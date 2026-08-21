@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <meta name="theme-color" content="#0b1220" />
+    <link rel="stylesheet" href="./src/renderer/styles.css" />
+    <title>QA Automation</title>
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">QA</div>
+          <div>
+            <p class="brand-title">QA Automation</p>
+            <p class="brand-subtitle">Centro de control</p>
+          </div>
+        </div>
+
+        <nav class="navigation" aria-label="Navegación principal">
+          <p class="navigation-label">General</p>
+          <button class="nav-item active" data-view="dashboard">
+            <span class="nav-icon">⌂</span>
+            <span>Dashboard</span>
+          </button>
+
+          <p class="navigation-label">Automatizaciones</p>
+          <button class="nav-item" data-view="forms">
+            <span class="nav-icon">▣</span>
+            <span>Formularios</span>
+            <span class="nav-phase">F2</span>
+          </button>
+          <button class="nav-item" data-view="visual">
+            <span class="nav-icon">◉</span>
+            <span>Monitoreo visual</span>
+            <span class="nav-phase">F3</span>
+          </button>
+          <button class="nav-item" data-view="excel">
+            <span class="nav-icon">▤</span>
+            <span>Excel vs Web</span>
+            <span class="nav-phase">F4</span>
+          </button>
+
+          <p class="navigation-label">Administración</p>
+          <button class="nav-item" data-view="history">
+            <span class="nav-icon">↺</span>
+            <span>Historial</span>
+          </button>
+          <button class="nav-item" data-view="settings">
+            <span class="nav-icon">⚙</span>
+            <span>Configuración</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="connection-dot" id="connection-dot"></div>
+          <div>
+            <p id="connection-label">Conectando...</p>
+            <span>FastAPI local</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Espacio de trabajo</p>
+            <h1 id="page-title">Dashboard</h1>
+          </div>
+          <div class="topbar-actions">
+            <span class="last-updated" id="last-updated">Sin actualizar</span>
+            <button class="icon-button" id="refresh-button" title="Actualizar dashboard" aria-label="Actualizar dashboard">↻</button>
+            <div class="user-avatar" title="Usuario local">QA</div>
+          </div>
+        </header>
+
+        <section class="view active" id="view-dashboard" data-view-panel="dashboard">
+          <div class="welcome-row">
+            <div>
+              <p class="eyebrow accent">Resumen operativo</p>
+              <h2>Buenos días, equipo QA</h2>
+              <p class="muted">Centraliza tus pruebas y consulta el estado de las automatizaciones.</p>
+            </div>
+            <div class="date-card">
+              <span class="date-icon">◷</span>
+              <div>
+                <span class="small-label">Hoy</span>
+                <strong id="today-label">—</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card metric-blue">
+              <div class="metric-heading"><span>Automatizaciones hoy</span><span class="metric-icon">↗</span></div>
+              <strong id="metric-total">0</strong>
+              <span class="metric-caption">Todas las ejecuciones</span>
+            </article>
+            <article class="metric-card metric-green">
+              <div class="metric-heading"><span>Exitosas</span><span class="metric-icon">✓</span></div>
+              <strong id="metric-success">0</strong>
+              <span class="metric-caption">Resultado PASS</span>
+            </article>
+            <article class="metric-card metric-red">
+              <div class="metric-heading"><span>Fallidas</span><span class="metric-icon">!</span></div>
+              <strong id="metric-failed">0</strong>
+              <span class="metric-caption">Requieren revisión</span>
+            </article>
+            <article class="metric-card metric-purple">
+              <div class="metric-heading"><span>Cambios detectados</span><span class="metric-icon">⌁</span></div>
+              <strong id="metric-changes">0</strong>
+              <span class="metric-caption">Alertas visuales</span>
+            </article>
+          </div>
+
+          <div class="content-grid">
+            <article class="panel latest-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Actividad</p>
+                  <h3>Última ejecución</h3>
+                </div>
+                <span class="status-badge pending" id="latest-status">PENDIENTE</span>
+              </div>
+              <div class="latest-content" id="latest-content">
+                <div class="empty-state compact">
+                  <div class="empty-icon">◌</div>
+                  <strong>Aún no hay ejecuciones</strong>
+                  <span>Las automatizaciones aparecerán aquí cuando se construyan en las siguientes fases.</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel health-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Sistema</p>
+                  <h3>Estado del entorno</h3>
+                </div>
+                <span class="health-pulse" id="health-pulse"></span>
+              </div>
+              <div class="health-item">
+                <div class="health-name"><span class="health-dot" id="api-dot"></span> API FastAPI</div>
+                <span class="health-value" id="api-status">Verificando</span>
+              </div>
+              <div class="health-item">
+                <div class="health-name"><span class="health-dot online"></span> Base de datos</div>
+                <span class="health-value online-text">SQLite local</span>
+              </div>
+              <div class="health-item">
+                <div class="health-name"><span class="health-dot online"></span> Modo de ejecución</div>
+                <span class="health-value online-text">Desarrollo</span>
+              </div>
+              <div class="health-note"><span>i</span> Las credenciales de servicios externos se mantienen en el backend.</div>
+            </article>
+          </div>
+
+          <article class="panel history-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Seguimiento</p>
+                <h3>Últimas ejecuciones</h3>
+              </div>
+              <button class="text-button" data-view="history">Ver historial completo <span>→</span></button>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr><th>Automatización</th><th>Tipo</th><th>Fecha</th><th>Duración</th><th>Estado</th></tr>
+                </thead>
+                <tbody id="history-body">
+                  <tr><td colspan="5" class="table-empty">No hay ejecuciones registradas todavía.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" id="view-forms" data-view-panel="forms">
+          <div class="section-intro"><p class="eyebrow accent">Fase 2</p><h2>Validación de formularios</h2><p class="muted">Configura y ejecuta pruebas de formularios y verificación de leads.</p></div>
+          <div class="coming-card"><div class="coming-icon">▣</div><h3>Módulo preparado para la siguiente fase</h3><p>La estructura de configuración, Playwright y evidencias se incorporará aquí sin afectar el dashboard.</p><span class="status-badge pending">PRÓXIMAMENTE</span></div>
+        </section>
+
+        <section class="view" id="view-visual" data-view-panel="visual">
+          <div class="section-intro"><p class="eyebrow accent">Fase 3</p><h2>Monitoreo visual</h2><p class="muted">Compara screenshots de tu homepage y detecta cambios relevantes.</p></div>
+          <div class="coming-card"><div class="coming-icon">◉</div><h3>Módulo preparado para la siguiente fase</h3><p>La comparación visual, el threshold configurable y el historial se añadirán en este espacio.</p><span class="status-badge pending">PRÓXIMAMENTE</span></div>
+        </section>
+
+        <section class="view" id="view-excel" data-view-panel="excel">
+          <div class="section-intro"><p class="eyebrow accent">Fase 4</p><h2>Excel vs Web / Strapi</h2><p class="muted">Analiza diferencias y prepara sincronizaciones controladas con Strapi.</p></div>
+          <div class="coming-card"><div class="coming-icon">▤</div><h3>Módulo preparado para la siguiente fase</h3><p>La importación configurable, el dry-run y las confirmaciones de cambios se añadirán más adelante.</p><span class="status-badge pending">PRÓXIMAMENTE</span></div>
+        </section>
+
+        <section class="view" id="view-history" data-view-panel="history">
+          <div class="section-intro"><p class="eyebrow accent">Trazabilidad</p><h2>Historial de ejecuciones</h2><p class="muted">Consulta los resultados almacenados por el backend local.</p></div>
+          <article class="panel history-panel standalone-history"><div class="table-wrapper"><table><thead><tr><th>Automatización</th><th>Tipo</th><th>Fecha</th><th>Duración</th><th>Estado</th></tr></thead><tbody id="full-history-body"><tr><td colspan="5" class="table-empty">No hay ejecuciones registradas todavía.</td></tr></tbody></table></div></article>
+        </section>
+
+        <section class="view" id="view-settings" data-view-panel="settings">
+          <div class="section-intro"><p class="eyebrow accent">Entorno</p><h2>Configuración</h2><p class="muted">Valores generales de la aplicación local.</p></div>
+          <article class="panel settings-card"><div class="setting-row"><div><strong>API local</strong><span>Endpoint que utiliza el renderer de Electron</span></div><code id="api-url-label">http://127.0.0.1:8000</code></div><div class="setting-row"><div><strong>Persistencia</strong><span>Base de datos inicial de la Fase 1</span></div><code>SQLite</code></div><div class="setting-row"><div><strong>Credenciales</strong><span>Se configuran exclusivamente en el archivo .env del backend</span></div><span class="status-badge success">PROTEGIDAS</span></div></article>
+        </section>
+      </main>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="./src/renderer/app.js"></script>
+  </body>
+</html>

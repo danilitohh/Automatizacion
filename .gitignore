@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# Los archivos de ejecución pueden contener información sensible.
+storage/*.db
+storage/*.db-*
+storage/logs/*
+storage/reports/*
+storage/screenshots/*
+storage/visual_comparisons/*
+!storage/logs/.gitkeep
+!storage/reports/.gitkeep
+!storage/screenshots/.gitkeep
+!storage/visual_comparisons/.gitkeep

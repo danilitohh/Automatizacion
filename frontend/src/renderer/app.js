@@ -1,0 +1,157 @@
+"use strict";
+
+import { api } from "../services/api.js";
+
+const state = { activeView: "dashboard" };
+
+const viewMeta = {
+  dashboard: { title: "Dashboard", description: "Resumen operativo" },
+  forms: { title: "Validación de formularios", description: "Automatizaciones" },
+  visual: { title: "Monitoreo visual", description: "Automatizaciones" },
+  excel: { title: "Excel vs Web / Strapi", description: "Automatizaciones" },
+  history: { title: "Historial", description: "Trazabilidad" },
+  settings: { title: "Configuración", description: "Administración" },
+};
+
+function selectElements() {
+  return {
+    title: document.querySelector("#page-title"),
+    views: document.querySelectorAll("[data-view-panel]"),
+    navigation: document.querySelectorAll("[data-view]"),
+    refreshButton: document.querySelector("#refresh-button"),
+    lastUpdated: document.querySelector("#last-updated"),
+    toast: document.querySelector("#toast"),
+  };
+}
+
+const elements = selectElements();
+
+function escapeHtml(value) {
+  // Los datos del historial vienen de SQLite y se escapan antes de insertarlos en la tabla.
+  return String(value ?? "—")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) return value;
+  return parsedDate.toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+}
+
+function formatDuration(seconds) {
+  if (seconds === null || seconds === undefined) return "—";
+  return `${Number(seconds).toFixed(1)} s`;
+}
+
+function statusClass(status) {
+  return { SUCCESS: "success", FAIL: "error", WARNING: "warning", RUNNING: "running" }[status] || "pending";
+}
+
+function statusLabel(status) {
+  return { SUCCESS: "PASS", FAIL: "FAIL", WARNING: "WARNING", RUNNING: "RUNNING" }[status] || "PENDING";
+}
+
+function executionRow(execution) {
+  return `<tr>
+    <td><strong>${escapeHtml(execution.name)}</strong></td>
+    <td><span class="type-label">${escapeHtml(execution.automation_type)}</span></td>
+    <td>${escapeHtml(formatDate(execution.started_at))}</td>
+    <td>${escapeHtml(formatDuration(execution.duration_seconds))}</td>
+    <td><span class="status-badge ${statusClass(execution.status)}">${statusLabel(execution.status)}</span></td>
+  </tr>`;
+}
+
+function renderHistory(executions) {
+  const body = document.querySelector("#history-body");
+  const fullBody = document.querySelector("#full-history-body");
+  const emptyRow = '<tr><td colspan="5" class="table-empty">No hay ejecuciones registradas todavía.</td></tr>';
+  const rows = executions.length ? executions.map(executionRow).join("") : emptyRow;
+  if (body) body.innerHTML = rows;
+  if (fullBody) fullBody.innerHTML = rows;
+}
+
+function renderLatest(execution) {
+  const status = document.querySelector("#latest-status");
+  const content = document.querySelector("#latest-content");
+
+  if (!execution) {
+    status.className = "status-badge pending";
+    status.textContent = "PENDIENTE";
+    content.innerHTML = `<div class="empty-state compact"><div class="empty-icon">◌</div><strong>Aún no hay ejecuciones</strong><span>Las automatizaciones aparecerán aquí cuando se construyan en las siguientes fases.</span></div>`;
+    return;
+  }
+
+  status.className = `status-badge ${statusClass(execution.status)}`;
+  status.textContent = statusLabel(execution.status);
+  content.innerHTML = `<div class="latest-execution"><div class="latest-icon">${execution.status === "SUCCESS" ? "✓" : "!"}</div><div><strong>${escapeHtml(execution.name)}</strong><span>${escapeHtml(execution.summary || "Sin resumen disponible")}</span><small>${escapeHtml(formatDate(execution.started_at))} · ${escapeHtml(formatDuration(execution.duration_seconds))}</small></div></div>`;
+}
+
+function renderSummary(summary) {
+  document.querySelector("#metric-total").textContent = summary.total_today;
+  document.querySelector("#metric-success").textContent = summary.successful_today;
+  document.querySelector("#metric-failed").textContent = summary.failed_today;
+  document.querySelector("#metric-changes").textContent = summary.changes_detected_today;
+  renderLatest(summary.latest_execution);
+}
+
+function setConnectionStatus(online) {
+  const dot = document.querySelector("#connection-dot");
+  const label = document.querySelector("#connection-label");
+  const apiDot = document.querySelector("#api-dot");
+  const apiStatus = document.querySelector("#api-status");
+  const pulse = document.querySelector("#health-pulse");
+  dot.classList.toggle("offline", !online);
+  apiDot.classList.toggle("online", online);
+  apiDot.classList.toggle("offline", !online);
+  pulse.classList.toggle("offline", !online);
+  label.textContent = online ? "Backend conectado" : "Backend desconectado";
+  apiStatus.textContent = online ? "Operativa" : "No disponible";
+  apiStatus.classList.toggle("online-text", online);
+}
+
+function showToast(message, type = "info") {
+  elements.toast.textContent = message;
+  elements.toast.className = `toast visible ${type}`;
+  window.setTimeout(() => elements.toast.classList.remove("visible"), 3500);
+}
+
+async function refreshDashboard() {
+  elements.refreshButton.classList.add("loading");
+  try {
+    const [health, summary, history] = await Promise.all([api.health(), api.dashboardSummary(), api.executions(20)]);
+    renderSummary(summary);
+    renderHistory(history.items);
+    setConnectionStatus(health.status === "ok");
+    elements.lastUpdated.textContent = `Actualizado ${new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}`;
+  } catch (error) {
+    setConnectionStatus(false);
+    showToast(`No se pudo actualizar el dashboard: ${error.message}`, "error");
+  } finally {
+    elements.refreshButton.classList.remove("loading");
+  }
+}
+
+function navigate(viewName) {
+  if (!viewMeta[viewName]) return;
+  state.activeView = viewName;
+  elements.navigation.forEach((item) => item.classList.toggle("active", item.dataset.view === viewName));
+  elements.views.forEach((view) => view.classList.toggle("active", view.dataset.viewPanel === viewName));
+  elements.title.textContent = viewMeta[viewName].title;
+}
+
+function bindEvents() {
+  elements.navigation.forEach((item) => item.addEventListener("click", () => navigate(item.dataset.view)));
+  elements.refreshButton.addEventListener("click", refreshDashboard);
+  document.querySelector("#today-label").textContent = new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
+  document.querySelector("#api-url-label").textContent = api.baseUrl;
+}
+
+bindEvents();
+navigate(state.activeView);
+refreshDashboard();
+window.setInterval(refreshDashboard, 30000);

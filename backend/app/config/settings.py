@@ -1,0 +1,63 @@
+"""Configuración centralizada y rutas de almacenamiento del proyecto."""
+
+from functools import lru_cache
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+# Este archivo está tres niveles por debajo de la raíz del proyecto:
+# backend/app/config/settings.py -> raíz del proyecto.
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+
+class Settings(BaseSettings):
+    """Valores que controlan el backend sin esconderlos dentro de los servicios."""
+
+    app_env: str = "development"
+    api_host: str = "127.0.0.1"
+    api_port: int = 8000
+    api_url: str = "http://127.0.0.1:8000"
+    database_path: Path = PROJECT_ROOT / "storage" / "qa_automation.db"
+    storage_dir: Path = PROJECT_ROOT / "storage"
+    log_level: str = "INFO"
+
+    # Estas variables se reservan para las fases que integrarán servicios externos.
+    strapi_url: str = ""
+    strapi_token: str = ""
+    crm_url: str = ""
+    crm_username: str = ""
+    crm_password: str = ""
+
+    model_config = SettingsConfigDict(
+        env_file=PROJECT_ROOT / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    def ensure_directories(self) -> None:
+        """Crea las carpetas que usarán las ejecuciones y los reportes."""
+
+        # Las rutas relativas del .env se interpretan desde la raíz del proyecto,
+        # aunque FastAPI haya sido iniciado desde la carpeta backend.
+        if not self.storage_dir.is_absolute():
+            self.storage_dir = PROJECT_ROOT / self.storage_dir
+        if not self.database_path.is_absolute():
+            self.database_path = PROJECT_ROOT / self.database_path
+
+        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        for folder_name in (
+            "logs",
+            "reports",
+            "screenshots",
+            "visual_comparisons",
+        ):
+            (self.storage_dir / folder_name).mkdir(parents=True, exist_ok=True)
+        self.database_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """Devuelve una única configuración para toda la ejecución del backend."""
+
+    return Settings()
