@@ -2,7 +2,9 @@
 
 Aplicación desktop para centralizar automatizaciones de QA. Esta primera entrega implementa la **Fase 1**: shell de Electron, dashboard, backend FastAPI local, SQLite, logs diarios, configuración y comunicación segura entre procesos.
 
-Las automatizaciones reales de formularios, monitoreo visual y Excel/Strapi se incorporarán en las fases siguientes. En esta etapa la interfaz deja los módulos preparados y no usa URLs ni datos reales.
+Las automatizaciones reales de formularios, monitoreo visual y Excel/Strapi se incorporarán en las fases siguientes. También se añadió el módulo **Bot de verificaciones**, que permite construir flujos y ejecutarlos con Playwright.
+
+El módulo **PDP vs documentos** compara las páginas de producto con un Excel de URLs y un DOCX de referencia. Revisa título, descripción, asignaturas y preguntas frecuentes, y guarda el reporte en `storage/reports/pdp/`.
 
 ## Arquitectura
 
@@ -32,7 +34,16 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r backend/requirements.txt
 Copy-Item .env.example .env
+python -m playwright install chromium
 ```
+
+Para usar Google Chrome con una sesión persistente de QA, abre el perfil aislado con:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\open_chrome_qa.ps1
+```
+
+Inicia sesión en las plataformas necesarias y cierra esa ventana. Luego selecciona **Google Chrome - Perfil QA** en el Bot de verificaciones y ejecuta el flujo. Las cookies se guardan en `storage/browser_profiles/chrome-qa`, que está excluida de Git.
 
 No completes todavía las variables de CRM o Strapi con credenciales reales; esos módulos pertenecen a fases posteriores.
 
@@ -63,6 +74,37 @@ La documentación interactiva queda disponible en `http://127.0.0.1:8000/docs`.
 | GET | `/api/health` | Comprueba que FastAPI está disponible. |
 | GET | `/api/dashboard/summary` | Métricas del día y última ejecución. |
 | GET | `/api/executions?limit=20` | Historial reciente. |
+| POST | `/api/bots/run` | Ejecuta un flujo web con Playwright y guarda sus evidencias. |
+| POST | `/api/bots/recorder/start` | Abre el navegador visible para grabar interacciones. |
+| GET | `/api/bots/recorder/{id}/events` | Consulta clicks y campos capturados. |
+| POST | `/api/bots/recorder/{id}/stop` | Cierra la grabación y devuelve los pasos. |
+
+## Validar PDP vs DOCX
+
+1. Abre **PDP vs documentos** en la navegación.
+2. Sube el Excel, con una columna de programa (`Programa`, `Carrera` o `Nombre`) y una URL (`URL`, `Link`, `Enlace` o `PDP`).
+3. Sube el documento `.docx`. Si contiene varios programas, inicia cada bloque con el nombre del programa como título y usa encabezados como **Descripción**, **Asignaturas** y **Preguntas frecuentes**.
+4. Pulsa **Comparar PDPs**. La aplicación revisa cada URL, muestra la coincidencia por sección y registra el resultado en el historial.
+
+La comparación es textual y tolera cambios menores de redacción. Las diferencias marcadas como **Revisar** requieren verificación humana, especialmente si el contenido de la PDP está dentro de acordeones, imágenes o componentes sin texto HTML.
+
+## Proveedores de IA
+
+Las integraciones de Ollama Cloud, Groq y Gemini viven en `backend/app/services/ai_service.py`. Sus claves se configuran únicamente en `.env`; el renderer solo puede consultar el estado booleano mediante `GET /api/ai/providers`.
+
+Para las automatizaciones futuras se dispone de `POST /api/ai/generate` con `provider`, `prompt`, `system_instruction` opcional y `model` opcional. La respuesta tiene el mismo formato para los tres proveedores.
+
+### Respaldo automático
+
+El módulo PDP semántico utiliza esta cascada: **Gemini → Groq → Ollama local → comparador determinístico**. Si un proveedor responde con cuota agotada, error de red o una respuesta inválida, se registra el motivo y se intenta el siguiente. Si todos fallan, la comparación textual continúa y los casos ambiguos quedan para revisión manual.
+
+Para activar Ollama local:
+
+1. Instala Ollama y descarga el modelo definido en `OLLAMA_LOCAL_MODEL` (por defecto `gpt-oss:20b`).
+2. Confirma que el servidor local esté disponible en `OLLAMA_LOCAL_BASE_URL` (por defecto `http://127.0.0.1:11434/api`).
+3. No necesitas una clave para el servidor local.
+
+El reporte PDP incluye `ai.providers`, donde se puede ver qué proveedor respondió, cuál fue omitido, cuál agotó su cuota y qué proveedor actuó como respaldo. Las respuestas directas de `/api/ai/generate` también incluyen `usage` y `rate_limits` cuando el proveedor los informa.
 
 ## Tests
 
@@ -76,6 +118,10 @@ Los tests usan archivos SQLite temporales y no modifican la base de datos local.
 
 ```text
 frontend/                 Interfaz Electron y renderer.
+frontend/src/renderer/bot-module.js Constructor y controles del Bot de verificaciones.
+backend/app/automations/generic_bot/runner.py Ejecutor de pasos web con Playwright.
+storage/browser_profiles/chrome-qa Perfil persistente usado por Google Chrome para QA.
+backend/app/automations/generic_bot/recorder.py Grabador visual de clicks y campos.
 backend/app/api/          Rutas HTTP.
 backend/app/config/       Variables y rutas centralizadas.
 backend/app/database/     Conexión y consultas SQLite.
@@ -115,4 +161,16 @@ Cada automatización tendrá su propio módulo dentro de `backend/app/automation
 
 ## Próxima fase
 
-Antes de avanzar a la Fase 2 hay que verificar esta base con los tests y la prueba manual. La próxima entrega añadirá una validación sencilla de formularios con Playwright, sin asumir selectores, CRM o URLs reales.
+Antes de avanzar hay que verificar esta base con los tests y la prueba manual. El Bot de verificaciones ya tiene el primer ejecutor; el siguiente trabajo será añadir acciones como hover, teclas, selección de opciones, descarga de archivos y manejo de sesiones, sin asumir selectores, CRM o URLs reales.
+
+## Grabar pasos visualmente
+
+1. Selecciona **Google Chrome - Perfil QA** y escribe la URL inicial.
+2. Pulsa **Grabar pasos**.
+3. Interactúa con la ventana de Chrome que se abre; los elementos se resaltan al pasar el cursor.
+4. Haz click en botones o enlaces y selecciona los campos de formulario que el bot deberá rellenar. Los pasos aparecerán automáticamente en la aplicación.
+5. Pulsa **Detener grabación** para convertir la interacción en pasos editables.
+6. En cada paso **Rellenar campo**, escribe dentro de la caja **Valor a enviar** el dato que el bot deberá introducir.
+7. Revisa el flujo, guarda la configuración y pulsa **Ejecutar bot**.
+
+El grabador no conserva el texto que escribes en el navegador: guarda únicamente el localizador del campo. El valor se define después dentro de Electron, y los campos de contraseña no se capturan. También registra el scroll como una posición vertical y reemplaza los movimientos consecutivos por un único paso. Evita guardar tokens o datos sensibles en la configuración.

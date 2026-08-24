@@ -1,6 +1,8 @@
 "use strict";
 
 import { api } from "../services/api.js";
+import { initializeBotModule } from "./bot-module.js";
+import { initializePdpModule } from "./pdp-module.js";
 
 const state = { activeView: "dashboard" };
 
@@ -9,6 +11,8 @@ const viewMeta = {
   forms: { title: "Validación de formularios", description: "Automatizaciones" },
   visual: { title: "Monitoreo visual", description: "Automatizaciones" },
   excel: { title: "Excel vs Web / Strapi", description: "Automatizaciones" },
+  bot: { title: "Bot de verificaciones", description: "Automatizaciones" },
+  pdp: { title: "Validación PDP vs DOCX", description: "Automatizaciones" },
   history: { title: "Historial", description: "Trazabilidad" },
   settings: { title: "Configuración", description: "Administración" },
 };
@@ -153,5 +157,7 @@ function bindEvents() {
 
 bindEvents();
 navigate(state.activeView);
+initializeBotModule({ showToast, runBot: api.runBot, recorderApi: api });
+initializePdpModule({ showToast, validatePdp: api.validatePdp, validatePdpSemantic: api.validatePdpSemantic });
 refreshDashboard();
 window.setInterval(refreshDashboard, 30000);

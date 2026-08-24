@@ -3,6 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,6 +29,18 @@ class Settings(BaseSettings):
     crm_url: str = ""
     crm_username: str = ""
     crm_password: str = ""
+
+    # Servicios de IA: las claves se cargan desde .env y nunca se envían al renderer.
+    ollama_api_key: SecretStr = SecretStr("")
+    ollama_base_url: str = "https://ollama.com/api"
+    ollama_model: str = "gpt-oss:120b"
+    # Servidor de respaldo sin cuota de API. Requiere Ollama instalado y el modelo descargado.
+    ollama_local_base_url: str = "http://127.0.0.1:11434/api"
+    ollama_local_model: str = "gpt-oss:20b"
+    groq_api_key: SecretStr = SecretStr("")
+    groq_model: str = "llama-3.3-70b-versatile"
+    gemini_api_key: SecretStr = SecretStr("")
+    gemini_model: str = "gemini-2.5-flash"
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",

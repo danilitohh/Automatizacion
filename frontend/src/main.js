@@ -1,6 +1,7 @@
 "use strict";
 
 const { app, BrowserWindow } = require("electron");
+const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
@@ -9,7 +10,12 @@ let backendProcess;
 function startBackend() {
   // Electron arranca FastAPI como proceso local para que el usuario no tenga que
   // abrir una terminal. Las dependencias de Python deben estar instaladas antes.
-  const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === "win32" ? "python" : "python3");
+  const projectDirectory = path.resolve(__dirname, "../..");
+  const virtualEnvironmentPython = process.platform === "win32"
+    ? path.join(projectDirectory, ".venv", "Scripts", "python.exe")
+    : path.join(projectDirectory, ".venv", "bin", "python");
+  const pythonCommand = process.env.PYTHON_COMMAND
+    || (fs.existsSync(virtualEnvironmentPython) ? virtualEnvironmentPython : (process.platform === "win32" ? "python" : "python3"));
   const backendDirectory = path.resolve(__dirname, "../../backend");
   const backendArguments = ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "" + (process.env.API_PORT || "8000")];
 

@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from .automations.generic_bot.recorder import RecorderManager
 from .api.routes import router
 from .config.settings import Settings, get_settings
 from .database.connection import initialize_database
@@ -23,7 +24,10 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         "Backend iniciado en %s:%s", settings.api_host, settings.api_port
     )
     initialize_database(settings.database_path)
-    yield
+    try:
+        yield
+    finally:
+        await application.state.recorder_manager.close_all()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -64,6 +68,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     application.state.settings = settings or get_settings()
+    application.state.recorder_manager = RecorderManager()
     application.include_router(router)
     return application
 
