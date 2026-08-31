@@ -16,6 +16,8 @@ storage/reports/*
 storage/screenshots/*
 storage/visual_comparisons/*
 storage/browser_profiles/*
+storage/diagnostics/
+backend/storage/
 !storage/logs/.gitkeep
 !storage/reports/.gitkeep
 !storage/screenshots/.gitkeep

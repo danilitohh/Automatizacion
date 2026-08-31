@@ -1,0 +1,1634 @@
+"""Flujo QA real para enviar un lead UTEL y verificarlo en InConcert."""
+
+import asyncio
+import re
+import secrets
+import unicodedata
+from contextlib import asynccontextmanager
+from datetime import datetime
+from difflib import SequenceMatcher
+from pathlib import Path
+from time import perf_counter
+from typing import Any, Awaitable, Callable
+from urllib.parse import urlparse
+
+from pydantic import SecretStr
+
+from ...config.settings import Settings
+from ...schemas.bot import UtelQaConfig, UtelQaStageResult
+from ...services.logging_service import get_logger
+from ...services.program_rotation_service import ProgramRotationService
+
+
+class UtelQaError(RuntimeError):
+    """Error de negocio con contexto suficiente para el reporte QA."""
+
+    def __init__(self, stage: str, message: str, selector: str | None = None):
+        super().__init__(message)
+        self.stage = stage
+        self.selector = selector
+        self.screenshot: str | None = None
+        self.url: str | None = None
+
+
+class UnconfirmedSubmission(UtelQaError):
+    """El click ya ocurrio: consultar CRM, nunca reenviar automaticamente."""
+
+
+class UtelInconcertRunner:
+    """Ejecuta el flujo UTEL -> InConcert usando Playwright."""
+
+    FORM_IDS = {"lateral": "LateralBLC", "tarjeta": "TarjetaBLC", "footer": "FooterBLC"}
+    COUNTRY_CODES = {
+        "mexico": "+52",
+        "mÃ©xico": "+52",
+        "ecuador": "+593",
+        "colombia": "+57",
+        "peru": "+51",
+        "perÃº": "+51",
+        "chile": "+56",
+        "argentina": "+54",
+        "usa": "+1",
+        "united states": "+1",
+        "bolivia": "+591",
+        "paraguay": "+595",
+        "dominicana": "+1",
+        "republica dominicana": "+1",
+        "guatemala": "+502",
+        "panama": "+507",
+        "el salvador": "+503",
+        "global": "+1",
+        "filipinas": "+63",
+        "india": "+91",
+    }
+    _open_session: dict[str, Any] | None = None
+
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.logger = get_logger()
+        self.stage_results: list[UtelQaStageResult] = []
+        self.screenshots: list[str] = []
+        self.evidence_directory: Path | None = None
+        self.lead_url: str | None = None
+        self.selected_program_name = ""
+        self._rotation_config = None
+        self._crm_session_recoveries = 0
+        self._crm_origin = ""
+        self.status_flags = {
+            "utel_submission": "pending",
+            "utel_submission_message": "Formulario pendiente de envio.",
+            "inconcert_login": "pending",
+            "lead_found": "pending",
+            "conversion_found": "pending",
+        }
+        self._last_submit_success_pattern = ""
+        self._last_submit_error_pattern = "error|invalido|inválido|obligatorio|requerido|fall"
+
+    async def run(self, config: UtelQaConfig) -> dict[str, Any]:
+        """Valida configuracion, ejecuta el flujo y devuelve un reporte estructurado."""
+
+        started_at = datetime.now().isoformat(timespec="seconds")
+        timer = perf_counter()
+        self.stage_results = []
+        self.screenshots = []
+        self.lead_url = None
+        self.selected_program_name = ""
+        self._rotation_config = config
+        self._crm_session_recoveries = 0
+        self._crm_origin = ""
+        self.status_flags = {key: "pending" for key in self.status_flags}
+        self.evidence_directory = self._evidence_directory(config.name)
+        page = None
+        unconfirmed = None
+
+        try:
+            self._validate_config(config)
+            try:
+                from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+                from playwright.async_api import async_playwright
+            except ImportError as error:
+                raise RuntimeError(
+                    "Playwright no esta instalado. Ejecuta `python -m pip install -r backend/requirements.txt` "
+                    "y despues `python -m playwright install chromium`."
+                ) from error
+
+            await self._close_open_session()
+            keep_open = {"value": config.keep_browser_open}
+            async with self._playwright(async_playwright, keep_open) as playwright:
+                browser = None
+                context = None
+                launch_headless = False if config.keep_browser_open else config.headless
+                if config.browser == "chrome":
+                    profile_directory = self.settings.storage_dir / "browser_profiles" / "chrome-qa"
+                    profile_directory.mkdir(parents=True, exist_ok=True)
+                    context = await playwright.chromium.launch_persistent_context(
+                        str(profile_directory),
+                        channel="chrome",
+                        headless=launch_headless,
+                        viewport={"width": 1440, "height": 900},
+                    )
+                else:
+                    browser_type = getattr(playwright, config.browser)
+                    browser = await browser_type.launch(headless=launch_headless)
+                    context = await browser.new_context(viewport={"width": 1440, "height": 900})
+                try:
+                    utel_page = await context.new_page()
+                    page = utel_page
+                    utel_page.set_default_timeout(18000)
+                    await self._run_stage(1, "utel_open", "UTEL abierta", utel_page, lambda: self._open_utel(utel_page, config), "01_utel_inicio")
+                    await self._run_stage(2, "utel_navigation", "Modalidad, nivel y programa resueltos", utel_page, lambda: self._navigate_utel(utel_page, config))
+                    form = await self._run_stage(3, "utel_form", "Formulario identificado", utel_page, lambda: self._find_utel_form(utel_page, config))
+                    await self._run_stage(4, "utel_fill", "Formulario rellenado", utel_page, lambda: self._fill_utel_form(utel_page, form, config), "02_formulario_lleno")
+                    if config.dry_run:
+                        await self._run_stage(5, "dry_run_stop", "Dry run: formulario listo, envio omitido", utel_page, lambda: self._dry_run_stop(), "03_dry_run_pre_envio")
+                        self.status_flags = {key: "skipped" for key in self.status_flags}
+                        return self._build_result(config, started_at, timer)
+
+                    # InConcert se prepara antes del envio. Si el CRM esta caido,
+                    # lento o las credenciales no funcionan, el formulario UTEL
+                    # no se envia y evitamos crear leads que no podamos validar.
+                    inconcert_page = await context.new_page()
+                    page = inconcert_page
+                    inconcert_page.set_default_timeout(30000)
+                    await self._run_stage(5, "inconcert_open", "InConcert disponible antes del envio", inconcert_page, lambda: self._open_inconcert(inconcert_page, config))
+                    await self._run_stage(6, "inconcert_login", "Login de InConcert completado", inconcert_page, lambda: self._login_inconcert(inconcert_page), "04_inconcert_login")
+                    self.status_flags["inconcert_login"] = "success"
+                    await self._run_stage(7, "inconcert_contacts", "Contactos listos para buscar", inconcert_page, lambda: self._open_contacts(inconcert_page))
+
+                    page = utel_page
+                    unconfirmed = None
+                    try:
+                        await self._run_stage(8, "utel_submit", "Formulario enviado y confirmado", utel_page, lambda: self._submit_utel_form(utel_page, form), "03_formulario_enviado")
+                    except UnconfirmedSubmission as error:
+                        unconfirmed = error
+                        self.logger.warning("%s Se verificara en CRM sin reenviar.", error)
+                    self.status_flags["utel_submission"] = "pending" if unconfirmed else "success"
+                    self.status_flags["utel_submission_message"] = str(unconfirmed) if unconfirmed else "Formulario enviado y confirmado correctamente."
+
+                    page = inconcert_page
+                    await self._run_stage(9, "inconcert_search", "Lead localizado y verificado", inconcert_page, lambda: self._search_lead(inconcert_page, config.lead.email, config.lead.name), "05_lead_encontrado")
+                    self.status_flags["lead_found"] = "success"
+                    await self._run_stage(10, "inconcert_manage", "Gestionar abierto y email confirmado", inconcert_page, lambda: self._open_manage(inconcert_page, config.lead.name, config.lead.email), "06_gestionar")
+                    if unconfirmed:
+                        self.status_flags["utel_submission"] = "success"
+                        self.status_flags["utel_submission_message"] = f"Lead verificado en CRM sin reenviar. Aviso original: {unconfirmed}"
+                    if config.workflow_mode == "form_validation":
+                        self.status_flags["conversion_found"] = "skipped"
+                        return self._build_result(config, started_at, timer)
+                    await self._run_stage(11, "inconcert_conversion", "Conversion encontrada y programa validado", inconcert_page, lambda: self._confirm_conversion(inconcert_page, config), "07_conversion")
+                    self.status_flags["conversion_found"] = "success"
+                finally:
+                    if config.keep_browser_open:
+                        keep_open["value"] = True
+                        UtelInconcertRunner._open_session = {
+                            "playwright": playwright,
+                            "context": context,
+                            "browser": browser,
+                        }
+                        self.logger.info("El navegador quedo abierto para revision manual.")
+                    else:
+                        await context.close()
+                        if browser is not None:
+                            await browser.close()
+        except UtelQaError as error:
+            if unconfirmed and error.stage.startswith("inconcert_"):
+                error.args = (f"{error} | Aviso del envio: {unconfirmed}. No se reenvio el formulario.",)
+            self.logger.exception("Fallo el flujo UTEL en %s", error.stage)
+            self._append_failed_stage(len(self.stage_results) + 1, error, error.url, error.screenshot)
+        except Exception as error:  # noqa: BLE001 - se devuelve un resumen apto para QA
+            self.logger.exception("No se pudo completar el flujo UTEL")
+            wrapped = UtelQaError("startup", self._friendly_error(error))
+            self._append_failed_stage(len(self.stage_results) + 1, wrapped, page.url if page else None, None)
+
+        return self._build_result(config, started_at, timer)
+
+    def _build_result(self, config: UtelQaConfig, started_at: str, timer: float) -> dict[str, Any]:
+        failed = any(stage.status == "FAIL" for stage in self.stage_results)
+        finished_at = datetime.now().isoformat(timespec="seconds")
+        if config.workflow_mode == "form_validation":
+            summary = "Formulario enviado y enlace del lead verificado en InConcert." if not failed else "La validacion del formulario o del lead en InConcert fallo en una etapa."
+        else:
+            summary = "Flujo UTEL/InConcert completado correctamente." if not failed else "El flujo UTEL/InConcert fallo en una etapa."
+        if config.dry_run and not failed:
+            summary = "Dry run completado: el formulario se lleno, pero no se envio ningun lead real."
+            self.status_flags["utel_submission_message"] = "No enviado: dry run activo."
+        return {
+            "status": "FAIL" if failed else "PASS",
+            "summary": summary,
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "duration_seconds": round(perf_counter() - timer, 2),
+            "country": config.country,
+            "level": config.level,
+            "modality": config.modality,
+            "form_type": config.form_type,
+            "lead_name": config.lead.name,
+            "lead_email": config.lead.email,
+            "lead_phone": config.lead.phone,
+            "selected_program_name": self.selected_program_name,
+            "lead_url": self.lead_url,
+            "environment": config.environment,
+            "dry_run": config.dry_run,
+            "workflow_mode": config.workflow_mode,
+            **self.status_flags,
+            "stages": self.stage_results,
+            "screenshots": self.screenshots,
+        }
+
+    @asynccontextmanager
+    async def _playwright(self, async_playwright, keep_open: dict[str, bool]):
+        playwright = await async_playwright().start()
+        try:
+            yield playwright
+        finally:
+            if not keep_open["value"]:
+                await playwright.stop()
+
+    @classmethod
+    async def _close_open_session(cls) -> None:
+        """Cierra una sesion visible que quedo abierta en una ejecucion anterior."""
+
+        session = cls._open_session
+        cls._open_session = None
+        if not session:
+            return
+        try:
+            if session.get("context") is not None:
+                await session["context"].close()
+            if session.get("browser") is not None:
+                await session["browser"].close()
+        except Exception:
+            pass
+        finally:
+            try:
+                await session["playwright"].stop()
+            except Exception:
+                pass
+
+    async def _run_stage(
+        self,
+        number: int,
+        stage: str,
+        success_message: str,
+        page: Any,
+        action: Callable[[], Awaitable[Any]],
+        screenshot_name: str | None = None,
+    ) -> Any:
+        """Ejecuta una etapa y registra su resultado legible."""
+
+        try:
+            value = await action()
+            screenshot = await self._safe_screenshot(page, screenshot_name) if screenshot_name else None
+            self.stage_results.append(
+                UtelQaStageResult(
+                    step_number=number,
+                    stage=stage,
+                    status="PASS",
+                    message=success_message,
+                    url=page.url,
+                    screenshot=screenshot,
+                )
+            )
+            return value
+        except Exception as error:  # noqa: BLE001 - Playwright emite errores variados
+            failure = error if isinstance(error, UtelQaError) else UtelQaError(stage, self._friendly_error(error))
+            # Capturar antes de que run() cierre el contexto del navegador.
+            failure.url = page.url
+            failure.screenshot = await self._safe_screenshot(page, f"error_{failure.stage}")
+            if failure is error:
+                raise
+            raise failure from error
+
+    async def _open_utel(self, page: Any, config: UtelQaConfig) -> None:
+        await page.goto(config.utel_url, wait_until="domcontentloaded")
+        await self._check_access(page)
+        if config.program_name:
+            heading = page.locator("h1").first
+            try:
+                await heading.wait_for(state="visible", timeout=12000)
+                actual_title = (await heading.inner_text()).strip()
+            except Exception as error:
+                raise UtelQaError("utel_program_validation", "No se encontro el titulo H1 del programa en la URL indicada.", "h1") from error
+            if self._normalize(actual_title) != self._normalize(config.program_name):
+                raise UtelQaError(
+                    "utel_program_validation",
+                    f"El programa no coincide. Excel: '{config.program_name}' | H1 encontrado: '{actual_title}'.",
+                    "h1",
+                )
+
+    async def _navigate_utel(self, page: Any, config: UtelQaConfig) -> None:
+        # Los Excel de programas normalmente contienen la URL PDP directa.
+        # Si el H1 ya fue validado en _open_utel, no debemos volver a abrir el
+        # menú global de Modalidad/Nivel: esas opciones también existen ocultas
+        # en otras partes del DOM y pueden provocar un timeout.
+        if config.program_name:
+            heading = page.locator("h1").first
+            if await heading.count() and await heading.is_visible():
+                actual_title = (await heading.inner_text()).strip()
+                if self._normalize(actual_title) == self._normalize(config.program_name):
+                    self.logger.info("URL directa de programa confirmada por H1; se omite la navegación global.")
+                    return
+        if config.workflow_mode == "form_validation":
+            await self._navigate_form_validation(page, config)
+            return
+        modalidad = page.get_by_text(re.compile(r"^Modalidad$", re.I)).first
+        await self._hover_center(modalidad, page)
+        modality_variants = self._spanish_variants(config.modality)
+        modality_option = await self._text_locator(page, [*modality_variants, *[f"Modalidad {item}" for item in modality_variants]])
+        await self._hover_center(modality_option, page)
+        level_option = await self._text_locator(page, self._level_candidates(config.level))
+        await self._hover_center(level_option, page)
+
+        if config.program_selection_strategy == "exact_match":
+            program_option = await self._text_locator(page, [config.program_name])
+            await program_option.click()
+            await page.wait_for_load_state("domcontentloaded")
+            return
+
+        first_program = await self._first_visible_program_link(page)
+        if first_program is not None:
+            await first_program.click()
+            await page.wait_for_load_state("domcontentloaded")
+            return
+
+        await level_option.click()
+        await page.wait_for_load_state("domcontentloaded")
+
+    async def _navigate_form_validation(self, page: Any, config: UtelQaConfig) -> None:
+        """Navega el menu de Leads Deploy y elige el primer programa disponible."""
+
+        # Las URLs de Leads Deploy ya apuntan a la superficie correcta. Footer
+        # vive en la pagina recibida y Lateral se abre despues desde el CTA.
+        # Tarjeta es la unica ubicacion que necesita entrar primero a una PDP.
+        if config.form_type in {"footer", "lateral"}:
+            return
+        if config.form_type == "tarjeta":
+            await self._click_first_program_card(page)
+            await page.wait_for_load_state("domcontentloaded")
+            await self._capture_selected_program(page)
+            return
+
+        modal_menu = page.get_by_text(re.compile(r"^Modalidad$", re.I)).first
+        if await modal_menu.count() and await modal_menu.is_visible():
+            await self._hover_center(modal_menu, page)
+            modality_option = await self._text_locator(
+                page,
+                self._menu_candidates(config.navigation_modality or config.modality),
+            )
+            await self._hover_center(modality_option, page)
+            level_option = await self._text_locator(
+                page,
+                self._menu_candidates(config.navigation_level or config.level),
+            )
+            await self._hover_center(level_option, page)
+            target_option = level_option
+            if config.navigation_sublevel:
+                try:
+                    target_option = await self._text_locator(
+                        page,
+                        self._menu_candidates(config.navigation_sublevel),
+                    )
+                    await self._hover_center(target_option, page)
+                except UtelQaError:
+                    self.logger.info(
+                        "El submenu %s no existe; se usara %s.",
+                        config.navigation_sublevel,
+                        config.navigation_level,
+                    )
+
+            first_program = await self._first_visible_program_link(page, target_option)
+            if first_program is not None:
+                await first_program.click()
+            else:
+                await target_option.click()
+            await page.wait_for_load_state("domcontentloaded")
+            await self._capture_selected_program(page)
+            return
+
+        # Algunos portales por pais reemplazan "Modalidad" por "Oferta
+        # educativa". En esos sitios el nivel abre una pagina de resultados y
+        # el programa se elige desde la primera card visible.
+        education_menu = page.get_by_text(re.compile(r"^Oferta educativa$", re.I)).first
+        if await education_menu.count() and await education_menu.is_visible():
+            await self._hover_center(education_menu, page)
+            level_option = await self._text_locator(
+                page,
+                self._education_level_candidates(config.navigation_level or config.level),
+            )
+            await level_option.click()
+            await page.wait_for_load_state("domcontentloaded")
+            await self._click_first_program_card(page)
+            await page.wait_for_load_state("domcontentloaded")
+            await self._capture_selected_program(page)
+            return
+
+        # Global/Filipinas ofrece Bachelor/Master directamente y no muestra
+        # el menu Modalidad utilizado por los sitios en espanol.
+        level_option = await self._text_locator(
+            page,
+            self._menu_candidates(config.navigation_level or config.level),
+        )
+        await level_option.click()
+        await page.wait_for_load_state("domcontentloaded")
+        await self._capture_selected_program(page)
+
+    async def _click_first_program_card(self, page: Any) -> None:
+        """Rota programas del listado y abre su CTA Explorar cuando existe."""
+
+        cards = page.locator(".chakra-card__body:visible")
+        try:
+            await cards.first.wait_for(state="visible", timeout=18000)
+        except Exception:
+            cards = None
+
+        if cards is not None:
+            candidates = []
+            for index in range(await cards.count()):
+                card = cards.nth(index)
+                program_text = card.locator("p").first
+                label = (await program_text.inner_text()).strip() if await program_text.count() else ""
+                if not label:
+                    continue
+                explore = card.get_by_text(re.compile(r"^(Explorar|Ver programa|Conocer mas|Conocer m[aá]s)$", re.I)).first
+                link = card.locator("xpath=ancestor::a[1]")
+                if not await link.count():
+                    link = card.locator("a[href]").first
+                target = explore if await explore.count() and await explore.is_visible() else link
+                if not await target.count() or not await target.is_visible():
+                    continue
+                candidates.append({"text": label, "target": target})
+            if candidates:
+                selected = self._rotate_program(candidates, page.url)
+                self.selected_program_name = selected["text"]
+                await selected["target"].scroll_into_view_if_needed()
+                await selected["target"].click()
+                return
+
+        # Las paginas nuevas no siempre usan chakra-card. Como respaldo,
+        # seleccionamos el primer enlace academico visible dentro de <main>.
+        current_path = urlparse(page.url).path.rstrip("/").lower()
+        links = page.locator("main a[href]:visible")
+        academic_path = re.compile(
+            r"/(doctorado|maestr|master|magister|licenciatura|carrera|bachelor|bootcamp|diplomado|especialidad)[^/]*",
+            re.I,
+        )
+        candidates = []
+        for index in range(await links.count()):
+            link = links.nth(index)
+            href = (await link.get_attribute("href") or "").strip()
+            candidate_path = urlparse(href).path.rstrip("/").lower()
+            if not candidate_path or candidate_path == current_path or not academic_path.search(candidate_path):
+                continue
+            label = (await link.inner_text()).strip()
+            if not label or re.fullmatch(r"conocer m[aá]s|explorar|ver programa", label, re.I):
+                label = candidate_path
+            candidates.append({"text": label, "target": link})
+        if candidates:
+            selected = self._rotate_program(candidates, page.url)
+            await selected["target"].scroll_into_view_if_needed()
+            await selected["target"].click()
+            return
+
+        raise UtelQaError(
+            "utel_navigation",
+            "El listado se abrio, pero no se encontro una tarjeta o enlace valido de programa.",
+            ".chakra-card__body, main a[href]",
+        )
+
+    async def _capture_selected_program(self, page: Any) -> None:
+        await self._check_access(page)
+        heading = page.locator("h1:visible").first
+        if await heading.count():
+            self.selected_program_name = (await heading.inner_text()).strip()
+
+    async def _check_access(self, page: Any) -> None:
+        text = await page.locator("body").inner_text(timeout=12000)
+        if re.search(r"sorry,?\s+you have been blocked|you are unable to access", text, re.I):
+            raise UtelQaError(
+                "utel_access", "El sitio bloqueo el acceso de esta sesion. No se envio el formulario. "
+                "Que abra manualmente no confirma acceso desde el navegador del bot; revisar la captura y la sesion.", "body",
+            )
+
+    async def _find_utel_form(self, page: Any, config: UtelQaConfig) -> Any:
+        await self._check_access(page)
+        form_id = self.FORM_IDS[config.form_type]
+        selector = f"#{form_id}"
+        form = page.locator(selector).first
+        if config.form_type == "lateral":
+            try:
+                await self._open_lateral_form(page)
+            except Exception as error:
+                raise UtelQaError(
+                    "utel_form",
+                    "No se pudo abrir el formulario lateral con el boton Solicitar informacion.",
+                    "text=Solicitar informacion",
+                ) from error
+        try:
+            await form.wait_for(state="visible", timeout=12000)
+            if config.form_type != "lateral":
+                # El primer scroll activa contenido diferido y puede remontar
+                # el footer. Debe ocurrir ANTES de seleccionar modalidad/nivel.
+                await form.scroll_into_view_if_needed()
+                await asyncio.sleep(2)
+                await form.wait_for(state="visible", timeout=12000)
+            return form
+        except Exception as error:
+            raise UtelQaError("utel_form", f"No se encontro el formulario {form_id}.", selector) from error
+
+    async def _open_lateral_form(self, page: Any) -> None:
+        """Abre el formulario lateral cuando la pagina lo mantiene cerrado."""
+
+        controls = page.locator('button:visible, a:visible, [role="button"]:visible')
+        accepted_prefixes = (
+            "solicitar informaci",
+            "solicita informaci",
+            "quiero informaci",
+            "pedir informaci",
+        )
+        for index in range(await controls.count()):
+            control = controls.nth(index)
+            label = self._normalize((await control.inner_text()).strip())
+            if label.startswith(accepted_prefixes):
+                await control.scroll_into_view_if_needed()
+                await control.click()
+                await page.locator("#LateralBLC").first.wait_for(state="visible", timeout=12000)
+                return
+        form = page.locator("#LateralBLC").first
+        if await form.count() and await form.is_visible():
+            # Algunas paginas conservan el drawer abierto entre navegaciones.
+            return
+        raise UtelQaError(
+            "utel_form",
+            "El formulario lateral esta cerrado y no se encontro el boton Solicitar informacion.",
+            "button:has-text('Solicitar informacion')",
+        )
+
+    async def _fill_utel_form(self, page: Any, form: Any, config: UtelQaConfig) -> None:
+        await self._set_dynamic_field(form, '[data-cy="formModalityInput"]', config.modality)
+        await self._set_dynamic_field(form, '[data-cy="educationLevelInput"]', config.level)
+        selected_program = config.program_name or self.selected_program_name
+        if selected_program:
+            await self._set_dynamic_field(form, '[data-cy="productsInput"]', selected_program)
+        else:
+            await self._select_random_program(page, form, '[data-cy="productsInput"]', config)
+        academic_values = await self._academic_values(form)
+        await self._select_optional_bachillerato(form)
+        await self._select_random_city(form)
+        await self._select_preferred_contact_channel(form)
+        await self._fill_first_available(form, ['[data-cy="textfieldInput"]', '#first_name', 'input[name="first_name"]'], config.lead.name)
+        await self._fill_first_available(form, ['[data-cy="emailInput"]', '#email', 'input[type="email"]', 'input[name="email"]'], config.lead.email)
+        await self._set_country_if_possible(form, config.country)
+        await self._fill_first_available(form, ['[data-cy="telephoneInput"]', '#phone', 'input[type="tel"]', 'input[name="phone"]'], config.lead.phone)
+        await self._check_privacy(form)
+        if academic_values != await self._academic_values(form):
+            raise UtelQaError(
+                "utel_fill",
+                "El sitio reinicio la modalidad, el nivel o el programa durante el llenado. No se enviara el formulario.",
+                '[data-cy="formModalityInput"], [data-cy="educationLevelInput"], [data-cy="productsInput"]',
+            )
+
+    async def _academic_values(self, form: Any) -> list[dict[str, str]]:
+        return await form.locator(
+            '[data-cy="formModalityInput"], [data-cy="educationLevelInput"], [data-cy="productsInput"]'
+        ).evaluate_all("els => els.map(e => ({field: e.dataset.cy, value: e.value}))")
+
+    def _rotate_program(self, candidates: list[dict], url: str, config: UtelQaConfig | None = None) -> dict:
+        config = config or self._rotation_config
+        scope = [config.country, config.level, config.modality, config.form_type,
+                 "dry_run" if config.dry_run else "real"] if config else [urlparse(url).path]
+        scope.insert(0, urlparse(url).netloc)
+        selected = ProgramRotationService(self.settings.database_path).choose(scope, candidates)
+        self.logger.info("Rotacion de programas: %s (%s candidatos disponibles). Es un intento, no una aprobacion.", selected["text"], len(candidates))
+        return selected
+
+    async def _select_random_program(self, page: Any, form: Any, selector: str, config: UtelQaConfig) -> None:
+        """Rota programas disponibles en select o autocomplete."""
+
+        field = form.locator(selector).first
+        if not await field.count():
+            return
+        tag_name = await field.evaluate("(element) => element.tagName.toLowerCase()")
+        if tag_name == "input":
+            await self._select_random_autocomplete_option(page, form, field, selector, config)
+            return
+        if tag_name != "select":
+            raise UtelQaError("utel_fill", "El campo de programa no es seleccionable.", selector)
+        await field.wait_for(state="visible", timeout=12000)
+        await self._wait_for_select_options(field)
+        options = await field.evaluate(
+            """(element) => [...element.options]
+                .filter((option) => option && !option.disabled && option.value
+                    && !/seleccion|programa de interes|programa de interés|cargando|loading/i.test(option.textContent || ''))
+                .map((option) => ({ value: option.value, text: option.textContent || '' }))"""
+        )
+        if not options:
+            raise UtelQaError("utel_fill", "El formulario no contiene programas disponibles.", selector)
+        selected = self._rotate_program(options, page.url, config)
+        await field.select_option(value=selected["value"])
+        await asyncio.sleep(1)
+        if await field.input_value() != selected["value"]:
+            raise UtelQaError("utel_fill", "El programa seleccionado fue reiniciado por el sitio.", selector)
+        if not self.selected_program_name:
+            self.selected_program_name = selected["text"].strip()
+
+    async def _select_random_autocomplete_option(
+        self, page: Any, form: Any, field: Any, selector: str, config: UtelQaConfig
+    ) -> None:
+        # El cambio de modalidad/nivel inicia la carga de programas con un
+        # pequeño retraso. Esperamos a que el ciclo Cargando... haya terminado
+        # y el placeholder permanezca estable antes de escribir la búsqueda.
+        await asyncio.sleep(1.5)
+        deadline = perf_counter() + 30
+        ready_checks = 0
+        while perf_counter() < deadline:
+            placeholder = self._normalize(await field.get_attribute("placeholder") or "")
+            if "cargando" not in placeholder and "loading" not in placeholder:
+                ready_checks += 1
+                if ready_checks >= 3:
+                    break
+            else:
+                ready_checks = 0
+            await asyncio.sleep(0.5)
+        else:
+            raise UtelQaError("utel_fill", "El campo de programa no termino de cargar.", selector)
+
+        results = form.locator('[id^="result-"]')
+        available = []
+        await field.focus()
+        toggle = field.locator("xpath=following-sibling::*[1]")
+        if await toggle.count():
+            try:
+                await toggle.click(force=True)
+                toggle_deadline = perf_counter() + 5
+                while perf_counter() < toggle_deadline:
+                    items = await results.evaluate_all(
+                        """elements => elements
+                            .filter(element => {
+                                const rect = element.getBoundingClientRect();
+                                const style = getComputedStyle(element);
+                                return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden';
+                            })
+                            .map(element => ({ id: element.id, text: (element.innerText || element.textContent || '').trim() }))"""
+                    )
+                    available = [
+                        item for item in items
+                        if item.get("text") and not re.search(r"cargando|sin resultados|selecciona", item["text"], re.I)
+                    ]
+                    if available:
+                        break
+                    await asyncio.sleep(0.4)
+            except Exception:
+                available = []
+        # Estos autocompletados no siempre muestran el catálogo al enfocarse;
+        # necesitan al menos una letra. Se aleatoriza la consulta y después la
+        # opción para evitar usar siempre el mismo programa.
+        probes = list("aeiourst")
+        secrets.SystemRandom().shuffle(probes)
+        for probe in (probes if not available else []):
+            await field.fill(probe)
+            deadline = perf_counter() + 8
+            while perf_counter() < deadline:
+                items = await results.evaluate_all(
+                    """elements => elements
+                        .filter(element => {
+                            const rect = element.getBoundingClientRect();
+                            const style = getComputedStyle(element);
+                            return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden';
+                        })
+                        .map(element => ({ id: element.id, text: (element.innerText || element.textContent || '').trim() }))"""
+                )
+                available = [
+                    item for item in items
+                    if item.get("text") and not re.search(r"cargando|sin resultados|selecciona", item["text"], re.I)
+                ]
+                if available:
+                    break
+                await asyncio.sleep(0.4)
+            if available:
+                break
+        if not available:
+            raise UtelQaError(
+                "utel_fill",
+                f"El autocomplete no mostro programas disponibles. Selecciones actuales: {await self._academic_values(form)}.",
+                selector,
+            )
+        selected = self._rotate_program(available, page.url, config)
+        clicked = await results.evaluate_all(
+            """(elements, wanted) => {
+                const option = elements.find(element => element.id === wanted.id && (element.innerText || element.textContent || '').trim() === wanted.text);
+                if (!option) return false;
+                option.click();
+                return true;
+            }""",
+            selected,
+        )
+        if not clicked:
+            raise UtelQaError("utel_fill", "El programa elegido desaparecio antes de seleccionarse.", selector)
+        await asyncio.sleep(0.8)
+        if (self._normalize(await field.input_value()) != self._normalize(selected["text"])
+                or await form.locator('[id^="result-"]:visible').count()):
+            raise UtelQaError("utel_fill", "El programa se mostro, pero no quedo seleccionado en el formulario.", selector)
+        self.selected_program_name = selected["text"]
+
+    async def _wait_for_select_options(self, field: Any, timeout_seconds: int = 30) -> None:
+        deadline = perf_counter() + timeout_seconds
+        while perf_counter() < deadline:
+            ready = await field.evaluate(
+                """(element) => [...element.options].some((option) =>
+                    option.value && !option.disabled && !/cargando|loading/i.test(option.textContent || '')
+                )"""
+            )
+            if ready:
+                return
+            await asyncio.sleep(0.5)
+        raise UtelQaError("utel_fill", "El formulario no termino de cargar sus opciones.")
+
+    async def _select_optional_bachillerato(self, form: Any) -> None:
+        """Marca SI cuando el formulario pregunta si terminó el bachillerato."""
+
+        selects = form.locator("select")
+        for index in range(await selects.count()):
+            select = selects.nth(index)
+            candidate = await select.evaluate(
+                """(element) => {
+                    const normalize = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, ' ').trim();
+                    const context = element.closest('label, .form-group, .chakra-form-control, div')?.innerText || element.parentElement?.innerText || '';
+                    const option = [...element.options].find((item) => normalize(item.textContent) === 'si');
+                    return { context: normalize(context), value: option?.value || null };
+                }"""
+            )
+            if candidate.get("value") and re.search(
+                r"bachiller|grado\s*11|graduaste|terminado.*estudios|estudios.*terminado",
+                candidate.get("context", ""),
+                re.I,
+            ):
+                await select.select_option(value=candidate["value"])
+                return
+
+    async def _select_random_city(self, form: Any) -> None:
+        """Selecciona una ciudad aleatoria cuando el formulario la solicita."""
+
+        fields = form.locator("select")
+        for index in range(await fields.count()):
+            field = fields.nth(index)
+            if not await field.is_visible() or not await field.is_enabled():
+                continue
+            metadata = await field.evaluate("""element => [element.name, element.id,
+                element.dataset.cy, element.getAttribute('aria-label'),
+                ...Array.from(element.labels || []).map(label => label.textContent),
+                element.options[0]?.textContent].filter(Boolean).join(' ')""")
+            if re.search(r"ciudad|city|provincia|province|estado|state", metadata, re.I):
+                await self._select_random_select_option(field, "Ciudad / provincia / estado")
+
+    async def _select_preferred_contact_channel(self, form: Any) -> None:
+        """Selecciona Cualquier canal en formularios con canal preferido."""
+
+        fields = form.locator('select[name="Canal_Preferido"], select[name*="canal" i], select[name*="channel" i]')
+        if not await fields.count():
+            return
+        field = fields.first
+        options = await field.locator("option").evaluate_all(
+            "elements => elements.map(option => ({ text: option.textContent || '', value: option.value || '' }))"
+        )
+        selected = next(
+            (
+                option for option in options
+                if self._normalize(option["text"]) in {"cualquier canal", "any channel"}
+                or self._normalize(option["value"]) in {"cualquier canal", "any channel"}
+            ),
+            None,
+        )
+        if not selected:
+            raise UtelQaError(
+                "utel_fill", "El formulario pide un canal de contacto, pero no ofrece Cualquier canal."
+            )
+        await field.select_option(value=selected["value"])
+
+    async def _select_random_select_option(self, field: Any, label: str) -> None:
+        await field.wait_for(state="visible", timeout=12000)
+        await self._wait_for_select_options(field)
+        options = await field.locator("option").evaluate_all(
+            r"""elements => elements
+                .filter(option => !option.disabled && option.value
+                    && !/^\s*(seleccion|elige|cargando|loading|ciudad\s*:|provincia\s*:|estado\s*:)/i.test(option.textContent || ''))
+                .map(option => ({ text: option.textContent || '', value: option.value || '' }))"""
+        )
+        if not options:
+            raise UtelQaError("utel_fill", f"El campo {label} no contiene opciones disponibles.")
+        selected = secrets.choice(options)
+        await field.select_option(value=selected["value"])
+
+    async def _submit_utel_form(self, page: Any, form: Any) -> None:
+        submit = form.locator('button[type="submit"], input[type="submit"]').first
+        try:
+            await submit.wait_for(state="visible", timeout=12000)
+            if not await submit.is_enabled():
+                raise UtelQaError(
+                    "utel_submit",
+                    "El boton de envio permanece deshabilitado; falta completar o validar un campo.",
+                    'button[type="submit"], input[type="submit"]',
+                )
+            # El drawer lateral mantiene una animacion/transformacion activa y
+            # Playwright puede esperar indefinidamente a que el boton quede
+            # estable. El click DOM dispara el mismo handler React sin depender
+            # de la geometria animada del elemento.
+            await submit.evaluate("(element) => element.click()")
+        except UtelQaError:
+            raise
+        except Exception as error:
+            raise UtelQaError(
+                "utel_submit",
+                "No se pudo activar el boton de envio del formulario.",
+                'button[type="submit"], input[type="submit"]',
+            ) from error
+        toast = page.locator("#chakra-toast-manager-bottom")
+        try:
+            await toast.wait_for(state="attached", timeout=8000)
+            await page.wait_for_function(
+                """() => {
+                    const toast = document.querySelector("#chakra-toast-manager-bottom");
+                    return toast && toast.innerText.trim().length > 0;
+                }""",
+                timeout=12000,
+            )
+            text = (await toast.inner_text()).strip()
+            if re.search(self._last_submit_error_pattern, text, re.I):
+                raise UtelQaError("utel_submit", f"El formulario mostro un mensaje de error: {text}")
+            success_pattern = r"env[ií]o correcto|pronto recibir[aá]s informaci[oó]n|successfully submitted|your information has been received"
+            if self._last_submit_success_pattern:
+                success_pattern += "|(?:" + self._last_submit_success_pattern + ")"
+            if not re.search(success_pattern, text, re.I):
+                raise UnconfirmedSubmission("utel_submit", f"El mensaje de confirmacion no coincide con el patron configurado: {text}")
+        except UtelQaError:
+            raise
+        except Exception as error:
+            raise UnconfirmedSubmission(
+                "utel_submit",
+                "Envio no confirmado: no aparecio una confirmacion del sitio. El lead podria haberse enviado; revisar antes de reintentar.",
+                "#chakra-toast-manager-bottom",
+            ) from error
+
+    async def _open_inconcert(self, page: Any, config: UtelQaConfig) -> None:
+        parsed = urlparse(config.inconcert_url)
+        self._crm_origin = f"{parsed.scheme}://{parsed.netloc}"
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                await page.goto(config.inconcert_url, wait_until="domcontentloaded", timeout=60000)
+            except Exception as error:  # InConcert puede dejar el DOM util aunque agote el timeout.
+                last_error = error
+            if self._is_crm_route(page.url) or await page.locator("#userId").count():
+                return
+            if attempt < 2:
+                await asyncio.sleep(2)
+        raise UtelQaError(
+            "inconcert_open",
+            "InConcert no respondio despues de 3 intentos. El formulario UTEL no fue enviado.",
+        ) from last_error
+
+    @staticmethod
+    def _is_crm_route(url: str) -> bool:
+        # El parametro redirect del login NO demuestra una sesion iniciada.
+        return bool(re.match(r"^/mas/(?:home|contact)(?:/|$)", urlparse(str(url)).path))
+
+    async def _is_inconcert_login(self, page: Any) -> bool:
+        return (urlparse(page.url).path.rstrip("/") == "/login"
+                or await page.locator("#userId").is_visible())
+
+    async def _recover_inconcert_session(self, page: Any) -> None:
+        if self._crm_session_recoveries >= 1:
+            raise UtelQaError("inconcert_login", "InConcert volvio al login despues de recuperar la sesion. "
+                              "Se detuvo la consulta sin reenviar el formulario; el estado del lead no esta verificado.")
+        self._crm_session_recoveries += 1
+        self.logger.warning("InConcert redirigio al login. Recuperando la sesion una vez; no se reenviara el formulario UTEL.")
+        await self._login_inconcert(page)
+
+    async def _login_inconcert(self, page: Any) -> None:
+        current = urlparse(page.url)
+        if self._crm_origin and f"{current.scheme}://{current.netloc}" != self._crm_origin:
+            raise UtelQaError("inconcert_login", "El CRM redirigio a un dominio distinto del configurado. No se introdujeron credenciales.")
+        if self._is_crm_route(page.url) and not await self._is_inconcert_login(page):
+            return
+        username = self._inconcert_username()
+        password = self._inconcert_password()
+        try:
+            await page.locator("#userId").wait_for(state="visible", timeout=60000)
+            await page.locator("#userId").fill(username)
+            await page.locator("#password").fill(password)
+            await page.locator('button[type="submit"]').first.click()
+            await page.wait_for_url(self._is_crm_route, timeout=60000)
+            await page.locator("#userId").wait_for(state="hidden", timeout=10000)
+            if not self._is_crm_route(page.url) or await self._is_inconcert_login(page):
+                raise RuntimeError("La sesion no quedo establecida")
+        except Exception as error:
+            # No incluir excepciones de fill: pueden contener credenciales.
+            raise UtelQaError(
+                "inconcert_login",
+                "InConcert no completo el inicio de sesion. No se pudo verificar el lead; revisar acceso al CRM.",
+            ) from None
+
+    async def _open_contacts(self, page: Any) -> None:
+        current = urlparse(page.url)
+        contacts_url = f"{current.scheme}://{current.netloc}/mas/contact/people"
+        last_error: Exception | None = None
+        search_input = page.locator('input[placeholder="Ingrese un texto para buscar"]:visible').first
+        for attempt in range(3):
+            try:
+                await page.goto(contacts_url, wait_until="domcontentloaded", timeout=60000)
+                await page.wait_for_function(r"""() => location.pathname.replace(/\/$/, '') === '/login'
+                    || !!document.querySelector('#userId')
+                    || !!Array.from(document.querySelectorAll('input[placeholder="Ingrese un texto para buscar"]'))
+                        .find(el => el.getClientRects().length)""", timeout=45000)
+                if await self._is_inconcert_login(page):
+                    await self._recover_inconcert_session(page)
+                    continue
+                await search_input.wait_for(state="visible", timeout=45000)
+                return
+            except UtelQaError:
+                raise
+            except Exception as error:
+                last_error = error
+                if await self._is_inconcert_login(page):
+                    await self._recover_inconcert_session(page)
+                    continue
+                if await search_input.count() and await search_input.is_visible():
+                    return
+                if attempt < 2:
+                    await asyncio.sleep(2)
+        raise UtelQaError(
+            "inconcert_contacts",
+            "No se pudo abrir Contactos en InConcert despues de 3 intentos. No se pudo verificar el estado del lead.",
+        ) from last_error
+
+    async def _search_contact_with_session(self, page: Any, filter_name: str, value: str, expected_name: str) -> bool:
+        for attempt in range(2):
+            if await self._is_inconcert_login(page):
+                await self._recover_inconcert_session(page)
+                await self._open_contacts(page)
+            try:
+                await self._apply_contact_search(page, filter_name, value)
+                found = await self._has_single_exact_name(page, expected_name)
+                if not await self._is_inconcert_login(page):
+                    return found
+            except Exception as error:
+                if not await self._is_inconcert_login(page):
+                    raise
+                self.logger.warning("La consulta de contactos fue interrumpida por el login.")
+            await self._recover_inconcert_session(page)
+            await self._open_contacts(page)
+        raise UtelQaError("inconcert_search", "No se pudo completar la consulta despues de recuperar la sesion. No se reenvio el formulario.")
+
+    async def _search_lead(self, page: Any, email: str, expected_name: str) -> None:
+        # El listado no muestra Email. Filtramos por email y validamos la fila
+        # mediante el nombre sintetico unico DaniloN.
+        indexing_deadline = perf_counter() + 180
+        attempt = 0
+        while True:
+            attempt += 1
+            # InConcert normaliza los emails al almacenarlos y su filtro puede
+            # ser sensible a mayusculas/minusculas.
+            if await self._search_contact_with_session(page, "Email", email.casefold(), expected_name):
+                if attempt > 1:
+                    self.logger.info(
+                        "Lead %s localizado en InConcert despues de %s consultas de indexacion.",
+                        expected_name,
+                        attempt,
+                    )
+                return
+
+            remaining = indexing_deadline - perf_counter()
+            if remaining <= 0:
+                break
+            self.logger.info(
+                "InConcert aun no indexa %s; nuevo intento en 10 segundos (intento %s).",
+                expected_name,
+                attempt,
+            )
+            await asyncio.sleep(min(10, remaining))
+
+        # En algunos tenants el filtro Email de la vista basica es inestable.
+        # El email se vuelve a comprobar dentro de Gestionar antes de aceptar.
+        # El CRM concatena un apellido vacio como un punto ("Danilo41 .").
+        if await self._search_contact_with_session(page, "Nombre", f"{expected_name} .", expected_name):
+            self.logger.warning(
+                "El lead se localizo por el nombre unico %s; el email se verificara en Gestionar.",
+                expected_name,
+            )
+            return
+        raise UtelQaError(
+            "inconcert_search",
+            f"No se encontro el lead por email ({email}) ni por nombre ({expected_name}) despues de esperar su indexacion.",
+        )
+
+    async def _apply_contact_search(self, page: Any, filter_name: str, value: str) -> None:
+        search_input = page.locator('input[placeholder="Ingrese un texto para buscar"]:visible').first
+        filter_container = search_input.locator("xpath=ancestor::div[contains(@class,'input-group')][1]")
+        filter_button = filter_container.locator("button.dropdown-toggle").first
+        current_filter = self._normalize(await filter_button.inner_text())
+        if current_filter != self._normalize(filter_name):
+            await filter_button.click(force=True)
+            option = page.locator('a.dropdown-item:visible').filter(
+                has_text=re.compile(rf"^{re.escape(filter_name)}$", re.I)
+            ).first
+            await option.click(force=True)
+        await search_input.fill(value)
+        condition_container = filter_container.locator("xpath=ancestor::div[contains(@class,'flexCondition')][1]")
+        search_button = condition_container.locator("button[title='Buscar']:visible").first
+        try:
+            async with page.expect_response(
+                lambda response: "/api/contact/get_contacts/" in response.url
+                and response.request.method == "POST",
+                timeout=30000,
+            ):
+                await search_button.click(force=True)
+        except Exception:
+            if await self._is_inconcert_login(page):
+                raise
+            # Si la respuesta no es observable, la tabla sigue siendo la fuente
+            # de verdad para la comprobacion posterior.
+            await search_button.click(force=True)
+        await asyncio.sleep(1)
+
+    async def _has_single_exact_name(self, page: Any, expected_name: str) -> bool:
+        matches = await self._matching_contact_rows(page, expected_name)
+        if len(matches) > 1:
+            raise UtelQaError(
+                "inconcert_search",
+                f"InConcert devolvio {len(matches)} contactos con el nombre {expected_name}; requiere revision manual.",
+            )
+        return len(matches) == 1
+
+    async def _matching_contact_rows(self, page: Any, expected_name: str) -> list[Any]:
+        expected = self._normalize(expected_name).strip(" .")
+        rows = page.locator("table tbody tr:visible")
+        matching_rows: list[Any] = []
+        for row_index in range(await rows.count()):
+            row = rows.nth(row_index)
+            cells = row.locator("td")
+            for cell_index in range(await cells.count()):
+                cell_text = self._normalize((await cells.nth(cell_index).inner_text()).strip()).strip(" .")
+                if cell_text == expected:
+                    matching_rows.append(row)
+                    break
+        return matching_rows
+
+    async def _open_manage(self, page: Any, expected_name: str, expected_email: str) -> None:
+        matching_rows = await self._matching_contact_rows(page, expected_name)
+        if len(matching_rows) != 1:
+            raise UtelQaError(
+                "inconcert_manage",
+                f"No se pudo identificar una unica fila para {expected_name} antes de abrir Gestionar.",
+            )
+        result_row = matching_rows[0]
+        menu_button = result_row.locator("button.btn-only-icon:visible, button:visible").last
+        await menu_button.click(force=True)
+        manage = page.locator('[title="Gestionar"]:visible').first
+        if await manage.count():
+            await manage.click()
+        else:
+            await page.get_by_text("Gestionar", exact=True).first.click()
+        try:
+            await page.wait_for_url(re.compile(r"/mas/contact/people/view/\d+"), timeout=60000)
+        except Exception:
+            await page.wait_for_load_state("domcontentloaded")
+        await page.get_by_text("Actividad", exact=True).first.wait_for(state="visible", timeout=60000)
+        await page.wait_for_function(
+            """({ expectedName, expectedEmail }) => {
+                const text = (document.body?.innerText || '').toLocaleLowerCase();
+                return text.includes(expectedName.toLocaleLowerCase())
+                    && text.includes(expectedEmail.toLocaleLowerCase());
+            }""",
+            arg={"expectedName": expected_name, "expectedEmail": expected_email},
+            timeout=60000,
+        )
+        body_text = await page.locator("body").inner_text()
+        if expected_email.casefold() not in body_text.casefold():
+            raise UtelQaError(
+                "inconcert_manage",
+                f"El contacto {expected_name} fue abierto, pero su email no coincide con {expected_email}.",
+            )
+        self.lead_url = page.url
+
+    async def _confirm_conversion(self, page: Any, config: UtelQaConfig) -> None:
+        # La version actual de InConcert expone Conversion como texto de la
+        # linea de tiempo; el titulo Actividad no es un control desplegable.
+        conversion = page.locator('.timeline-icon-conversion[title="ConversiÃ³n"], .timeline-icon-conversion[title="Conversion"]').first
+        conversion = page.get_by_text(re.compile(r"^Conversi[oó]n$", re.I)).first
+        conversion_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                await conversion.wait_for(state="visible", timeout=45000)
+                await conversion.click()
+                conversion_error = None
+                break
+            except Exception as error:
+                conversion_error = error
+                if attempt < 2:
+                    await page.reload(wait_until="domcontentloaded", timeout=60000)
+                    await asyncio.sleep(5)
+        if conversion_error is not None:
+            raise UtelQaError(
+                "inconcert_conversion",
+                "No se encontro el evento Conversion en la actividad del lead.",
+                "text=/^Conversion$/i",
+            ) from conversion_error
+        if config.program_name:
+            program_data = {"found": False, "text": ""}
+            for _ in range(20):
+                program_data = await page.evaluate(
+                    """() => {
+                        const normalize = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, ' ').trim();
+                        const label = [...document.querySelectorAll('*')].find((node) => {
+                            if (normalize(node.textContent) !== 'programadeinteres' || node.children.length !== 0) return false;
+                            const style = window.getComputedStyle(node);
+                            return style.display !== 'none' && style.visibility !== 'hidden' && node.getClientRects().length > 0;
+                        });
+                        if (!label) return { found: false, text: '' };
+                        const container = label.parentElement;
+                        return { found: true, text: container?.innerText || container?.textContent || '' };
+                    }"""
+                )
+                if program_data.get("found"):
+                    break
+                await asyncio.sleep(1)
+            expected_programs = [self._normalize(config.program_name)]
+            for prefix in ("carrera en ", "licenciatura en ", "maestria en ", "doctorado en "):
+                if expected_programs[0].startswith(prefix):
+                    expected_programs.append(expected_programs[0][len(prefix):].strip())
+            actual_program = self._normalize(program_data.get("text", ""))
+            actual_program = re.sub(r"^programadeinteres\s*", "", actual_program).strip()
+            program_matches = any(
+                expected == actual_program
+                or expected in actual_program
+                or actual_program in expected
+                or SequenceMatcher(None, expected, actual_program).ratio() >= 0.96
+                for expected in expected_programs
+                if expected and actual_program
+            )
+            if not program_data.get("found") or not program_matches:
+                raise UtelQaError(
+                    "inconcert_program_validation",
+                    f"El programa de InConcert no coincide. Excel: '{config.program_name}' | InConcert: '{actual_program or 'sin valor'}'.",
+                    "ProgramaDeInteres",
+                )
+
+    async def _set_dynamic_field(self, form: Any, selector: str, value: str) -> None:
+        if not value:
+            return
+        field = form.locator(selector).first
+        if not await field.count():
+            return
+        tag_name = await field.evaluate("(el) => el.tagName.toLowerCase()")
+        if selector == '[data-cy="productsInput"]' and tag_name == "input":
+            await self._select_program_autocomplete(form, field, value, selector)
+            return
+        if tag_name == "select":
+            await field.wait_for(state="visible", timeout=12000)
+            await self._wait_for_select_options(field)
+            options = await field.locator("option").evaluate_all(
+                "elements => elements.map(option => ({ text: option.textContent || '', value: option.value || '' }))"
+            )
+            wanted = [self._normalize(value)]
+            # En los formularios de algunas PDP, el nivel Licenciatura se
+            # representa como el área "Carrera"; no existe una option literal
+            # llamada Licenciatura.
+            if selector == '[data-cy="educationLevelInput"]':
+                normalized_level = self._normalize(value)
+                if normalized_level and not normalized_level.endswith("s"):
+                    wanted.append(f"{normalized_level}s")
+                if "licenciatura" in normalized_level:
+                    wanted.extend(["licenciatura", "licenciaturas", "carrera", "carreras"])
+                elif "maestria" in normalized_level:
+                    wanted.extend(["maestria", "maestrias", "master", "masteres", "magister", "magisteres"])
+                elif "doctorado" in normalized_level:
+                    wanted.extend(["doctorado", "doctorados"])
+                elif "diplomado" in normalized_level:
+                    wanted.extend(["diplomado", "diplomados"])
+                elif "bootcamp" in normalized_level:
+                    wanted.extend(["bootcamp", "bootcamps"])
+            if selector == '[data-cy="productsInput"]':
+                normalized_program = self._normalize(value)
+                # UTEL puede mostrar el programa sin el prefijo académico
+                # que sí aparece en el Excel o en el H1 de la PDP.
+                for prefix in ("carrera en ", "licenciatura en ", "maestria en ", "doctorado en "):
+                    if normalized_program.startswith(prefix):
+                        wanted.append(normalized_program[len(prefix):].strip())
+                if normalized_program.startswith("carrera "):
+                    wanted.append(normalized_program[len("carrera "):].strip())
+            selected = next(
+                (
+                    option for option in options
+                    if self._normalize(option["text"]) in wanted or self._normalize(option["value"]) in wanted
+                ),
+                None,
+            )
+            if selected is None:
+                available = ", ".join(option["text"].strip() for option in options if option["text"].strip())
+                raise UtelQaError(
+                    "utel_fill",
+                    f"El formulario no tiene una opcion equivalente a '{value}'. Opciones disponibles: {available}.",
+                    selector,
+                )
+            for attempt in range(3):
+                try:
+                    await field.select_option(value=selected["value"])
+                    await asyncio.sleep(1)
+                    return
+                except Exception as error:
+                    if attempt == 2:
+                        raise UtelQaError(
+                            "utel_fill",
+                            f"No se pudo seleccionar '{selected['text'].strip()}' porque el formulario cambio sus opciones.",
+                            selector,
+                        ) from error
+                    await asyncio.sleep(0.5)
+        await field.fill(value)
+        await field.press("Enter")
+
+    async def _select_program_autocomplete(self, form: Any, field: Any, value: str, selector: str) -> None:
+        """Selecciona el programa exacto en los autocompletados de UTEL."""
+
+        deadline = perf_counter() + 30
+        while perf_counter() < deadline:
+            placeholder = self._normalize(await field.get_attribute("placeholder") or "")
+            if "cargando" not in placeholder and "loading" not in placeholder:
+                break
+            await asyncio.sleep(0.5)
+        else:
+            raise UtelQaError("utel_fill", "El campo de programa no termino de cargar.", selector)
+
+        candidates = [value.strip()]
+        normalized_program = self._normalize(value)
+        for prefix in ("carrera en ", "licenciatura en ", "maestria en ", "doctorado en "):
+            if normalized_program.startswith(prefix):
+                # Conserva acentos y mayusculas quitando el mismo numero de
+                # caracteres que ocupa el prefijo visible del H1.
+                candidates.append(value.strip()[len(prefix):].strip())
+
+        for search_value in dict.fromkeys(item for item in candidates if item):
+            await field.fill(search_value)
+            try:
+                results = form.locator('[id^="result-"]:visible')
+                await results.first.wait_for(state="visible", timeout=6000)
+            except Exception:
+                continue
+            wanted = {self._normalize(item) for item in candidates}
+            chosen = None
+            for index in range(await results.count()):
+                result = results.nth(index)
+                result_text = self._normalize((await result.inner_text()).strip())
+                if result_text in wanted:
+                    chosen = result
+                    break
+            if chosen is None and await results.count() == 1:
+                chosen = results.first
+            if chosen is not None:
+                # Los listados largos del formulario lateral viven dentro de
+                # un contenedor con scroll. Un click fisico puede quedar
+                # bloqueado por el overlay aunque la opcion sea visible; el
+                # click DOM conserva el handler React sin depender del scroll.
+                await chosen.evaluate("(element) => element.click()")
+                await asyncio.sleep(0.8)
+                current_value = self._normalize(await field.input_value())
+                dropdown_closed = await form.locator('[id^="result-"]:visible').count() == 0
+                if current_value in wanted and dropdown_closed:
+                    self.selected_program_name = value.strip()
+                    return
+
+        raise UtelQaError(
+            "utel_fill",
+            f"No se pudo seleccionar en el formulario el programa de la pagina: '{value}'.",
+            selector,
+        )
+
+    async def _dry_run_stop(self) -> None:
+        self.logger.info("Dry run activo: no se enviara el formulario ni se abrira InConcert.")
+
+    async def _fill_first_available(self, form: Any, selectors: list[str], value: str) -> None:
+        for selector in selectors:
+            locator = form.locator(selector).first
+            if await locator.count():
+                await locator.fill(value)
+                return
+        raise UtelQaError("utel_fill", f"No se encontro campo para completar el valor requerido.", ", ".join(selectors))
+
+    async def _set_country_if_possible(self, form: Any, country: str) -> None:
+        field = form.locator('[data-cy="countryCallingCode"]').first
+        if not await field.count() or await field.is_disabled():
+            return
+        code = self.COUNTRY_CODES.get(self._normalize(country))
+        try:
+            tag_name = await field.evaluate("(el) => el.tagName.toLowerCase()")
+            if tag_name == "select" and code:
+                await field.select_option(label=re.compile(re.escape(code)))
+            else:
+                await field.fill(country)
+                await field.press("Enter")
+        except Exception:
+            self.logger.info("No se pudo ajustar pais; se usara el valor preseleccionado.")
+
+    async def _check_privacy(self, form: Any) -> None:
+        selector = '[data-cy="checkboxGroup"] input[type="checkbox"], input[type="checkbox"]'
+        checkboxes = form.locator(selector)
+        if not await checkboxes.count():
+            raise UtelQaError("utel_fill", "No se encontro la aceptacion de privacidad.", selector)
+        checked = 0
+        for index in range(await checkboxes.count()):
+            checkbox = checkboxes.nth(index)
+            if await checkbox.is_disabled():
+                continue
+            if not await checkbox.is_checked():
+                try:
+                    await checkbox.evaluate("(element) => element.click()")
+                except Exception:
+                    await checkbox.check(force=True)
+            if not await checkbox.is_checked():
+                raise UtelQaError(
+                    "utel_fill",
+                    "No se pudo aceptar uno de los consentimientos requeridos.",
+                    selector,
+                )
+            checked += 1
+        if not checked:
+            raise UtelQaError("utel_fill", "No se pudo aceptar ningun consentimiento.", selector)
+
+    async def _first_visible_program_link(self, page: Any, menu_option: Any | None = None) -> Any | None:
+        if menu_option is not None:
+            option_text = self._normalize((await menu_option.inner_text()).strip())
+            option_box = await menu_option.bounding_box()
+            menu_item = menu_option.locator("xpath=ancestor::li[1]")
+            if await menu_item.count():
+                nested_links = menu_item.locator("a[href]")
+                for index in range(await nested_links.count()):
+                    candidate = nested_links.nth(index)
+                    if await candidate.is_visible():
+                        text = (await candidate.inner_text()).strip()
+                        candidate_box = await candidate.bounding_box()
+                        is_adjacent_submenu = (
+                            not option_box
+                            or not candidate_box
+                            or (
+                                candidate_box["x"] > option_box["x"] + 20
+                                and candidate_box["y"] >= option_box["y"] - 40
+                                and candidate_box["y"] <= option_box["y"] + 650
+                            )
+                        )
+                        if (
+                            text
+                            and self._normalize(text) != option_text
+                            and is_adjacent_submenu
+                            and await self._is_safe_program_link(candidate, page)
+                        ):
+                            return candidate
+            # Los mega menus nuevos no siempre usan <li>. En ese caso, el
+            # submenu de programas se identifica por su posicion a la derecha
+            # del nivel que acabamos de desplegar.
+            if option_box:
+                visible_links = page.locator("a[href]:visible")
+                for index in range(await visible_links.count()):
+                    candidate = visible_links.nth(index)
+                    text = (await candidate.inner_text()).strip()
+                    candidate_box = await candidate.bounding_box()
+                    if (
+                        text
+                        and candidate_box
+                        and self._normalize(text) != option_text
+                        and candidate_box["x"] > option_box["x"] + 20
+                        and candidate_box["y"] >= option_box["y"] - 40
+                        and candidate_box["y"] <= option_box["y"] + 650
+                        and not re.search(r"ver todos los programas", text, re.I)
+                        and await self._is_safe_program_link(candidate, page)
+                    ):
+                        return candidate
+        links = page.locator('a[href*="licenciatura"], a[href*="maestr"], a[href*="doctor"], a[href*="program"]')
+        for index in range(await links.count()):
+            candidate = links.nth(index)
+            if await candidate.is_visible():
+                text = (await candidate.inner_text()).strip()
+                if (
+                    text
+                    and not re.search(r"modalidad|oferta|aspirantes|becas|^licenciaturas?$|^maestr[ií]as?$|^doctorados?$|ver todos", text, re.I)
+                    and await self._is_safe_program_link(candidate, page)
+                ):
+                    return candidate
+        return None
+
+    async def _is_safe_program_link(self, candidate: Any, page: Any) -> bool:
+        """Impide que la navegacion academica abra telefono, WhatsApp u otros accesos globales."""
+
+        href = (await candidate.get_attribute("href") or "").strip()
+        text = (await candidate.inner_text()).strip()
+        normalized_href = href.casefold()
+        normalized_text = self._normalize(text)
+        if not href or normalized_href.startswith(("tel:", "mailto:", "javascript:")):
+            return False
+        if any(token in normalized_href for token in ("whatsapp", "wa.me", "api.whatsapp", "campus")):
+            return False
+        if re.search(r"inscripciones|estudiantes|campus virtual|solicitar informacion|contacto", normalized_text, re.I):
+            return False
+        destination = urlparse(href)
+        current = urlparse(page.url)
+        if destination.netloc and current.netloc and destination.netloc.casefold() != current.netloc.casefold():
+            return False
+        return True
+
+    async def _text_locator(self, page: Any, candidates: list[str]) -> Any:
+        pattern = "|".join(re.escape(candidate.strip()) for candidate in candidates if candidate.strip())
+        if not pattern:
+            raise UtelQaError("utel_navigation", "La opcion solicitada esta vacia.")
+        matches = page.get_by_text(re.compile(rf"^({pattern})s?$", re.I))
+        for index in range(await matches.count()):
+            candidate = matches.nth(index)
+            if await candidate.is_visible():
+                return candidate
+        # Respaldo tolerante a acentos mal codificados en el Excel o en el DOM.
+        normalized_candidates = {self._normalize(item) for item in candidates if item.strip()}
+        elements = page.locator("a:visible, button:visible, [role='menuitem']:visible")
+        for index in range(await elements.count()):
+            candidate = elements.nth(index)
+            text = self._normalize((await candidate.inner_text()).strip())
+            if text in normalized_candidates or text.rstrip("s") in {item.rstrip("s") for item in normalized_candidates}:
+                return candidate
+        raise UtelQaError(
+            "utel_navigation",
+            f"No se encontro una opcion visible entre: {', '.join(candidates)}.",
+            f"text=/{pattern}/i",
+        )
+
+    def _level_candidates(self, level: str) -> list[str]:
+        candidates = self._spanish_variants(level)
+        if not level.lower().endswith("s"):
+            candidates.append(f"{level}s")
+        normalized = self._normalize(level)
+        if "licenciatura" in normalized:
+            candidates.extend(["Licenciaturas", "Carrera", "Carreras"])
+        elif "maestr" in normalized:
+            candidates.extend(["Maestrias", "Maestr\u00edas", "Magister", "Magisteres", "Mag\u00edster", "Mag\u00edsteres"])
+        return candidates
+
+    def _menu_candidates(self, value: str) -> list[str]:
+        candidates = self._spanish_variants(value)
+        normalized = self._normalize(value)
+        if "diplomado" in normalized:
+            candidates.extend(["Diplomados", "Diplomados presenciales"])
+        if "masteres internacionales" in normalized:
+            candidates.extend(["MÃ¡steres Internacionales", "Masteres Internacionales"])
+        if normalized == "maestrias":
+            candidates.extend(["MaestrÃ­as", "Maestrias"])
+        if normalized == "licenciaturas":
+            candidates.extend(["Licenciaturas", "Carrera", "Carreras"])
+        if normalized == "maestrias":
+            candidates.extend(["Maestrias", "Maestr\u00edas", "Magisteres", "Mag\u00edsteres"])
+        if normalized == "modalidad en linea":
+            candidates.extend(["Modalidad en lÃ­nea", "Modalidad en linea"])
+        if normalized == "modalidad hibrida":
+            candidates.extend(["Modalidad hÃ­brida", "Modalidad hibrida"])
+        return list(dict.fromkeys(candidates))
+
+    def _education_level_candidates(self, value: str) -> list[str]:
+        """Equivalencias de nivel usadas por los portales con Oferta educativa."""
+
+        candidates = self._menu_candidates(value)
+        normalized = self._normalize(value)
+        if "licenciatura" in normalized or normalized in {"carrera", "carreras"}:
+            candidates.extend(["Licenciatura", "Licenciaturas", "Carrera", "Carreras"])
+        elif "maestr" in normalized or "magister" in normalized:
+            candidates.extend(["Maestria", "Maestrias", "Maestr\u00eda", "Maestr\u00edas", "Magister", "Magisteres", "Mag\u00edster", "Mag\u00edsteres"])
+        elif "doctor" in normalized:
+            candidates.extend(["Doctorado", "Doctorados"])
+        return list(dict.fromkeys(candidates))
+
+    @staticmethod
+    def _spanish_variants(value: str) -> list[str]:
+        """Genera variantes comunes con y sin acento para textos visibles."""
+
+        variants = {value.strip()}
+        replacements = {
+            "linea": "línea",
+            "Linea": "Línea",
+            "maestria": "maestría",
+            "Maestria": "Maestría",
+            "hibrida": "híbrida",
+            "Hibrida": "Híbrida",
+        }
+        replacements.update({
+            "linea": "l\u00ednea",
+            "Linea": "L\u00ednea",
+            "maestria": "maestr\u00eda",
+            "Maestria": "Maestr\u00eda",
+            "hibrida": "h\u00edbrida",
+            "Hibrida": "H\u00edbrida",
+            "educacion": "educaci\u00f3n",
+            "Educacion": "Educaci\u00f3n",
+            "titulacion": "titulaci\u00f3n",
+            "Titulacion": "Titulaci\u00f3n",
+            "ingles": "ingl\u00e9s",
+            "Ingles": "Ingl\u00e9s",
+        })
+        for source, target in replacements.items():
+            if source in value:
+                variants.add(value.replace(source, target).strip())
+        return [variant for variant in variants if variant]
+
+    def _validate_config(self, config: UtelQaConfig) -> None:
+        urls = {"utel_url": config.utel_url}
+        if not config.dry_run:
+            urls["inconcert_url"] = config.inconcert_url
+        for field_name, value in urls.items():
+            parsed = urlparse(value)
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                raise UtelQaError("config", f"La URL {field_name} no es valida.")
+        if config.form_type not in self.FORM_IDS:
+            raise UtelQaError("config", "El tipo de formulario debe ser lateral, tarjeta o footer.")
+        if config.program_selection_strategy == "exact_match" and not config.program_name:
+            raise UtelQaError("config", "Debes indicar el nombre del programa cuando la estrategia es exact_match.")
+        if not config.dry_run and (not self._inconcert_username() or not self._inconcert_password()):
+            raise UtelQaError(
+                "config",
+                "Faltan credenciales de InConcert. Configura INCONCERT_USERNAME/INCONCERT_PASSWORD o CRM_USERNAME/CRM_PASSWORD en .env.",
+            )
+        self._last_submit_success_pattern = config.submit_success_pattern.strip()
+        self._last_submit_error_pattern = config.submit_error_pattern.strip() or "error|invalido|inválido|obligatorio|requerido|fall"
+
+    async def _hover_center(self, locator: Any, page: Any) -> None:
+        await locator.wait_for(state="visible")
+        box = await locator.bounding_box()
+        if box:
+            await page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        else:
+            await locator.hover()
+
+    def _append_failed_stage(self, number: int, error: UtelQaError, url: str | None, screenshot: str | None) -> None:
+        if error.stage == "utel_submit":
+            self.status_flags["utel_submission"] = "failed"
+            self.status_flags["utel_submission_message"] = str(error)
+        if error.stage == "inconcert_login":
+            self.status_flags["inconcert_login"] = "failed"
+        if error.stage == "inconcert_search":
+            self.status_flags["lead_found"] = "failed"
+        if error.stage == "inconcert_conversion":
+            self.status_flags["conversion_found"] = "failed"
+        self.stage_results.append(
+            UtelQaStageResult(
+                step_number=number,
+                stage=error.stage,
+                status="FAIL",
+                message=str(error),
+                selector=error.selector,
+                url=url,
+                screenshot=screenshot,
+            )
+        )
+
+    async def _safe_screenshot(self, page: Any, name: str | None) -> str | None:
+        if not name or self.evidence_directory is None:
+            return None
+        try:
+            file_path = self.evidence_directory / f"{name}.png"
+            try:
+                await page.screenshot(path=str(file_path), full_page=True, animations="disabled", timeout=10000)
+            except Exception:
+                # Una captura completa puede fallar en páginas largas; todavía
+                # conservamos evidencia visible sin retrasar toda la fila.
+                await page.screenshot(path=str(file_path), full_page=False, animations="disabled", timeout=5000)
+            relative = file_path.relative_to(self.settings.storage_dir.parent).as_posix()
+            self.screenshots.append(relative)
+            return relative
+        except Exception:
+            self.logger.exception("No se pudo guardar screenshot %s", name)
+            return None
+
+    def _evidence_directory(self, name: str) -> Path:
+        now = datetime.now()
+        directory = self.settings.storage_dir / "screenshots" / "utel_inconcert" / now.date().isoformat() / f"{self._slug(name)}_{now.strftime('%H%M%S_%f')}"
+        directory.mkdir(parents=True, exist_ok=True)
+        return directory
+
+    @staticmethod
+    def _secret_value(value: str | SecretStr) -> str:
+        if isinstance(value, SecretStr):
+            return value.get_secret_value().strip()
+        return str(value or "").strip()
+
+    def _inconcert_username(self) -> str:
+        return self._secret_value(getattr(self.settings, "inconcert_username", "")) or self._secret_value(self.settings.crm_username)
+
+    def _inconcert_password(self) -> str:
+        return self._secret_value(getattr(self.settings, "inconcert_password", "")) or self._secret_value(self.settings.crm_password)
+
+    @staticmethod
+    def _normalize(value: str) -> str:
+        normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii").lower()
+        return re.sub(r"\s+", " ", normalized).strip()
+
+    @staticmethod
+    def _slug(value: str) -> str:
+        normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+        return re.sub(r"[^a-zA-Z0-9_-]+", "-", normalized).strip("-").lower() or "utel-inconcert"
+
+    @staticmethod
+    def _friendly_error(error: Exception) -> str:
+        message = str(error).strip()
+        # El panel de diagnóstico permite copiar/descargar el detalle técnico.
+        # Conservamos el call log completo de Playwright para poder reproducirlo.
+        return message[:8000] if message else "Ocurrio un error durante la automatizacion."

@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     crm_url: str = ""
     crm_username: str = ""
     crm_password: str = ""
+    inconcert_username: str = ""
+    inconcert_password: str = ""
 
     # Servicios de IA: las claves se cargan desde .env y nunca se envían al renderer.
     ollama_api_key: SecretStr = SecretStr("")

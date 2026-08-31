@@ -1,39 +1,18 @@
 "use strict";
 
-const { app, BrowserWindow } = require("electron");
-const fs = require("node:fs");
+const { app, BrowserWindow, dialog } = require("electron");
 const path = require("node:path");
-const { spawn } = require("node:child_process");
+const { launchBackend, stopBackend } = require("./backend-process");
 
 let backendProcess;
 
-function startBackend() {
-  // Electron arranca FastAPI como proceso local para que el usuario no tenga que
-  // abrir una terminal. Las dependencias de Python deben estar instaladas antes.
-  const projectDirectory = path.resolve(__dirname, "../..");
-  const virtualEnvironmentPython = process.platform === "win32"
-    ? path.join(projectDirectory, ".venv", "Scripts", "python.exe")
-    : path.join(projectDirectory, ".venv", "bin", "python");
-  const pythonCommand = process.env.PYTHON_COMMAND
-    || (fs.existsSync(virtualEnvironmentPython) ? virtualEnvironmentPython : (process.platform === "win32" ? "python" : "python3"));
-  const backendDirectory = path.resolve(__dirname, "../../backend");
-  const backendArguments = ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "" + (process.env.API_PORT || "8000")];
-
-  backendProcess = spawn(pythonCommand, backendArguments, {
-    cwd: backendDirectory,
-    env: { ...process.env, PYTHONUNBUFFERED: "1" },
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  });
-
-  backendProcess.stdout.on("data", (data) => console.log(`[FastAPI] ${data}`));
-  backendProcess.stderr.on("data", (data) => console.error(`[FastAPI] ${data}`));
-  backendProcess.on("error", (error) => {
-    console.error("No fue posible iniciar FastAPI:", error.message);
-  });
+async function startBackend() {
+  const launched = await launchBackend(path.resolve(__dirname, "../.."));
+  backendProcess = launched.child;
+  process.env.API_URL = launched.apiUrl;
   backendProcess.on("exit", (code) => {
-    if (code && !app.isQuitting) {
-      console.error(`FastAPI terminó con código ${code}.`);
+    if (!app.isQuitting) {
+      dialog.showErrorBox("Backend desconectado", `El motor de pruebas terminó (código ${code}). Reinicia la aplicación antes de ejecutar otra prueba.`);
     }
   });
 }
@@ -53,21 +32,35 @@ function createWindow() {
     },
   });
 
+  window.webContents.on("console-message", (_event, level, message, line, sourceId) => {
+    if (level >= 2) console.error(`[Renderer] ${message} (${sourceId}:${line})`);
+  });
+  window.webContents.on("render-process-gone", (_event, details) => {
+    console.error(`[Renderer] proceso terminado: ${details.reason}`);
+  });
   window.loadFile(path.resolve(__dirname, "../index.html"));
 }
 
-app.whenReady().then(() => {
-  startBackend();
-  createWindow();
+app.whenReady().then(async () => {
+  try {
+    await startBackend();
+    createWindow();
+  } catch (error) {
+    dialog.showErrorBox("No se pudo iniciar el motor de pruebas", error.message);
+    app.quit();
+    return;
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
-app.on("before-quit", () => {
+app.on("before-quit", (event) => {
+  if (app.isQuitting) return;
   app.isQuitting = true;
-  if (backendProcess && !backendProcess.killed) backendProcess.kill();
+  event.preventDefault();
+  stopBackend(backendProcess).finally(() => app.quit());
 });
 
 app.on("window-all-closed", () => {

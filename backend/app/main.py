@@ -1,5 +1,6 @@
 """Punto de entrada de FastAPI para la plataforma de QA."""
 
+import asyncio
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -8,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .automations.generic_bot.recorder import RecorderManager
+from .automations.utel_inconcert.runner import UtelInconcertRunner
 from .api.routes import router
 from .config.settings import Settings, get_settings
 from .database.connection import initialize_database
@@ -27,6 +29,13 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        bot_tasks = list(application.state.bot_tasks.values())
+        for task in bot_tasks:
+            if not task.done():
+                task.cancel()
+        if bot_tasks:
+            await asyncio.gather(*bot_tasks, return_exceptions=True)
+        await UtelInconcertRunner._close_open_session()
         await application.state.recorder_manager.close_all()
 
 
@@ -69,6 +78,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application.state.settings = settings or get_settings()
     application.state.recorder_manager = RecorderManager()
+    application.state.bot_jobs = {}
+    application.state.utel_inconcert_jobs = {}
+    application.state.utel_batch_jobs = {}
+    application.state.bot_tasks = {}
     application.include_router(router)
     return application
 

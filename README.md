@@ -159,6 +159,22 @@ Cada automatización tendrá su propio módulo dentro de `backend/app/automation
 - **La ventana no abre:** ejecuta `npm install` y comprueba la versión de Node.
 - **No aparecen logs:** verifica que el proceso tenga permisos de escritura en `storage/`.
 
+## Bot UTEL + InConcert
+
+El modulo **Bot de verificaciones** ejecuta ahora un flujo especializado de QA:
+
+UTEL -> modalidad/nivel/programa -> formulario BLC -> envio del lead -> InConcert -> Contactos -> busqueda por email -> Gestionar -> Actividad -> Conversion.
+
+Para usarlo:
+
+1. Configura en `.env` las credenciales `INCONCERT_USERNAME` e `INCONCERT_PASSWORD`. Tambien se aceptan `CRM_USERNAME` y `CRM_PASSWORD`.
+2. Abre **Bot de verificaciones** en la app.
+3. Completa pais, URL de UTEL, URL de InConcert, modalidad, nivel, tipo de formulario y datos del lead de prueba.
+4. Usa **Programa opcional** solo si quieres seleccionar un programa concreto; si queda vacio, el bot intenta elegir el primer programa visible.
+5. Pulsa **Validar** y luego **Ejecutar flujo**.
+
+FastAPI crea la ejecucion en segundo plano con `POST /api/bots/utel-inconcert/run`, y la interfaz consulta el estado con `GET /api/bots/utel-inconcert/runs/{job_id}`. El flujo guarda screenshots en `storage/screenshots/utel_inconcert/` al abrir UTEL, antes y despues del envio, despues del login, al encontrar el lead, al abrir Gestionar, al encontrar Conversion y cuando ocurre un error. El modo debug visible desactiva headless y deja el navegador abierto al final para revision manual.
+
 ## Próxima fase
 
 Antes de avanzar hay que verificar esta base con los tests y la prueba manual. El Bot de verificaciones ya tiene el primer ejecutor; el siguiente trabajo será añadir acciones como hover, teclas, selección de opciones, descarga de archivos y manejo de sesiones, sin asumir selectores, CRM o URLs reales.
@@ -172,5 +188,11 @@ Antes de avanzar hay que verificar esta base con los tests y la prueba manual. E
 5. Pulsa **Detener grabación** para convertir la interacción en pasos editables.
 6. En cada paso **Rellenar campo**, escribe dentro de la caja **Valor a enviar** el dato que el bot deberá introducir.
 7. Revisa el flujo, guarda la configuración y pulsa **Ejecutar bot**.
+
+### Ejecución en segundo plano
+
+El Bot ejecuta los pasos con Playwright en modo headless por defecto. Al pulsar **Ejecutar bot**, FastAPI crea una ejecución en segundo plano y devuelve el control inmediatamente; la interfaz consulta su estado mediante `GET /api/bots/runs/{job_id}`. Puedes cambiar de módulo o continuar trabajando mientras el flujo navega, rellena campos, valida resultados y guarda sus evidencias.
+
+La opción **Abrir navegador para revisión manual** desactiva el modo headless únicamente cuando necesites observar la sesión.
 
 El grabador no conserva el texto que escribes en el navegador: guarda únicamente el localizador del campo. El valor se define después dentro de Electron, y los campos de contraseña no se capturan. También registra el scroll como una posición vertical y reemplaza los movimientos consecutivos por un único paso. Evita guardar tokens o datos sensibles en la configuración.

@@ -16,13 +16,13 @@
         <div class="brand">
           <div class="brand-mark">QA</div>
           <div>
-            <p class="brand-title">QA Automation</p>
-            <p class="brand-subtitle">Centro de control</p>
+          <p class="brand-title">UTEL QA</p>
+          <p class="brand-subtitle">Centro de automatizacion</p>
           </div>
         </div>
 
         <nav class="navigation" aria-label="Navegación principal">
-          <p class="navigation-label">General</p>
+          <p class="navigation-label">Principal</p>
           <button class="nav-item active" data-view="dashboard">
             <span class="nav-icon">⌂</span>
             <span>Dashboard</span>
@@ -82,7 +82,7 @@
             <h1 id="page-title">Dashboard</h1>
           </div>
           <div class="topbar-actions">
-            <span class="last-updated" id="last-updated">Sin actualizar</span>
+            <span class="system-status"><span class="health-dot online"></span> Sistema operativo</span><span class="last-updated" id="last-updated">Sin actualizar</span>
             <button class="icon-button" id="refresh-button" title="Actualizar dashboard" aria-label="Actualizar dashboard">↻</button>
             <div class="user-avatar" title="Usuario local">QA</div>
           </div>
@@ -214,8 +214,8 @@
                 <label class="field full"><span>Nombre del bot</span><input id="bot-name" type="text" placeholder="Ej. Validar checkout homepage" /></label>
                 <label class="field full"><span>URL inicial</span><input id="bot-url" type="url" placeholder="https://ejemplo.com" /></label>
                 <label class="field"><span>Navegador</span><select id="bot-browser"><option value="chromium">Chromium aislado</option><option value="chrome">Google Chrome - Perfil QA</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select></label>
-                <label class="toggle-field"><input id="bot-headless" type="checkbox" checked /><span><strong>Modo headless</strong><small>Ejecutar sin mostrar el navegador</small></span></label>
-                <label class="toggle-field"><input id="bot-keep-browser-open" type="checkbox" checked /><span><strong>Mantener navegador abierto</strong><small>Dejarlo abierto para revisión manual</small></span></label>
+                <label class="toggle-field"><input id="bot-headless" type="checkbox" checked /><span><strong>Ejecutar en segundo plano</strong><small>Trabajar sin mostrar ni controlar el navegador</small></span></label>
+                <label class="toggle-field"><input id="bot-keep-browser-open" type="checkbox" /><span><strong>Abrir navegador para revisión manual</strong><small>Mostrar la sesión durante la ejecución</small></span></label>
               </div>
               <div class="security-note"><span>i</span><p>No guardes contraseñas o tokens en este flujo. Las credenciales deben permanecer en el backend.</p></div>
               <div class="bot-step-builder">

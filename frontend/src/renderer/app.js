@@ -25,6 +25,11 @@ function selectElements() {
     refreshButton: document.querySelector("#refresh-button"),
     lastUpdated: document.querySelector("#last-updated"),
     toast: document.querySelector("#toast"),
+    connectionDot: document.querySelector("#connection-dot"),
+    connectionLabel: document.querySelector("#connection-label"),
+    apiDot: document.querySelector("#api-dot"),
+    apiStatus: document.querySelector("#api-status"),
+    healthPulse: document.querySelector("#health-pulse"),
   };
 }
 
@@ -104,11 +109,7 @@ function renderSummary(summary) {
 }
 
 function setConnectionStatus(online) {
-  const dot = document.querySelector("#connection-dot");
-  const label = document.querySelector("#connection-label");
-  const apiDot = document.querySelector("#api-dot");
-  const apiStatus = document.querySelector("#api-status");
-  const pulse = document.querySelector("#health-pulse");
+  const { connectionDot: dot, connectionLabel: label, apiDot, apiStatus, healthPulse: pulse } = elements;
   dot.classList.toggle("offline", !online);
   apiDot.classList.toggle("online", online);
   apiDot.classList.toggle("offline", !online);
@@ -157,7 +158,16 @@ function bindEvents() {
 
 bindEvents();
 navigate(state.activeView);
-initializeBotModule({ showToast, runBot: api.runBot, recorderApi: api });
+initializeBotModule({
+  showToast,
+  runUtelInconcertBot: api.runUtelInconcertBot,
+  utelInconcertStatus: api.utelInconcertStatus,
+  cancelUtelInconcert: api.cancelUtelInconcert,
+  previewBotSpreadsheet: api.previewBotSpreadsheet,
+  runUtelBatch: api.runUtelBatch,
+  utelBatchStatus: api.utelBatchStatus,
+  cancelUtelBatch: api.cancelUtelBatch,
+});
 initializePdpModule({ showToast, validatePdp: api.validatePdp, validatePdpSemantic: api.validatePdpSemantic });
 refreshDashboard();
 window.setInterval(refreshDashboard, 30000);
