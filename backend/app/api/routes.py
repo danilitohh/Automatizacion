@@ -102,7 +102,7 @@ def executions(
 async def run_bot(request: Request, config: BotConfig) -> dict:
     """Ejecuta un flujo web y guarda el resultado en el historial local."""
 
-    logger.info("Iniciando bot de verificaciones: %s", config.name)
+    logger.info("Iniciando bot de formularios en segundo plano: %s", config.name)
     settings = request.app.state.settings
     result = await BotRunner(settings).run(config)
     serializable_result = {
@@ -131,20 +131,18 @@ async def run_bot(request: Request, config: BotConfig) -> dict:
 async def validate_pdp(
     request: Request,
     excel_file: UploadFile = File(...),
-    docx_file: UploadFile = File(...),
 ) -> dict:
     """Compara información de PDP en Excel/DOCX contra sus páginas web."""
 
     if not (excel_file.filename or "").lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="Comparte un archivo Excel con extensión .xlsx.")
-    if not (docx_file.filename or "").lower().endswith(".docx"):
+    if False:
         raise HTTPException(status_code=400, detail="Comparte un documento Word con extensión .docx.")
 
     settings = request.app.state.settings
     try:
         result = await PdpValidationService(settings).validate(
             await excel_file.read(),
-            await docx_file.read(),
         )
     except (ValueError, RuntimeError) as error:
         raise HTTPException(status_code=400, detail=str(error)) from error

@@ -29,15 +29,11 @@ export const api = {
   dashboardSummary: () => request("/api/dashboard/summary"),
   executions: (limit = 20) => request(`/api/executions?limit=${limit}`),
   runBot: (config) => request("/api/bots/run", { method: "POST", body: JSON.stringify(config) }),
-  startBotRecorder: (config) => request("/api/bots/recorder/start", { method: "POST", body: JSON.stringify(config) }),
-  botRecorderEvents: (sessionId) => request(`/api/bots/recorder/${sessionId}/events`),
-  stopBotRecorder: (sessionId) => request(`/api/bots/recorder/${sessionId}/stop`, { method: "POST" }),
   aiProviders: () => request("/api/ai/providers"),
   aiGenerate: (payload) => request("/api/ai/generate", { method: "POST", body: JSON.stringify(payload) }),
-  validatePdp: (excelFile, docxFile) => {
+  validatePdp: (excelFile) => {
     const formData = new FormData();
     formData.append("excel_file", excelFile);
-    formData.append("docx_file", docxFile);
     return request("/api/pdp/validate", { method: "POST", body: formData });
   },
   validatePdpSemantic: (sourceFile, url, useAi = true) => {

@@ -95,11 +95,12 @@ class BotRunner:
             await self._close_open_session()
             # Puede cambiar a True cuando un paso falle para conservar la
             # sesión y permitir una revisión manual del estado parcial.
-            keep_open = {"value": config.keep_browser_open}
+            # Los scripts se ejecutan siempre en segundo plano.
+            keep_open = {"value": False}
             async with self._playwright_context(keep_open) as playwright:
                 browser = None
                 context = None
-                launch_headless = False if config.keep_browser_open else config.headless
+                launch_headless = True
                 if config.browser == "chrome":
                     # Usamos una carpeta propia para no tocar el perfil personal
                     # de Chrome ni provocar conflictos con una ventana abierta.
@@ -173,7 +174,7 @@ class BotRunner:
                             break
                 finally:
                     failed_run = any(result.status == "FAIL" for result in step_results)
-                    preserve_browser = config.keep_browser_open or failed_run
+                    preserve_browser = False
                     keep_open["value"] = preserve_browser
                     if preserve_browser and context is not None:
                         BotRunner._open_session = {

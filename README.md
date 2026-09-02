@@ -2,7 +2,7 @@
 
 Aplicación desktop para centralizar automatizaciones de QA. Esta primera entrega implementa la **Fase 1**: shell de Electron, dashboard, backend FastAPI local, SQLite, logs diarios, configuración y comunicación segura entre procesos.
 
-Las automatizaciones reales de formularios, monitoreo visual y Excel/Strapi se incorporarán en las fases siguientes. También se añadió el módulo **Bot de verificaciones**, que permite construir flujos y ejecutarlos con Playwright.
+Las automatizaciones reales de formularios, monitoreo visual y Excel/Strapi se incorporarán en las fases siguientes. También se añadió el módulo **Bot de formularios**, que permite definir scripts paso a paso y ejecutarlos con Playwright en segundo plano.
 
 El módulo **PDP vs documentos** compara las páginas de producto con un Excel de URLs y un DOCX de referencia. Revisa título, descripción, asignaturas y preguntas frecuentes, y guarda el reporte en `storage/reports/pdp/`.
 
@@ -43,7 +43,7 @@ Para usar Google Chrome con una sesión persistente de QA, abre el perfil aislad
 powershell -ExecutionPolicy Bypass -File .\scripts\open_chrome_qa.ps1
 ```
 
-Inicia sesión en las plataformas necesarias y cierra esa ventana. Luego selecciona **Google Chrome - Perfil QA** en el Bot de verificaciones y ejecuta el flujo. Las cookies se guardan en `storage/browser_profiles/chrome-qa`, que está excluida de Git.
+Las ejecuciones usan Chromium en modo headless por defecto. Si necesitas una sesión persistente, selecciona **Google Chrome - Perfil QA**; las cookies se guardan en `storage/browser_profiles/chrome-qa`, que está excluida de Git.
 
 No completes todavía las variables de CRM o Strapi con credenciales reales; esos módulos pertenecen a fases posteriores.
 
@@ -75,9 +75,6 @@ La documentación interactiva queda disponible en `http://127.0.0.1:8000/docs`.
 | GET | `/api/dashboard/summary` | Métricas del día y última ejecución. |
 | GET | `/api/executions?limit=20` | Historial reciente. |
 | POST | `/api/bots/run` | Ejecuta un flujo web con Playwright y guarda sus evidencias. |
-| POST | `/api/bots/recorder/start` | Abre el navegador visible para grabar interacciones. |
-| GET | `/api/bots/recorder/{id}/events` | Consulta clicks y campos capturados. |
-| POST | `/api/bots/recorder/{id}/stop` | Cierra la grabación y devuelve los pasos. |
 
 ## Validar PDP vs DOCX
 
@@ -118,10 +115,10 @@ Los tests usan archivos SQLite temporales y no modifican la base de datos local.
 
 ```text
 frontend/                 Interfaz Electron y renderer.
-frontend/src/renderer/bot-module.js Constructor y controles del Bot de verificaciones.
+frontend/src/renderer/bot-module.js Constructor manual y controles del Bot de formularios.
 backend/app/automations/generic_bot/runner.py Ejecutor de pasos web con Playwright.
 storage/browser_profiles/chrome-qa Perfil persistente usado por Google Chrome para QA.
-backend/app/automations/generic_bot/recorder.py Grabador visual de clicks y campos.
+backend/app/automations/generic_bot/runner.py Ejecutor headless de scripts manuales con Playwright.
 backend/app/api/          Rutas HTTP.
 backend/app/config/       Variables y rutas centralizadas.
 backend/app/database/     Conexión y consultas SQLite.
@@ -161,16 +158,14 @@ Cada automatización tendrá su propio módulo dentro de `backend/app/automation
 
 ## Próxima fase
 
-Antes de avanzar hay que verificar esta base con los tests y la prueba manual. El Bot de verificaciones ya tiene el primer ejecutor; el siguiente trabajo será añadir acciones como hover, teclas, selección de opciones, descarga de archivos y manejo de sesiones, sin asumir selectores, CRM o URLs reales.
+El Bot de formularios permite definir manualmente cada acción, selector y valor. El ejecutor corre en segundo plano, registra cada resultado y guarda evidencias, sin abrir un navegador para grabar la interacción.
 
-## Grabar pasos visualmente
+## Crear un script manual
 
-1. Selecciona **Google Chrome - Perfil QA** y escribe la URL inicial.
-2. Pulsa **Grabar pasos**.
-3. Interactúa con la ventana de Chrome que se abre; los elementos se resaltan al pasar el cursor.
-4. Haz click en botones o enlaces y selecciona los campos de formulario que el bot deberá rellenar. Los pasos aparecerán automáticamente en la aplicación.
-5. Pulsa **Detener grabación** para convertir la interacción en pasos editables.
-6. En cada paso **Rellenar campo**, escribe dentro de la caja **Valor a enviar** el dato que el bot deberá introducir.
-7. Revisa el flujo, guarda la configuración y pulsa **Ejecutar bot**.
+1. Escribe el nombre y la URL inicial.
+2. Elige una acción, completa su selector/objetivo y su valor cuando aplique.
+3. Pulsa **Agregar paso** y repite el proceso en el orden exacto de ejecución.
+4. Reordena o elimina pasos, valida el script y guárdalo.
+5. Pulsa **Ejecutar en segundo plano**. Playwright ejecutará el flujo sin mostrar el navegador y conservará las capturas de evidencia.
 
-El grabador no conserva el texto que escribes en el navegador: guarda únicamente el localizador del campo. El valor se define después dentro de Electron, y los campos de contraseña no se capturan. También registra el scroll como una posición vertical y reemplaza los movimientos consecutivos por un único paso. Evita guardar tokens o datos sensibles en la configuración.
+Usa selectores `css=`, `label=`, `text=`, `testid=` o `role=button[name=Enviar]`. Evita guardar tokens o datos sensibles en la configuración.

@@ -11,7 +11,7 @@ const viewMeta = {
   forms: { title: "Validación de formularios", description: "Automatizaciones" },
   visual: { title: "Monitoreo visual", description: "Automatizaciones" },
   excel: { title: "Excel vs Web / Strapi", description: "Automatizaciones" },
-  bot: { title: "Bot de verificaciones", description: "Automatizaciones" },
+  bot: { title: "Bot de formularios", description: "Automatizaciones" },
   pdp: { title: "Validación PDP vs DOCX", description: "Automatizaciones" },
   history: { title: "Historial", description: "Trazabilidad" },
   settings: { title: "Configuración", description: "Administración" },
@@ -150,6 +150,10 @@ function navigate(viewName) {
 
 function bindEvents() {
   elements.navigation.forEach((item) => item.addEventListener("click", () => navigate(item.dataset.view)));
+  document.querySelector(".navigation")?.addEventListener("click", (event) => {
+    const item = event.target.closest("[data-view]");
+    if (item) navigate(item.dataset.view);
+  }, true);
   elements.refreshButton.addEventListener("click", refreshDashboard);
   document.querySelector("#today-label").textContent = new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
   document.querySelector("#api-url-label").textContent = api.baseUrl;
@@ -157,7 +161,7 @@ function bindEvents() {
 
 bindEvents();
 navigate(state.activeView);
-initializeBotModule({ showToast, runBot: api.runBot, recorderApi: api });
+initializeBotModule({ showToast, runBot: api.runBot });
 initializePdpModule({ showToast, validatePdp: api.validatePdp, validatePdpSemantic: api.validatePdpSemantic });
 refreshDashboard();
 window.setInterval(refreshDashboard, 30000);

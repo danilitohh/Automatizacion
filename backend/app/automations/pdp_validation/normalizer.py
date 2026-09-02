@@ -1,4 +1,4 @@
-"""NormalizaciÃ³n conservadora para comparar sin perder evidencia."""
+"""Normalización conservadora para comparar sin perder evidencia."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ def display_text(value: str) -> str:
 
 
 def normalized_text(value: str) -> str:
-    """Normaliza mayÃºsculas, acentos, bullets y puntuaciÃ³n visual."""
+    """Normaliza mayúsculas, acentos, bullets y puntuación visual."""
 
     value = display_text(value).lower()
     value = "".join(character for character in unicodedata.normalize("NFKD", value) if not unicodedata.combining(character))

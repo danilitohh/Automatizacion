@@ -1,4 +1,4 @@
-"""Contratos de entrada y salida del Bot de verificaciones."""
+"""Contratos de entrada y salida del Bot de formularios."""
 
 from typing import Literal
 
@@ -36,7 +36,6 @@ class BotConfig(BaseModel):
     url: str = Field(min_length=1, max_length=2000)
     browser: Literal["chromium", "chrome", "firefox", "webkit"] = "chromium"
     headless: bool = True
-    keep_browser_open: bool = True
     steps: list[BotStep] = Field(min_length=1, max_length=100)
 
 

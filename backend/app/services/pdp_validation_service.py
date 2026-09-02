@@ -13,6 +13,7 @@ from io import BytesIO
 from pathlib import Path
 from time import perf_counter
 from typing import Any, Iterable
+from urllib.parse import urlparse
 
 from docx import Document
 from docx.document import Document as DocumentType
@@ -46,6 +47,7 @@ class ProgramReference:
     name: str
     url: str
     row_number: int
+    document: str = ""
 
 
 @dataclass
@@ -66,14 +68,14 @@ class PdpValidationService:
         self.settings = settings
         self.logger = get_logger()
 
-    async def validate(self, excel_bytes: bytes, docx_bytes: bytes) -> dict[str, Any]:
+    async def validate(self, excel_bytes: bytes, docx_bytes: bytes | None = None) -> dict[str, Any]:
         """Valida cada PDP de la matriz contra la información del documento."""
 
         started_at = datetime.now().isoformat(timespec="seconds")
         started_timer = perf_counter()
         programs, excel_info = self._read_excel(excel_bytes)
-        blocks = self._read_docx(docx_bytes)
-        references = self._map_document_to_programs(programs, blocks)
+        await self._resolve_excel_documents(programs)
+        references = self._map_excel_documents_to_programs(programs)
         results = await self._validate_pages(programs, references)
         summary = self._build_summary(results)
         finished_at = datetime.now().isoformat(timespec="seconds")
@@ -98,39 +100,57 @@ class PdpValidationService:
             raise ValueError("El Excel supera el límite de 12 MB.")
 
         try:
-            workbook = load_workbook(BytesIO(content), read_only=True, data_only=True)
+            workbook = load_workbook(BytesIO(content), read_only=False, data_only=True)
         except Exception as error:
             raise ValueError("No fue posible leer el Excel. Usa un archivo .xlsx válido.") from error
 
         sheet = workbook.active
-        rows = sheet.iter_rows(values_only=True)
-        try:
-            raw_headers = next(rows)
-        except StopIteration as error:
-            raise ValueError("El Excel no contiene encabezados ni filas.") from error
+        raw_headers = None
+        header_row_index = None
+        program_index = url_index = document_index = None
+        for candidate_sheet in workbook.worksheets:
+            candidate_rows = list(candidate_sheet.iter_rows(values_only=True))
+            for index, candidate_headers in enumerate(candidate_rows[:20]):
+                candidate_normalized = [self._normalize_header(value) for value in candidate_headers]
+                candidate_program = self._find_header(candidate_normalized, "program")
+                candidate_url = self._find_header(candidate_normalized, "url")
+                candidate_document = self._find_header(candidate_normalized, "document")
+                if candidate_program is not None and candidate_url is not None and candidate_document is not None:
+                    sheet = candidate_sheet
+                    raw_headers = candidate_headers
+                    header_row_index = index
+                    program_index, url_index, document_index = candidate_program, candidate_url, candidate_document
+                    rows = candidate_rows[index + 1:]
+                    break
+            if raw_headers is not None:
+                break
 
-        headers = [self._normalize_header(value) for value in raw_headers]
-        program_index = self._find_header(headers, "program")
-        url_index = self._find_header(headers, "url")
-        if program_index is None or url_index is None:
-            available = ", ".join(str(value) for value in raw_headers if value)
+        if program_index is None or url_index is None or document_index is None:
+            available = ", ".join(str(value) for value in (raw_headers or []) if value)
             raise ValueError(
-                "No se detectaron las columnas requeridas. Incluye una columna de programa "
-                "(Programa, Carrera o Nombre) y otra de URL (URL, Link, Enlace o PDP). "
+                "No se detectaron las columnas requeridas. Incluye columnas de programa "
+                "(Programa, Carrera o Nombre), URL (URL, Link, Enlace o PDP) y documento "
+                "(Documento, Contenido o Referencia). "
                 f"Encabezados encontrados: {available or 'ninguno'}."
             )
 
         programs: list[ProgramReference] = []
         skipped = 0
-        for row_number, row in enumerate(rows, start=2):
-            name = self._clean_text(row[program_index] if program_index < len(row) else "")
-            url = self._clean_text(row[url_index] if url_index < len(row) else "")
-            if not name and not url:
+        for row_number, row in enumerate(rows, start=(header_row_index or 0) + 2):
+            def cell_text(column_index: int) -> str:
+                cell = sheet.cell(row=row_number, column=column_index + 1)
+                hyperlink = getattr(cell, "hyperlink", None)
+                return self._clean_text(hyperlink.target if hyperlink else (row[column_index] if column_index < len(row) else ""))
+
+            name = cell_text(program_index)
+            url = cell_text(url_index)
+            document = cell_text(document_index)
+            if not name and not url and not document:
                 continue
-            if not name or not self._is_http_url(url):
+            if not name or not self._is_http_url(url) or not document:
                 skipped += 1
                 continue
-            programs.append(ProgramReference(name=name, url=url, row_number=row_number))
+            programs.append(ProgramReference(name=name, url=url, row_number=row_number, document=document))
             if len(programs) >= MAX_PROGRAMS:
                 break
 
@@ -141,10 +161,60 @@ class PdpValidationService:
             "sheet": sheet.title,
             "program_column": str(raw_headers[program_index]),
             "url_column": str(raw_headers[url_index]),
+            "document_column": str(raw_headers[document_index]),
             "programs_loaded": len(programs),
             "rows_skipped": skipped,
             "limited_to": MAX_PROGRAMS if len(programs) == MAX_PROGRAMS else None,
         }
+
+    def _map_excel_documents_to_programs(self, programs: list[ProgramReference]) -> dict[str, ReferenceContent]:
+        references: dict[str, ReferenceContent] = {}
+        for program in programs:
+            blocks = [{"kind": "paragraph", "text": line.strip()} for line in program.document.splitlines() if line.strip()]
+            references[self._normalize(program.name)] = self._extract_reference(program.name, blocks)
+        return references
+
+    async def _resolve_excel_documents(self, programs: list[ProgramReference]) -> None:
+        """Carga documentos referenciados por URL o ruta local en la columna Documento."""
+
+        remote_urls = [program.document for program in programs if self._is_document_url(program.document)]
+        client = None
+        if remote_urls:
+            try:
+                import httpx
+                client = httpx.AsyncClient(follow_redirects=True, timeout=35)
+            except ImportError as error:
+                raise RuntimeError("httpx es necesario para leer documentos enlazados desde el Excel.") from error
+        try:
+            for program in programs:
+                source = program.document.strip()
+                if self._is_document_url(source):
+                    response = await client.get(source)
+                    response.raise_for_status()
+                    if len(response.content) > MAX_FILE_SIZE:
+                        raise ValueError(f"El documento enlazado de la fila {program.row_number} supera 12 MB.")
+                    program.document = self._document_bytes_to_text(response.content, source, program.row_number)
+                else:
+                    local_path = Path(source.strip('\\\"'))
+                    if local_path.is_file() and local_path.suffix.lower() == ".docx":
+                        program.document = self._document_bytes_to_text(local_path.read_bytes(), source, program.row_number)
+        except httpx.HTTPError as error:
+            raise ValueError(f"No se pudo descargar el documento de la fila {program.row_number}: {error}") from error
+        finally:
+            if client:
+                await client.aclose()
+
+    def _document_bytes_to_text(self, content: bytes, source: str, row_number: int) -> str:
+        try:
+            blocks = self._read_docx(content)
+        except ValueError as error:
+            raise ValueError(f"El documento enlazado de la fila {row_number} no es un DOCX válido: {source}") from error
+        return "\n".join(block["text"] for block in blocks)
+
+    @staticmethod
+    def _is_document_url(value: str) -> bool:
+        parsed = urlparse(value.strip())
+        return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
     def _read_docx(self, content: bytes) -> list[dict[str, str]]:
         """Lee párrafos y tablas respetando el orden en el que aparecen."""
@@ -419,6 +489,7 @@ class PdpValidationService:
         aliases = {
             "program": ("programa", "carrera", "nombre", "nombreprograma", "nombrecarrera", "producto"),
             "url": ("url", "urlpdp", "link", "enlace", "pdp", "paginaproducto", "paginadeproducto"),
+            "document": ("documento", "contenido", "referencia", "documentofuente", "textoreferencia", "fuente"),
         }[field]
         for index, header in enumerate(headers):
             if header in aliases or any(alias in header for alias in aliases):

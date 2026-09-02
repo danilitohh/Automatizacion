@@ -20,7 +20,7 @@ class WebPageParser:
                 """() => [...document.querySelectorAll('button,a,[role="button"],summary')].some((element) => /ver\\s+m[aá]s|mostrar\\s+m[aá]s|cargar\\s+m[aá]s/i.test(element.innerText || element.textContent || ''))""",
                 timeout=3_000,
             )
-        except Exception:  # noqa: BLE001 - algunas pÃ¡ginas no tienen controles de expansiÃ³n
+        except Exception:  # noqa: BLE001 - algunas páginas no tienen controles de expansión
             await page.wait_for_timeout(800)
         expanded_controls = await self._expand_relevant_content(page)
         records = await page.evaluate(
