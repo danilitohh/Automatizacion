@@ -94,7 +94,7 @@ function renderModuleShell() {
             <label class="field"><span>Email de prueba</span><input id="bot-lead-email" type="email" readonly /></label>
             <label class="field"><span>Telefono de prueba</span><input id="bot-lead-phone" type="tel" readonly /></label>
           </div>
-          <p class="muted">El nombre, email y teléfono se generan automáticamente al ejecutar cada caso (por ejemplo, Danilo Prueba A). Son datos sintéticos y no se deben usar para contactar personas.</p>
+          <p class="muted">El nombre y email se generan automáticamente. En dry run el teléfono es sintético; los envíos reales usan exclusivamente el banco privado de números autorizados configurado por país.</p>
         </div>
       </article>
       <section class="bot-error-log-panel bot-error-log-panel--standalone">

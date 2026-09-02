@@ -1,5 +1,6 @@
 """Configuración centralizada y rutas de almacenamiento del proyecto."""
 
+import json
 from functools import lru_cache
 from pathlib import Path
 
@@ -34,6 +35,9 @@ class Settings(BaseSettings):
     lead_balancer_url: str = "https://lead-balancer.scalahed.com/leads/"
     lead_balancer_username: str = ""
     lead_balancer_password: SecretStr = SecretStr("")
+    # JSON con teléfonos reales controlados por QA, agrupados por país. Se
+    # mantiene como secreto para que nunca aparezca en reprs ni respuestas.
+    utel_test_phones_json: SecretStr = SecretStr("{}")
 
     # Servicios de IA: las claves se cargan desde .env y nunca se envían al renderer.
     ollama_api_key: SecretStr = SecretStr("")
@@ -75,6 +79,31 @@ class Settings(BaseSettings):
         ):
             (self.storage_dir / folder_name).mkdir(parents=True, exist_ok=True)
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def authorized_test_phones(self) -> dict[str, list[str]]:
+        """Lee el banco privado de teléfonos autorizado para envíos reales."""
+
+        raw_value = self.utel_test_phones_json.get_secret_value().strip() or "{}"
+        try:
+            parsed = json.loads(raw_value)
+        except json.JSONDecodeError as error:
+            raise ValueError(
+                "UTEL_TEST_PHONES_JSON no contiene un JSON válido."
+            ) from error
+        if not isinstance(parsed, dict):
+            raise ValueError(
+                "UTEL_TEST_PHONES_JSON debe ser un objeto con países y listas de teléfonos."
+            )
+        result: dict[str, list[str]] = {}
+        for country, phones in parsed.items():
+            if not isinstance(country, str) or not isinstance(phones, list) or not all(
+                isinstance(phone, str) for phone in phones
+            ):
+                raise ValueError(
+                    "Cada país de UTEL_TEST_PHONES_JSON debe contener una lista de teléfonos de texto."
+                )
+            result[country] = phones
+        return result
 
 
 @lru_cache

@@ -314,6 +314,17 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             })
             prepared_rows.append((row, UtelQaConfig.model_validate(row_config)))
 
+        lead_service = TestLeadService(
+            settings.database_path,
+            settings.authorized_test_phones() if not batch_dry_run else {},
+        )
+        if not batch_dry_run:
+            # Primero se valida localmente que cada fila tenga un número real,
+            # válido y disponible. No se abre CRM ni UTEL con un banco incompleto.
+            lead_service.validate_authorized_capacity(
+                [config.country for _, config in prepared_rows]
+            )
+
         if not batch_dry_run:
             # Se valida login y acceso a Contactos para cada CRM distinto antes
             # del primer clic. Así una contraseña vencida o una caída regional
@@ -332,16 +343,27 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 await UtelInconcertRunner(settings).preflight_inconcert(preflight_config)
                 checked_crm_urls.add(preflight_config.inconcert_url)
 
+        reserved_leads = (
+            []
+            if job.get("cancel_requested")
+            else lead_service.reserve_many(
+                [config.country for _, config in prepared_rows],
+                require_authorized_phone=not batch_dry_run,
+            )
+        )
         verification_queue = []
         job["phase"] = "UTEL: enviando formularios"
-        for index, (row, prepared_config) in enumerate(prepared_rows, 1):
+        for index, ((row, prepared_config), lead) in enumerate(
+            zip(prepared_rows, reserved_leads, strict=True),
+            1,
+        ):
             # La detención es cooperativa: no inicia otra fila, pero jamás
             # interrumpe una fila que pudiera estar justo después del clic.
             if job.get("cancel_requested"):
                 break
-            config = prepared_config
-            lead = TestLeadService(settings.database_path).reserve(config.country)
-            config = config.model_copy(update={"lead": config.lead.model_copy(update=lead)})
+            config = prepared_config.model_copy(
+                update={"lead": prepared_config.lead.model_copy(update=lead)}
+            )
             if not config.dry_run:
                 config = config.model_copy(
                     update={"defer_crm_verification": True, "verification_only": False}
@@ -987,7 +1009,17 @@ async def run_utel_inconcert_bot(request: Request, config: UtelQaConfig) -> dict
     country_crm = BotSpreadsheetService.default_inconcert_url(config.country)
     if country_crm:
         config = config.model_copy(update={"inconcert_url": country_crm})
-    generated_lead = TestLeadService(request.app.state.settings.database_path).reserve(config.country)
+    settings = request.app.state.settings
+    try:
+        generated_lead = TestLeadService(
+            settings.database_path,
+            settings.authorized_test_phones() if not config.dry_run else {},
+        ).reserve(
+            config.country,
+            require_authorized_phone=not config.dry_run,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     config = config.model_copy(
         update={
             "lead": config.lead.model_copy(

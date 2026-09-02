@@ -52,6 +52,7 @@ def test_batch_preserves_safe_mode_and_marks_excel(tmp_path, monkeypatch, crm_pr
             batch_delay_seconds=0,
             inconcert_username="test",
             inconcert_password="test",
+            utel_test_phones_json='{"Mexico":["+525512345678"]}',
         )
     )
     with TestClient(app) as client:
@@ -108,6 +109,7 @@ def test_each_batch_row_uses_its_country_crm_not_a_stale_url(tmp_path, monkeypat
             batch_delay_seconds=0,
             inconcert_username="test",
             inconcert_password="test",
+            utel_test_phones_json='{"Mexico":["+525512345678"]}',
         )
     )
     with TestClient(app) as client:
@@ -261,6 +263,7 @@ def test_real_batch_stops_before_first_click_when_crm_preflight_fails(
             batch_delay_seconds=0,
             inconcert_username="test",
             inconcert_password="test",
+            utel_test_phones_json='{"Mexico":["+525512345678"]}',
         )
     )
 
@@ -276,6 +279,52 @@ def test_real_batch_stops_before_first_click_when_crm_preflight_fails(
     assert job["status"] == "FAIL"
     assert "no se inició ningún envío" in job["summary"].casefold()
     crm_preflight.assert_awaited_once()
+    run.assert_not_awaited()
+
+
+def test_real_batch_requires_enough_authorized_phones_before_first_click(
+    tmp_path, monkeypatch, crm_preflight
+):
+    """El formato válido no sustituye al banco de números controlado por QA."""
+
+    run = AsyncMock()
+    monkeypatch.setattr(UtelInconcertRunner, "run", run)
+    workbook = Workbook()
+    workbook.active.append(["Nivel", "URL", "Location", "Locale"])
+    workbook.active.append(["Licenciatura", "https://example.test", "footer", "Mexico"])
+    content = io.BytesIO()
+    workbook.save(content)
+    app = create_app(
+        Settings(
+            database_path=tmp_path / "test.db",
+            storage_dir=tmp_path / "storage",
+            batch_delay_seconds=0,
+            inconcert_username="test",
+            inconcert_password="test",
+            utel_test_phones_json="{}",
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/bots/utel-inconcert/batch-run",
+            data={
+                "config": json.dumps({"lead": {}, "dry_run": False}),
+                "mapping": json.dumps({
+                    "level": "Nivel",
+                    "utel_url": "URL",
+                    "form_type": "Location",
+                    "country": "Locale",
+                }),
+            },
+            files={"file": ("test.xlsx", content.getvalue())},
+        )
+        assert response.status_code == 202
+        job = client.get(f'/api/bots/utel-inconcert/batch/{response.json()["job_id"]}').json()
+
+    assert job["status"] == "FAIL"
+    assert "falta un banco de teléfonos autorizados" in job["summary"]
+    crm_preflight.assert_not_awaited()
     run.assert_not_awaited()
 
 
@@ -340,6 +389,7 @@ def test_batch_merge_preserves_post_submit_warning_when_crm_finds_lead(tmp_path,
             batch_delay_seconds=0,
             inconcert_username="test",
             inconcert_password="test",
+            utel_test_phones_json='{"Mexico":["+525512345678"]}',
         )
     )
 
@@ -430,6 +480,7 @@ def test_batch_is_failed_when_crm_does_not_find_clicked_submission(tmp_path, mon
             batch_delay_seconds=0,
             inconcert_username="test",
             inconcert_password="test",
+            utel_test_phones_json='{"Mexico":["+525512345678"]}',
         )
     )
 
@@ -486,6 +537,7 @@ def test_batch_cancel_finishes_current_row_and_reconciles_before_stopping(
         batch_delay_seconds=0,
         inconcert_username="test",
         inconcert_password="test",
+        utel_test_phones_json='{"Mexico":["+525512345678","+525598765432"]}',
     )
     job_id = "cancel-safe"
     state = SimpleNamespace(
