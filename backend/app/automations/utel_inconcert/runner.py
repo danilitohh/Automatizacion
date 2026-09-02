@@ -185,26 +185,31 @@ class UtelInconcertRunner:
                         return self._build_result(config, started_at, timer)
                     if config.defer_crm_verification:
                         page = utel_page
+                        unconfirmed_submission = None
                         try:
-                            await self._run_stage(5, "utel_submit", "Formulario enviado; verificacion pendiente al final del lote", utel_page, lambda: self._submit_utel_form(utel_page, form), "03_formulario_enviado")
-                        except UnconfirmedSubmission:
-                            if self._normalize(config.country) != "panama":
-                                raise
-                            self.logger.warning(
-                                "Panama no confirmo el primer envio de %s; se hara un unico reintento autorizado.",
-                                config.lead.email,
-                            )
-                            await asyncio.sleep(8)
                             await self._run_stage(
-                                6,
-                                "utel_submit_retry",
-                                "Formulario enviado y confirmado en el segundo intento",
+                                5,
+                                "utel_submit",
+                                "Formulario enviado; verificación pendiente al final del lote",
                                 utel_page,
                                 lambda: self._submit_utel_form(utel_page, form),
-                                "03_formulario_enviado_reintento",
+                                "03_formulario_enviado",
                             )
-                        self.status_flags["utel_submission"] = "success"
-                        self.status_flags["utel_submission_message"] = "Formulario enviado; pendiente de verificacion CRM."
+                        except UnconfirmedSubmission as error:
+                            # El clic ya se ejecutó. Nunca se reintenta un envío
+                            # incierto: el lote debe comprobar el lead en CRM para
+                            # determinar si UTEL lo recibió.
+                            unconfirmed_submission = error
+                            self.logger.warning(
+                                "%s Se programará verificación CRM sin reenviar el formulario.",
+                                error,
+                            )
+                        self.status_flags["utel_submission"] = "pending" if unconfirmed_submission else "success"
+                        self.status_flags["utel_submission_message"] = (
+                            f"Confirmación visual pendiente; se verificará en CRM sin reenviar. Aviso: {unconfirmed_submission}"
+                            if unconfirmed_submission
+                            else "Formulario enviado; pendiente de verificación CRM."
+                        )
                         self.status_flags["inconcert_login"] = "skipped"
                         self.status_flags["lead_found"] = "pending"
                         self.status_flags["conversion_found"] = "pending"
@@ -1080,20 +1085,46 @@ class UtelInconcertRunner:
                 "No se pudo activar el boton de envio del formulario.",
                 'button[type="submit"], input[type="submit"]',
             ) from error
-        toast = page.locator("#chakra-toast-manager-bottom")
+        # UTEL no usa el mismo mensaje en todos los portales. Se espera un
+        # aviso visible de éxito o error, ya sea dentro del contenedor Chakra
+        # o en una alerta accesible del formulario.
         try:
-            await toast.wait_for(state="attached", timeout=8000)
-            await page.wait_for_function(
+            feedback_handle = await page.wait_for_function(
                 """() => {
-                    const toast = document.querySelector("#chakra-toast-manager-bottom");
-                    return toast && toast.innerText.trim().length > 0;
+                    const selectors = [
+                      '#chakra-toast-manager-bottom',
+                      '[role="alert"]',
+                      '[role="status"]',
+                      '.chakra-alert',
+                      '.chakra-toast'
+                    ];
+                    const text = selectors
+                      .flatMap(selector => [...document.querySelectorAll(selector)])
+                      .filter(element => element.getClientRects().length)
+                      .map(element => (element.innerText || element.textContent || '').trim())
+                      .find(value => /env[ií]o|gracias|recib|contactaremos|error|soporte|inv[aá]lid|obligatori|requerid|fall/i.test(value));
+                    return text || null;
                 }""",
-                timeout=12000,
+                timeout=18000,
             )
-            text = (await toast.inner_text()).strip()
+            text = ""
+            json_value = getattr(feedback_handle, "json_value", None)
+            if callable(json_value):
+                value = await json_value()
+                if isinstance(value, str):
+                    text = value.strip()
+            if not text:
+                toast = page.locator("#chakra-toast-manager-bottom")
+                text = (await toast.inner_text()).strip()
             if re.search(self._last_submit_error_pattern, text, re.I):
                 raise UtelQaError("utel_submit", f"El formulario mostro un mensaje de error: {text}")
-            success_pattern = r"env[ií]o correcto|pronto recibir[aá]s informaci[oó]n|successfully submitted|your information has been received"
+            success_pattern = (
+                r"env[ií]o correcto|pronto recibir[aá]s informaci[oó]n|"
+                r"successfully submitted|your information has been received|"
+                r"gracias.*(?:registro|informaci[oó]n|solicitud)|"
+                r"hemos recibido|(?:datos|solicitud|informaci[oó]n).*(?:recibid|enviad)|"
+                r"te contactaremos|nos pondremos en contacto"
+            )
             if self._last_submit_success_pattern:
                 success_pattern += "|(?:" + self._last_submit_success_pattern + ")"
             if not re.search(success_pattern, text, re.I):

@@ -19,6 +19,7 @@ def test_global_country_requires_explicit_philippines_context():
 
 @pytest.mark.parametrize("message,error", [
     ("Successfully submitted\nYour information has been received", None),
+    ("Gracias, hemos recibido tu solicitud. Te contactaremos pronto.", None),
     ("Error al enviar. Contacta a soporte", UtelQaError),
     ("Mensaje desconocido", UnconfirmedSubmission),
 ])
