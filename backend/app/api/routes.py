@@ -11,7 +11,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Query, Request, Upload
 from fastapi.responses import FileResponse
 
 from ..automations.generic_bot.runner import BotRunner
-from ..automations.utel_inconcert.runner import UtelInconcertRunner
+from ..automations.utel_inconcert.runner import UtelInconcertRunner, UtelRunCancelled
 from ..automations.weekly_auto.runner import WeeklyAutoRunner
 from ..database.repository import ExecutionRepository
 from ..schemas.bot import (
@@ -51,6 +51,15 @@ from ..services.test_lead_service import TestLeadService
 router = APIRouter(prefix="/api")
 
 
+def _batch_dry_run(raw_config: dict[str, Any]) -> bool:
+    """Obtiene el modo seguro sin aceptar cadenas ambiguas como ``"false"``."""
+
+    value = raw_config.get("dry_run", True)
+    if not isinstance(value, bool):
+        raise ValueError("El campo dry_run debe ser booleano (true o false).")
+    return value
+
+
 def _save_utel_batch_report(
     settings: Any,
     job_id: str,
@@ -66,7 +75,131 @@ def _save_utel_batch_report(
     output_dir = settings.storage_dir / "reports" / "bot"
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{job_id}_{filename.rsplit('.', 1)[0]}.xlsx"
-    BotReportService().build(content, mapping, results).save(output_path)
+    temporary_path = output_path.with_name(
+        f".{output_path.name}.{uuid4().hex}.tmp"
+    )
+    try:
+        # El ZIP de Excel se escribe completo en el mismo volumen y solo luego
+        # reemplaza el checkpoint anterior. Un cierre forzado nunca trunca el
+        # último reporte válido.
+        BotReportService().build(content, mapping, results).save(temporary_path)
+        os.replace(temporary_path, output_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+def _merge_utel_and_crm_results(
+    submission: dict[str, Any],
+    verification: dict[str, Any],
+) -> dict[str, Any]:
+    """Fusiona ambas fases sin perder la evidencia obtenida antes de consultar CRM.
+
+    El mensaje visual de UTEL es solo una señal de diagnóstico. Después de haber
+    hecho clic, la existencia del lead en CRM es la fuente de verdad y nunca se
+    vuelve a enviar el formulario para intentar cambiar ese resultado.
+    """
+
+    original_notice = str(submission.get("utel_submission_message") or "").strip()
+    crm_confirmed = bool(verification.get("lead_url")) and (
+        verification.get("lead_found") == "success"
+        # Compatibilidad con resultados antiguos: antes de exponer lead_found,
+        # un PASS con URL de detalle ya demostraba que CRM encontró el contacto.
+        or (
+            verification.get("lead_found") is None
+            and verification.get("status") == "PASS"
+        )
+    )
+
+    # La verificación contiene el estado final del flujo; estos campos pertenecen
+    # a la fase UTEL y deben sobrevivir aunque verification_only los marque skipped.
+    merged = {
+        **verification,
+        "selected_program_name": (
+            submission.get("selected_program_name")
+            or verification.get("selected_program_name")
+            or ""
+        ),
+        "utel_submission_attempted": bool(
+            submission.get("utel_submission_attempted", True)
+        ),
+        "stages": [
+            *submission.get("stages", []),
+            *verification.get("stages", []),
+        ],
+        "screenshots": list(
+            dict.fromkeys(
+                [
+                    *submission.get("screenshots", []),
+                    *verification.get("screenshots", []),
+                ]
+            )
+        ),
+    }
+
+    notice_suffix = f" Aviso original de UTEL: {original_notice}" if original_notice else ""
+    if crm_confirmed:
+        merged["utel_submission"] = "success"
+        merged["lead_found"] = "success"
+        merged["utel_submission_message"] = (
+            "Lead confirmado en CRM sin reenviar el formulario."
+            f"{notice_suffix}"
+        )
+    elif verification.get("lead_found") == "failed":
+        # Un toast rojo o la falta de confirmación visual no autorizan otro clic.
+        # Si ambos buscadores agotaron su ventana, la fila termina como fallo.
+        merged["status"] = "FAIL"
+        merged["utel_submission"] = "failed"
+        merged["lead_found"] = "failed"
+        merged["summary"] = (
+            "CRM no confirmó el lead y el formulario no se reenvió para evitar duplicados."
+        )
+        merged["utel_submission_message"] = (
+            "CRM no confirmó el lead; no se reenvió el formulario para evitar duplicados."
+            f"{notice_suffix}"
+        )
+    else:
+        # Una caída de login/red no demuestra que UTEL haya rechazado el lead.
+        # Conservamos el intento como pendiente para que nadie lo reenvíe por error.
+        merged["status"] = "FAIL"
+        merged["utel_submission"] = "pending"
+        merged["lead_found"] = "pending"
+        merged["summary"] = (
+            "No se pudo completar la verificación CRM; el formulario no se reenvió."
+        )
+        merged["utel_submission_message"] = (
+            "Verificación CRM pendiente; no se reenvió el formulario para evitar duplicados."
+            f"{notice_suffix}"
+        )
+    return merged
+
+
+def _utel_batch_counts(results: list[dict[str, Any]]) -> dict[str, int]:
+    """Cuenta únicamente resultados definitivos; un envío pendiente no es éxito."""
+
+    success = 0
+    failed = 0
+    pending = 0
+    for item in results:
+        result = item.get("result", {})
+        if (
+            result.get("utel_submission") == "pending"
+            and result.get("utel_submission_attempted") is not False
+        ):
+            pending += 1
+        elif result.get("status") == "FAIL":
+            failed += 1
+        elif result.get("dry_run") and result.get("status") == "PASS":
+            # El dry run termina en UTEL y no necesita una conciliación posterior.
+            success += 1
+        elif (
+            result.get("status") == "PASS"
+            and result.get("lead_found") == "success"
+            and bool(result.get("lead_url"))
+        ):
+            success += 1
+        else:
+            pending += 1
+    return {"success": success, "failed": failed, "pending": pending}
 
 
 @router.get("/runtime")
@@ -99,6 +232,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
     results: list[dict[str, Any]] = []
     logger.info("Lote %s con pausa anti-bloqueo entre filas: %ss", job_id, inter_row_delay)
     try:
+        batch_dry_run = _batch_dry_run(raw_config)
         service = BotSpreadsheetService()
         rows = service.rows_for_mapping(content, mapping)
         selected_rows = {
@@ -114,19 +248,30 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             rows = [row for row in rows if row["sheet"] == selected_sheet and row["row_number"] == int(selected_row_number)]
         if not rows:
             raise ValueError("No se encontraron filas con Programa/Nivel y URL usando las columnas seleccionadas.")
+        if not batch_dry_run:
+            # El lote diferido envía primero y consulta CRM al final. Validar
+            # aquí evita crear decenas de leads si faltan las credenciales que
+            # serán necesarias para reconciliar cada clic de forma segura.
+            crm_preflight = UtelInconcertRunner(settings)
+            if not crm_preflight.has_inconcert_credentials():
+                raise ValueError(
+                    "No se inició ningún envío: faltan credenciales de InConcert. "
+                    "Configura INCONCERT_USERNAME/INCONCERT_PASSWORD o CRM_USERNAME/CRM_PASSWORD en .env."
+                )
         workflow_mode = rows[0].get("workflow_mode", "product_release")
         job["workflow_mode"] = workflow_mode
         base_config = dict(raw_config)
         base_config.update({
             "utel_url": rows[0]["utel_url"],
             "program_name": rows[0]["program_name"],
-            "dry_run": raw_config.get("dry_run", True),
+            "dry_run": batch_dry_run,
             "workflow_mode": workflow_mode,
             "source_filename": filename,
         })
-        verification_queue = []
-        job["phase"] = "UTEL: enviando formularios"
-        for index, row in enumerate(rows, 1):
+        # Prepara y valida todas las configuraciones antes de reservar datos o
+        # abrir formularios. Los flags internos nunca se heredan del cliente.
+        prepared_rows: list[tuple[dict[str, Any], UtelQaConfig]] = []
+        for row in rows:
             row_config = dict(base_config)
             if row.get("workflow_mode") == "form_validation" and not row.get("country"):
                 raise ValueError(
@@ -164,12 +309,43 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "inconcert_url": service.default_inconcert_url(row_country) or row["inconcert_url"],
                 "workflow_mode": row.get("workflow_mode", "product_release"),
                 "name": f"{raw_config.get('name', 'QA UTEL')} - {row.get('test_case') or row['program_name'] or row['level']}",
+                "defer_crm_verification": False,
+                "verification_only": False,
             })
-            config = UtelQaConfig.model_validate(row_config)
+            prepared_rows.append((row, UtelQaConfig.model_validate(row_config)))
+
+        if not batch_dry_run:
+            # Se valida login y acceso a Contactos para cada CRM distinto antes
+            # del primer clic. Así una contraseña vencida o una caída regional
+            # no deja un lote entero sin posibilidad de conciliación.
+            job["phase"] = "CRM: validando acceso antes de enviar"
+            checked_crm_urls: set[str] = set()
+            for row, preflight_config in prepared_rows:
+                if job.get("cancel_requested"):
+                    break
+                if preflight_config.inconcert_url in checked_crm_urls:
+                    continue
+                job.update({
+                    "current_program": f"Validación CRM: {preflight_config.country}",
+                    "current_row": row["row_number"],
+                })
+                await UtelInconcertRunner(settings).preflight_inconcert(preflight_config)
+                checked_crm_urls.add(preflight_config.inconcert_url)
+
+        verification_queue = []
+        job["phase"] = "UTEL: enviando formularios"
+        for index, (row, prepared_config) in enumerate(prepared_rows, 1):
+            # La detención es cooperativa: no inicia otra fila, pero jamás
+            # interrumpe una fila que pudiera estar justo después del clic.
+            if job.get("cancel_requested"):
+                break
+            config = prepared_config
             lead = TestLeadService(settings.database_path).reserve(config.country)
             config = config.model_copy(update={"lead": config.lead.model_copy(update=lead)})
             if not config.dry_run:
-                config = config.model_copy(update={"defer_crm_verification": True})
+                config = config.model_copy(
+                    update={"defer_crm_verification": True, "verification_only": False}
+                )
             job.update({
                 "current_program": row.get("test_case") or row["program_name"] or row["level"],
                 "current_row": row["row_number"],
@@ -178,25 +354,72 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "current_lead_phone": config.lead.phone,
                 "last_error": "",
             })
+            result_index: int | None = None
+            if not config.dry_run:
+                # Checkpoint preventivo: si el proceso se cierra en la ventana
+                # del clic, el Excel conserva el email para buscarlo en CRM y
+                # la fila queda bloqueada para reintento automático.
+                provisional_result = {
+                    "status": "FAIL",
+                    "summary": (
+                        "Ejecución iniciada y estado final aún desconocido. "
+                        "Si el backend se interrumpe, buscar este email en CRM antes de reenviar."
+                    ),
+                    "dry_run": False,
+                    "country": config.country,
+                    "level": config.level,
+                    "modality": config.modality,
+                    "form_type": config.form_type,
+                    "lead_name": config.lead.name,
+                    "lead_email": config.lead.email,
+                    "lead_phone": config.lead.phone,
+                    "lead_url": None,
+                    "selected_program_name": config.program_name,
+                    "utel_submission_attempted": None,
+                    "utel_submission": "pending",
+                    "utel_submission_message": (
+                        "Estado desconocido; no reenviar automáticamente sin consultar CRM."
+                    ),
+                    "inconcert_login": "skipped",
+                    "lead_found": "pending",
+                    "conversion_found": "pending",
+                    "stages": [],
+                    "screenshots": [],
+                }
+                results.append({"row": row, "result": provisional_result})
+                result_index = len(results) - 1
+                _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
+                job["download_url"] = f"/api/bots/utel-inconcert/batch/{job_id}/download"
             result = await UtelInconcertRunner(settings).run(config)
             serializable_result = {**result, "stages": [stage.model_dump() for stage in result["stages"]]}
-            results.append({"row": row, "result": serializable_result})
+            if result_index is None:
+                results.append({"row": row, "result": serializable_result})
+                result_index = len(results) - 1
+            else:
+                results[result_index] = {"row": row, "result": serializable_result}
             # El reporte se actualiza fila por fila para no perder los enlaces
             # ya obtenidos si el backend se reinicia o el lote se detiene.
             _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
             job["download_url"] = f"/api/bots/utel-inconcert/batch/{job_id}/download"
-            if serializable_result["status"] == "PASS" and not config.dry_run:
-                verification_queue.append((len(results) - 1, config))
+            # Todo clic confirmado por el runner se concilia, incluso si un
+            # error inesperado posterior dejó el resultado visual en FAIL.
+            if (
+                not config.dry_run
+                and serializable_result.get("utel_submission_attempted") is True
+            ):
+                verification_queue.append((result_index, config))
             failed_stage = next((stage for stage in serializable_result["stages"] if stage["status"] == "FAIL"), None)
+            counts = _utel_batch_counts(results)
             job.update({
-                "completed": index,
-                "success": sum(1 for item in results if item["result"]["status"] == "PASS"),
-                "failed": sum(1 for item in results if item["result"]["status"] == "FAIL"),
+                "completed": len(results),
+                **counts,
                 "current_program": row.get("test_case") or row["program_name"] or row["level"],
                 "current_row": row["row_number"],
                 "last_error": failed_stage["message"] if failed_stage else "",
                 "results": results,
             })
+            if job.get("cancel_requested"):
+                break
             if index < len(rows) and inter_row_delay > 0:
                 await asyncio.sleep(inter_row_delay)
 
@@ -225,24 +448,43 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 verification = await UtelInconcertRunner(settings).run(verify_config)
                 serializable_verification = {**verification, "stages": [stage.model_dump() for stage in verification["stages"]]}
                 submission = results[result_index]["result"]
-                results[result_index]["result"] = {
-                    **serializable_verification,
-                    "selected_program_name": submission.get("selected_program_name"),
-                    "stages": [*submission["stages"], *serializable_verification["stages"]],
-                }
+                results[result_index]["result"] = _merge_utel_and_crm_results(
+                    submission,
+                    serializable_verification,
+                )
                 # Sustituye el checkpoint con el enlace CRM confirmado.
                 _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
+                counts = _utel_batch_counts(results)
                 job.update({
-                    "completed": len(rows),
-                    "success": sum(1 for item in results if item["result"]["status"] == "PASS"),
-                    "failed": sum(1 for item in results if item["result"]["status"] == "FAIL"),
+                    "completed": len(results),
+                    **counts,
                     "results": results,
                 })
                 if verification_index < len(verification_queue) and inter_row_delay > 0:
                     await asyncio.sleep(inter_row_delay)
 
         _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
-        job.update({"status": "PASS", "finished_at": datetime.now().isoformat(timespec="seconds"), "download_url": f"/api/bots/utel-inconcert/batch/{job_id}/download", "results": results})
+        counts = _utel_batch_counts(results)
+        cancel_requested = bool(job.get("cancel_requested"))
+        final_status = (
+            "CANCELLED"
+            if cancel_requested
+            else ("PASS" if counts["failed"] == 0 and counts["pending"] == 0 else "FAIL")
+        )
+        job.update({
+            "status": final_status,
+            "finished_at": datetime.now().isoformat(timespec="seconds"),
+            "download_url": (
+                f"/api/bots/utel-inconcert/batch/{job_id}/download" if results else None
+            ),
+            "results": results,
+            **counts,
+        })
+        if cancel_requested:
+            job["summary"] = (
+                "Detención segura completada: no se iniciaron nuevas filas y "
+                "todos los envíos ya iniciados fueron conciliados sin reenviar."
+            )
     except asyncio.CancelledError:
         _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
         job.update({"status": "CANCELLED", "finished_at": datetime.now().isoformat(timespec="seconds"), "summary": "Lote cancelado durante la ejecución."})
@@ -261,6 +503,7 @@ async def run_utel_batch(request: Request, file: UploadFile = File(...), config:
         raise HTTPException(status_code=400, detail="Comparte un archivo Excel con extensión .xlsx.")
     try:
         raw_config = json.loads(config)
+        batch_dry_run = _batch_dry_run(raw_config)
         selected_mapping = json.loads(mapping)
         if not (selected_mapping.get("program_name") or selected_mapping.get("level")) or not selected_mapping.get("utel_url"):
             raise ValueError("Selecciona una columna de Programa o Nivel, además de la columna URL.")
@@ -289,10 +532,12 @@ async def run_utel_batch(request: Request, file: UploadFile = File(...), config:
         "completed": 0,
         "success": 0,
         "failed": 0,
+        "pending": 0,
         "phase": "UTEL: preparando envíos",
         "download_url": None,
         "workflow_mode": preview_rows[0].get("workflow_mode", "product_release"),
-        "dry_run": raw_config.get("dry_run", True),
+        "dry_run": batch_dry_run,
+        "cancel_requested": False,
     }
     task = asyncio.create_task(_run_utel_batch_job(request.app, job_id, content, file.filename or "resultado.xlsx", raw_config, selected_mapping))
     request.app.state.bot_tasks[job_id] = task
@@ -314,8 +559,13 @@ async def cancel_utel_batch(request: Request, job_id: str) -> dict:
     task = request.app.state.bot_tasks.get(job_id)
     if job is None or task is None or task.done():
         raise HTTPException(status_code=404, detail="El lote ya terminó o no existe.")
-    job.update({"status": "CANCELLED", "finished_at": datetime.now().isoformat(timespec="seconds"), "summary": "Lote detenido por el usuario."})
-    task.cancel()
+    # No se cancela la coroutine mientras una fila puede estar después del clic.
+    # El worker termina la fila actual, concilia lo ya enviado y luego se detiene.
+    job.update({
+        "cancel_requested": True,
+        "phase": "Detención solicitada: cerrando la fila actual de forma segura",
+        "summary": "Detención solicitada; no se iniciarán filas nuevas.",
+    })
     return job
 
 
@@ -543,11 +793,27 @@ async def _run_utel_inconcert_job(application, job_id: str, config: UtelQaConfig
     settings = application.state.settings
     try:
         logger.info("Iniciando flujo UTEL/InConcert: %s (%s)", config.name, job_id)
-        result = await UtelInconcertRunner(settings).run(config)
+        result = await UtelInconcertRunner(settings).run(
+            config,
+            should_stop=lambda: bool(
+                application.state.utel_inconcert_jobs.get(job_id, {}).get(
+                    "cancel_requested"
+                )
+            ),
+        )
         serializable_result = {
             **result,
             "stages": [stage.model_dump() for stage in result["stages"]],
         }
+        cancel_requested = bool(
+            application.state.utel_inconcert_jobs.get(job_id, {}).get("cancel_requested")
+        )
+        final_summary = result["summary"]
+        if cancel_requested:
+            final_summary = (
+                "La detención se solicitó durante la operación. La fila activa "
+                f"se completó de forma segura para no perder ni duplicar el envío. {result['summary']}"
+            )
         ExecutionRepository(settings.database_path).create_execution(
             {
                 "automation_type": "utel_inconcert_qa",
@@ -556,7 +822,7 @@ async def _run_utel_inconcert_job(application, job_id: str, config: UtelQaConfig
                 "started_at": result["started_at"],
                 "finished_at": result["finished_at"],
                 "duration_seconds": result["duration_seconds"],
-                "summary": result["summary"],
+                "summary": final_summary,
                 "error_message": None if result["status"] == "PASS" else result["summary"],
                 "evidence_json": json.dumps(serializable_result, ensure_ascii=False),
                 "created_at": result["finished_at"],
@@ -569,10 +835,27 @@ async def _run_utel_inconcert_job(application, job_id: str, config: UtelQaConfig
             "started_at": result["started_at"],
             "finished_at": result["finished_at"],
             "duration_seconds": result["duration_seconds"],
-            "summary": result["summary"],
+            "summary": final_summary,
             "result": serializable_result,
+            "cancel_requested": cancel_requested,
         }
         logger.info("Flujo UTEL/InConcert finalizado: %s - %s", config.name, result["status"])
+    except UtelRunCancelled as error:
+        now = datetime.now().isoformat(timespec="seconds")
+        current = application.state.utel_inconcert_jobs.get(job_id, {})
+        application.state.utel_inconcert_jobs[job_id] = {
+            "job_id": job_id,
+            "name": config.name,
+            "status": "CANCELLED",
+            "started_at": current.get("started_at", now),
+            "finished_at": now,
+            "duration_seconds": None,
+            "summary": str(error),
+            "result": None,
+            "cancel_requested": True,
+        }
+        logger.info("Flujo UTEL/InConcert detenido antes del envío: %s (%s)", config.name, job_id)
+        return
     except asyncio.CancelledError:
         logger.info("Flujo UTEL/InConcert cancelado durante el cierre: %s (%s)", config.name, job_id)
         raise
@@ -696,6 +979,11 @@ async def _run_weekly_auto_job(application, job_id: str, config: WeeklyAutoConfi
 async def run_utel_inconcert_bot(request: Request, config: UtelQaConfig) -> dict:
     """Inicia el flujo UTEL/InConcert sin bloquear la interfaz."""
 
+    # La API individual siempre ejecuta el ciclo completo. Estos flags son de
+    # orquestación interna y no pueden quedar controlados por una petición vieja.
+    config = config.model_copy(
+        update={"defer_crm_verification": False, "verification_only": False}
+    )
     country_crm = BotSpreadsheetService.default_inconcert_url(config.country)
     if country_crm:
         config = config.model_copy(update={"inconcert_url": country_crm})
@@ -722,6 +1010,7 @@ async def run_utel_inconcert_bot(request: Request, config: UtelQaConfig) -> dict
         "duration_seconds": None,
         "summary": "El flujo UTEL/InConcert esta ejecutandose en segundo plano.",
         "result": None,
+        "cancel_requested": False,
     }
     task = asyncio.create_task(_run_utel_inconcert_job(request.app, job_id, config))
     request.app.state.bot_tasks[job_id] = task
@@ -753,8 +1042,15 @@ async def cancel_utel_run(request: Request, job_id: str) -> dict:
     task = request.app.state.bot_tasks.get(job_id)
     if job is None or task is None or task.done():
         raise HTTPException(status_code=404, detail="La ejecución ya terminó o no existe.")
-    job.update({"status": "CANCELLED", "finished_at": datetime.now().isoformat(timespec="seconds"), "summary": "Ejecución detenida por el usuario."})
-    task.cancel()
+    # Una cancelación forzada podría ocurrir después del clic y borrar el único
+    # registro del envío. Se deja terminar la operación atómica y su consulta CRM.
+    job.update({
+        "cancel_requested": True,
+        "summary": (
+            "Detención solicitada. La operación activa terminará su comprobación "
+            "sin reenviar para conservar un resultado seguro."
+        ),
+    })
     return job
 
 

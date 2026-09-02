@@ -32,6 +32,13 @@ const state = {
   workflowMode: "product_release",
 };
 
+export function isSafeUtelRetry(item) {
+  // Política cerrada: solo se reintenta cuando el backend confirma de forma
+  // explícita que nunca llegó a hacer clic en el botón de envío. Los resultados
+  // antiguos o incompletos quedan protegidos frente a posibles duplicados.
+  return item?.result?.status === "FAIL" && item.result.utel_submission_attempted === false;
+}
+
 const stageLabels = {
   utel_open: "Abrir UTEL",
   utel_navigation: "Navegar modalidad/nivel",
@@ -87,7 +94,7 @@ function renderModuleShell() {
             <label class="field"><span>Email de prueba</span><input id="bot-lead-email" type="email" readonly /></label>
             <label class="field"><span>Telefono de prueba</span><input id="bot-lead-phone" type="tel" readonly /></label>
           </div>
-          <p class="muted">El nombre, email y teléfono se generan automáticamente al ejecutar cada caso (Danilo1, Danilo2...). Son datos sintéticos y no se deben usar para contactar personas.</p>
+          <p class="muted">El nombre, email y teléfono se generan automáticamente al ejecutar cada caso (por ejemplo, Danilo Prueba A). Son datos sintéticos y no se deben usar para contactar personas.</p>
         </div>
       </article>
       <section class="bot-error-log-panel bot-error-log-panel--standalone">
@@ -380,7 +387,7 @@ function renderErrorLog(job) {
 
 function renderBatchTerminal(job, running = false) {
   const now = new Date().toLocaleTimeString("es-CO", { hour12: false });
-  const lines = [`[${now}] [LOTE] ${job.completed || 0}/${job.total || 0} filas procesadas · OK: ${job.success || 0} · ERROR: ${job.failed || 0}`];
+  const lines = [`[${now}] [LOTE] ${job.completed || 0}/${job.total || 0} filas procesadas · OK: ${job.success || 0} · ERROR: ${job.failed || 0} · PENDIENTE CRM: ${job.pending || 0}`];
   (job.results || []).forEach((item) => {
     const label = `Fila ${item.row?.row_number || "?"} · ${item.row?.program_name || item.row?.level || "Sin programa"}`;
     const result = item.result || {};
@@ -433,9 +440,21 @@ async function pollJob(showToast, statusApi, jobId) {
     localStorage.removeItem(ACTIVE_SINGLE_JOB_KEY);
     localStorage.setItem(LAST_SINGLE_JOB_KEY, jobId);
     document.querySelector("#bot-run").disabled = false;
-    document.querySelector("#bot-stop")?.setAttribute("hidden", "");
+    const stopButton = document.querySelector("#bot-stop");
+    stopButton?.setAttribute("hidden", "");
+    if (stopButton) {
+      stopButton.disabled = false;
+      stopButton.textContent = "Detener";
+    }
     document.querySelector("#bot-run").classList.remove("loading");
     document.querySelector("#bot-run").innerHTML = "Ejecutar prueba <span>-></span>";
+    if (job.status === "CANCELLED") {
+      const status = document.querySelector("#bot-run-status");
+      status.className = "bot-run-status";
+      status.innerHTML = `<strong>EJECUCIÓN DETENIDA SIN ENVÍO</strong><span>${escapeHtml(job.summary || "No se envió ningún lead.")}</span>`;
+      showToast("Ejecución detenida antes del envío.", "info");
+      return;
+    }
     if (job.result) renderRunResult(job.result);
     if (job.result) renderErrorLog({
       job_id: job.job_id,
@@ -448,7 +467,11 @@ async function pollJob(showToast, statusApi, jobId) {
       `[DATOS DE PRUEBA] Nombre: ${job.result.lead_name || "-"} · Email: ${job.result.lead_email || "-"} · Teléfono: ${job.result.lead_phone || "-"}`,
       ...(job.result.stages || []).map((stage) => `[${stage.status === "PASS" ? "OK" : "ERROR"}] ${stageLabels[stage.stage] || stage.stage}: ${stage.message}`),
     ]);
-    showToast(job.status === "PASS" ? "Flujo UTEL/InConcert completado." : "El flujo UTEL/InConcert termino con errores.", job.status === "PASS" ? "info" : "error");
+    const completedAfterStop = Boolean(job.cancel_requested);
+    const finalMessage = completedAfterStop
+      ? (job.summary || "La fila activa se completó de forma segura.")
+      : (job.status === "PASS" ? "Flujo UTEL/InConcert completado." : "El flujo UTEL/InConcert termino con errores.");
+    showToast(finalMessage, job.status === "PASS" || completedAfterStop ? "info" : "error");
   } catch (error) {
     const status = document.querySelector("#bot-run-status");
     status.className = "bot-run-status error";
@@ -472,7 +495,12 @@ async function executeBot(showToast, runApi, statusApi) {
   const runButton = document.querySelector("#bot-run");
   const status = document.querySelector("#bot-run-status");
   runButton.disabled = true;
-  document.querySelector("#bot-stop")?.removeAttribute("hidden");
+    const stopButton = document.querySelector("#bot-stop");
+    stopButton?.removeAttribute("hidden");
+    if (stopButton) {
+      stopButton.disabled = false;
+      stopButton.textContent = "Detener";
+    }
   runButton.classList.add("loading");
   runButton.innerHTML = "<span>◌</span> Ejecutando...";
   status.className = "bot-run-status running";
@@ -544,7 +572,9 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       const running = current.status === "RUNNING" || current.status === "QUEUED";
       const liveError = current.last_error ? ` · Último error: fila ${current.current_row} (${current.current_program}): ${current.last_error}` : "";
       const phase = current.phase ? `${current.phase} · ` : "";
-      document.querySelector("#bot-run-status").textContent = `${phase}${current.dry_run ? "Dry run (sin envío)" : "Lote"}: ${current.completed}/${current.total} filas procesadas · OK: ${current.success} · Errores: ${current.failed}${liveError}`;
+      const pendingCount = Number(current.pending || 0);
+      const pendingLabel = pendingCount ? ` · Pendientes CRM: ${pendingCount}` : "";
+      document.querySelector("#bot-run-status").textContent = `${phase}${current.dry_run ? "Dry run (sin envío)" : "Lote"}: ${current.completed}/${current.total} filas procesadas · OK: ${current.success} · Errores: ${current.failed}${pendingLabel}${liveError}`;
       renderBatchTerminal(current, running);
       renderErrorLog(current);
 
@@ -555,19 +585,32 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       localStorage.removeItem(ACTIVE_BATCH_JOB_KEY);
       localStorage.setItem(LAST_BATCH_JOB_KEY, jobId);
       stopButton.hidden = true;
+      stopButton.disabled = false;
+      stopButton.textContent = "Detener";
       batchButton.disabled = false;
       document.querySelector("#bot-run").disabled = false;
       lastFinishedBatch = current;
       const failedRows = (current.results || []).filter((item) => item.result?.status === "FAIL");
-      retryErrorsButton.hidden = !spreadsheetFile || failedRows.length === 0;
-      retryErrorsButton.disabled = failedRows.length === 0;
-      retryErrorsButton.textContent = `Reintentar ${failedRows.length} error${failedRows.length === 1 ? "" : "es"}`;
+      // Solo los fallos ocurridos antes del clic son seguros para reintentar.
+      // Un resultado post-clic debe volver a consultarse en CRM, no reenviarse.
+      const retriableRows = failedRows.filter(isSafeUtelRetry);
+      const protectedRows = failedRows.length - retriableRows.length;
+      retryErrorsButton.hidden = !spreadsheetFile || retriableRows.length === 0;
+      retryErrorsButton.disabled = retriableRows.length === 0;
+      retryErrorsButton.textContent = `Reintentar ${retriableRows.length} error${retriableRows.length === 1 ? "" : "es"} previo${retriableRows.length === 1 ? "" : "s"} al envío`;
       if (current.download_url) {
         const apiBase = window.desktop?.apiUrl || window.location.origin;
         const label = current.status === "PASS"
           ? (current.dry_run ? "Dry run completado (sin envío)" : "Lote completado")
-          : "Lote finalizado con resultados parciales";
-        document.querySelector("#bot-run-status").innerHTML = `${label}: ${current.success} OK, ${current.failed} con error. <a href="${apiBase}${current.download_url}" download>Descargar Excel actualizado</a>`;
+          : (current.status === "CANCELLED" ? "Lote detenido de forma segura" : "Lote finalizado con resultados parciales");
+        const protectedNotice = protectedRows
+          ? ` ${protectedRows} fila${protectedRows === 1 ? "" : "s"} post-envío no se reintentará${protectedRows === 1 ? "" : "n"} para evitar duplicados.`
+          : "";
+        const finalPending = Number(current.pending || 0);
+        const pendingNotice = finalPending
+          ? ` ${finalPending} fila${finalPending === 1 ? "" : "s"} pendiente${finalPending === 1 ? "" : "s"} de verificación CRM.`
+          : "";
+        document.querySelector("#bot-run-status").innerHTML = `${label}: ${current.success} OK, ${current.failed} con error.${pendingNotice}${protectedNotice} <a href="${apiBase}${current.download_url}" download>Descargar Excel actualizado</a>`;
         renderBatchResults(current);
         if (announceCompletion) showToast("Excel actualizado generado correctamente.", "info");
       } else {
@@ -585,6 +628,8 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
         if (localStorage.getItem(ACTIVE_BATCH_JOB_KEY) === jobId) localStorage.removeItem(ACTIVE_BATCH_JOB_KEY);
         if (localStorage.getItem(LAST_BATCH_JOB_KEY) === jobId) localStorage.removeItem(LAST_BATCH_JOB_KEY);
         stopButton.hidden = true;
+        stopButton.disabled = false;
+        stopButton.textContent = "Detener";
         batchButton.disabled = false;
         document.querySelector("#bot-run").disabled = false;
         status.className = "bot-run-status";
@@ -606,6 +651,8 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       localStorage.removeItem(LAST_BATCH_JOB_KEY);
     }
     stopButton.hidden = false;
+    stopButton.disabled = false;
+    stopButton.textContent = "Detener";
     batchButton.disabled = true;
     document.querySelector("#bot-run").disabled = true;
     await pollBatchJob(jobId, announceCompletion);
@@ -621,6 +668,8 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     runButton.classList.add("loading");
     runButton.innerHTML = "<span>◌</span> Ejecutando...";
     stopButton.hidden = false;
+    stopButton.disabled = false;
+    stopButton.textContent = "Detener";
     await pollJob(announce ? showToast : () => {}, utelInconcertStatus, jobId);
     if (state.activeJobId === jobId) {
       state.pollTimer = window.setInterval(() => void pollJob(showToast, utelInconcertStatus, jobId), 1000);
@@ -872,7 +921,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
   batchButton.addEventListener("click", executeBatch);
   retryErrorsButton.addEventListener("click", () => {
     const failedRows = (lastFinishedBatch?.results || [])
-      .filter((item) => item.result?.status === "FAIL")
+      .filter(isSafeUtelRetry)
       .map((item) => ({ sheet: item.row?.sheet, row_number: item.row?.row_number }))
       .filter((row) => row.sheet && Number.isInteger(Number(row.row_number)));
     if (!spreadsheetFile || !failedRows.length) {
@@ -885,29 +934,28 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     void executeBatch(retryMapping, failedRows.length);
   });
   stopButton.addEventListener("click", async () => {
+    let requestAccepted = false;
     try {
       stopButton.disabled = true;
-      if (activeBatchJobId && cancelUtelBatch) await cancelUtelBatch(activeBatchJobId);
-      else if (state.activeJobId && cancelUtelInconcert) await cancelUtelInconcert(state.activeJobId);
-      stopBatchPolling();
-      if (state.pollTimer) window.clearInterval(state.pollTimer);
-      state.pollTimer = null;
-      activeBatchJobId = null;
-      state.activeJobId = null;
-      localStorage.removeItem(ACTIVE_BATCH_JOB_KEY);
-      localStorage.removeItem(LAST_BATCH_JOB_KEY);
-      localStorage.removeItem(ACTIVE_SINGLE_JOB_KEY);
-      localStorage.removeItem(LAST_SINGLE_JOB_KEY);
-      document.querySelector("#bot-run").disabled = false;
-      document.querySelector("#bot-run").classList.remove("loading");
-      stopButton.hidden = true;
-      document.querySelector("#bot-run-status").textContent = "Ejecución detenida por el usuario.";
-      appendTerminal([`[${new Date().toLocaleTimeString("es-CO", { hour12: false })}] [CANCELADO] Ejecución detenida por el usuario.`]);
-      showToast("Ejecución detenida.", "info");
+      stopButton.textContent = "Detención solicitada";
+      if (activeBatchJobId && cancelUtelBatch) {
+        await cancelUtelBatch(activeBatchJobId);
+      } else if (state.activeJobId && cancelUtelInconcert) {
+        await cancelUtelInconcert(state.activeJobId);
+      } else {
+        throw new Error("No hay una ejecución activa para detener.");
+      }
+      requestAccepted = true;
+      document.querySelector("#bot-run-status").textContent = "Detención solicitada: se cerrará la operación actual y se conciliará cualquier envío ya iniciado.";
+      appendTerminal([`[${new Date().toLocaleTimeString("es-CO", { hour12: false })}] [DETENCIÓN SOLICITADA] No se iniciarán filas nuevas; la fila activa se cerrará y verificará sin reenviar.`]);
+      showToast("Detención segura solicitada. La comprobación continúa en segundo plano.", "info");
     } catch (error) {
       showToast(`No se pudo detener la ejecución: ${error.message}`, "error");
     } finally {
-      stopButton.disabled = false;
+      if (!requestAccepted) {
+        stopButton.disabled = false;
+        stopButton.textContent = "Detener";
+      }
     }
   });
   spreadsheetRow.addEventListener("change", () => {

@@ -139,7 +139,10 @@ def test_bot_run_returns_immediately_as_background_job(tmp_path, monkeypatch):
 def test_utel_inconcert_run_returns_background_job(tmp_path, monkeypatch):
     """El flujo UTEL/InConcert se lanza como job y no expone credenciales."""
 
-    async def fake_run(self, config):
+    seen = []
+
+    async def fake_run(self, config, should_stop=None):
+        seen.append((config, should_stop))
         return {
             "status": "PASS",
             "summary": "Flujo UTEL/InConcert completado correctamente.",
@@ -182,6 +185,8 @@ def test_utel_inconcert_run_returns_background_job(tmp_path, monkeypatch):
                 "modality": "En linea",
                 "level": "Licenciatura",
                 "form_type": "lateral",
+                "defer_crm_verification": True,
+                "verification_only": True,
                 "lead": {"name": "Lead QA", "email": "qa@example.com", "phone": "5549382716"},
             },
         )
@@ -195,3 +200,6 @@ def test_utel_inconcert_run_returns_background_job(tmp_path, monkeypatch):
         assert payload["result"]["lead_email"].startswith("Testing")
         assert payload["result"]["lead_email"].endswith("@testingUtel.com")
         assert "qa-password" not in status_response.text
+        assert seen[0][0].defer_crm_verification is False
+        assert seen[0][0].verification_only is False
+        assert callable(seen[0][1])

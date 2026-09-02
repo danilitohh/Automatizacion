@@ -4,7 +4,7 @@ import test from "node:test";
 
 // El renderer usa módulos ESM aunque Electron main es CommonJS.
 const source = await readFile(new URL("../src/renderer/bot-module.js", import.meta.url), "utf8");
-const { buildErrorLog } = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
+const { buildErrorLog, isSafeUtelRetry } = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
 
 test("el log contiene solo errores con la fila y el mensaje completo", () => {
   const message = `Timeout\n${"detalle ".repeat(200)}`;
@@ -23,4 +23,11 @@ test("el log contiene solo errores con la fila y el mensaje completo", () => {
 test("los errores del lote también se pueden compartir", () => {
   assert.ok(buildErrorLog({ status: "FAIL", summary: "Error al leer Excel" }).includes("Error al leer Excel"));
   assert.equal(buildErrorLog({ results: [] }), "");
+});
+
+test("solo se reintentan fallos ocurridos antes del clic", () => {
+  assert.equal(isSafeUtelRetry({ result: { status: "FAIL", utel_submission_attempted: false } }), true);
+  assert.equal(isSafeUtelRetry({ result: { status: "FAIL", utel_submission_attempted: true } }), false);
+  assert.equal(isSafeUtelRetry({ result: { status: "FAIL" } }), false);
+  assert.equal(isSafeUtelRetry({ result: { status: "PASS", utel_submission_attempted: false } }), false);
 });

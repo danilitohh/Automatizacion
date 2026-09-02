@@ -176,6 +176,9 @@ class UtelQaRunResponse(BaseModel):
     environment: str
     dry_run: bool
     workflow_mode: Literal["product_release", "form_validation"] = "product_release"
+    # Permite distinguir fallos seguros para reintentar de cualquier resultado
+    # ocurrido después del clic, donde un segundo envío podría duplicar el lead.
+    utel_submission_attempted: bool = False
     utel_submission: Literal["pending", "success", "failed", "skipped"]
     utel_submission_message: str = ""
     inconcert_login: Literal["pending", "success", "failed", "skipped"]
@@ -196,3 +199,4 @@ class UtelQaJobResponse(BaseModel):
     duration_seconds: float | None = None
     summary: str | None = None
     result: UtelQaRunResponse | None = None
+    cancel_requested: bool = False

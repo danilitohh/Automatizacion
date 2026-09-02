@@ -85,14 +85,16 @@ def test_rejected_login_does_not_search_or_expose_credentials(tmp_path):
 def test_contacts_redirect_recovers_before_waiting_for_search(tmp_path):
     bot = runner(tmp_path)
     page = Mock(url="https://crm.test/mas/home", goto=AsyncMock(), wait_for_function=AsyncMock())
-    search = Mock(wait_for=AsyncMock())
+    search = Mock(wait_for=AsyncMock(), count=AsyncMock(return_value=1))
     page.locator.return_value.first = search
     bot._is_inconcert_login = AsyncMock(side_effect=[True, False])
     bot._login_inconcert = AsyncMock()
     asyncio.run(bot._open_contacts(page))
     bot._login_inconcert.assert_awaited_once()
     assert page.goto.await_count == 2
-    search.wait_for.assert_awaited_once()
+    # El resolver comprueba visibilidad y la etapa vuelve a esperar el campo
+    # estable antes de continuar con la búsqueda.
+    assert search.wait_for.await_count == 2
 
 
 def test_login_does_not_fill_credentials_on_external_redirect(tmp_path):

@@ -95,6 +95,15 @@ class BotReportService:
                     status = "LEAD LOCALIZADO - VALIDACION PENDIENTE"
                 sheet.cell(row, status_col).value = status
                 detail = failure["message"] if failure else result.get("summary", "")
+                submission_detail = str(result.get("utel_submission_message") or "").strip()
+                if (
+                    result.get("utel_submission_attempted")
+                    and submission_detail
+                    and submission_detail not in detail
+                ):
+                    # Conserva tanto la causa CRM como el aviso observado en
+                    # UTEL; esta combinación explica por qué no se reenvió.
+                    detail = f"{detail} | {submission_detail}" if detail else submission_detail
                 if status == "LEAD LOCALIZADO - VALIDACION PENDIENTE":
                     detail = f"Lead localizado y enlace guardado. Faltó validar visualmente el email en InConcert: {detail}"
                 sheet.cell(row, detail_col).value = detail[:32767]

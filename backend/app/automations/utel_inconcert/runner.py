@@ -4,7 +4,7 @@ import asyncio
 import re
 import secrets
 import unicodedata
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -32,8 +32,24 @@ class UtelQaError(RuntimeError):
         self.url: str | None = None
 
 
-class UnconfirmedSubmission(UtelQaError):
-    """El click ya ocurrio: consultar CRM, nunca reenviar automaticamente."""
+class PostSubmitSignal(UtelQaError):
+    """Señal posterior al clic: consultar CRM y nunca volver a enviar."""
+
+
+class UnconfirmedSubmission(PostSubmitSignal):
+    """UTEL no mostró una respuesta concluyente después del clic."""
+
+
+class RejectedSubmission(PostSubmitSignal):
+    """UTEL mostró un rechazo genérico después del clic, aún sujeto a CRM."""
+
+
+class LeadNotFoundError(UtelQaError):
+    """La ventana completa de búsqueda terminó sin encontrar el lead."""
+
+
+class UtelRunCancelled(RuntimeError):
+    """Detención cooperativa confirmada antes de cualquier clic de envío."""
 
 
 class UtelInconcertRunner:
@@ -54,16 +70,35 @@ class UtelInconcertRunner:
         "argentina": "+54",
         "usa": "+1",
         "united states": "+1",
+        "estados unidos": "+1",
         "bolivia": "+591",
         "paraguay": "+595",
         "dominicana": "+1",
         "republica dominicana": "+1",
+        "dominican republic": "+1",
         "guatemala": "+502",
         "panama": "+507",
         "el salvador": "+503",
         "global": "+1",
         "filipinas": "+63",
+        "philippines": "+63",
         "india": "+91",
+    }
+    # Los valores reales del <select> están en inglés y no son los prefijos
+    # telefónicos que muestra visualmente el componente. Estos alias permiten
+    # seleccionar el país correcto y comprobarlo antes de escribir el teléfono.
+    COUNTRY_OPTION_ALIASES = {
+        "mexico": ("mexico",),
+        "peru": ("peru",),
+        "usa": ("united states",),
+        "united states": ("united states",),
+        "estados unidos": ("united states",),
+        "dominicana": ("dominican republic", "republica dominicana"),
+        "republica dominicana": ("dominican republic", "republica dominicana"),
+        "dominican republic": ("dominican republic", "republica dominicana"),
+        "global": ("united states",),
+        "filipinas": ("philippines",),
+        "philippines": ("philippines",),
     }
     _open_session: dict[str, Any] | None = None
 
@@ -80,6 +115,8 @@ class UtelInconcertRunner:
         self._rotation_config = None
         self._crm_session_recoveries = 0
         self._crm_origin = ""
+        self._submission_attempted = False
+        self._cancelled_before_submit = False
         self.status_flags = {
             "utel_submission": "pending",
             "utel_submission_message": "Formulario pendiente de envio.",
@@ -91,7 +128,11 @@ class UtelInconcertRunner:
         self._last_submit_success_pattern = ""
         self._last_submit_error_pattern = "error|invalido|inválido|obligatorio|requerido|fall"
 
-    async def run(self, config: UtelQaConfig) -> dict[str, Any]:
+    async def run(
+        self,
+        config: UtelQaConfig,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> dict[str, Any]:
         """Valida configuracion, ejecuta el flujo y devuelve un reporte estructurado."""
 
         started_at = datetime.now().isoformat(timespec="seconds")
@@ -105,13 +146,16 @@ class UtelInconcertRunner:
         self._rotation_config = config
         self._crm_session_recoveries = 0
         self._crm_origin = ""
+        self._submission_attempted = False
+        self._cancelled_before_submit = False
         self.status_flags = {key: "pending" for key in self.status_flags}
         self.evidence_directory = self._evidence_directory(config.name)
         page = None
-        unconfirmed = None
+        post_submit_signal: PostSubmitSignal | None = None
 
         try:
             self._validate_config(config)
+            self._raise_if_stop_requested(should_stop)
             try:
                 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
                 from playwright.async_api import async_playwright
@@ -149,6 +193,7 @@ class UtelInconcertRunner:
                         inconcert_page.set_default_timeout(30000)
                         await self._run_stage(1, "inconcert_open", "InConcert disponible para verificacion", inconcert_page, lambda: self._open_inconcert(inconcert_page, config))
                         await self._run_stage(2, "inconcert_login", "Login de InConcert completado", inconcert_page, lambda: self._login_inconcert(inconcert_page))
+                        self.status_flags["inconcert_login"] = "success"
                         await self._run_stage(3, "inconcert_contacts", "Contactos listos para buscar", inconcert_page, lambda: self._open_contacts(inconcert_page))
                         try:
                             await self._run_stage(4, "inconcert_search", "Lead localizado y verificado", inconcert_page, lambda: self._search_lead(inconcert_page, config.lead.email, config.lead.name))
@@ -161,7 +206,13 @@ class UtelInconcertRunner:
                             balancer_page = await context.new_page()
                             page = balancer_page
                             balancer_page.set_default_timeout(30000)
-                            await self._run_stage(5, "lead_balancer_search", "Lead localizado en Balanceador", balancer_page, lambda: self._search_lead_balancer(balancer_page, config.lead.email, config.lead.name))
+                            try:
+                                await self._run_stage(5, "lead_balancer_search", "Lead localizado en Balanceador", balancer_page, lambda: self._search_lead_balancer(balancer_page, config.lead.email, config.lead.name))
+                            except LeadNotFoundError:
+                                # InConcert y el Balanceador agotaron sus ventanas
+                                # de indexación: esta ausencia sí es concluyente.
+                                self.status_flags["lead_found"] = "failed"
+                                raise
                             self.status_flags["lead_source"] = "balanceador"
                             self.status_flags["lead_found"] = "success"
                             self.status_flags["conversion_found"] = "skipped"
@@ -176,38 +227,43 @@ class UtelInconcertRunner:
                     page = utel_page
                     utel_page.set_default_timeout(18000)
                     await self._run_stage(1, "utel_open", "UTEL abierta", utel_page, lambda: self._open_utel(utel_page, config), "01_utel_inicio")
+                    self._raise_if_stop_requested(should_stop)
                     await self._run_stage(2, "utel_navigation", "Modalidad, nivel y programa resueltos", utel_page, lambda: self._navigate_utel(utel_page, config))
+                    self._raise_if_stop_requested(should_stop)
                     form = await self._run_stage(3, "utel_form", "Formulario identificado", utel_page, lambda: self._find_utel_form(utel_page, config))
                     await self._run_stage(4, "utel_fill", "Formulario rellenado", utel_page, lambda: self._fill_utel_form(utel_page, form, config), "02_formulario_lleno")
+                    self._raise_if_stop_requested(should_stop)
                     if config.dry_run:
                         await self._run_stage(5, "dry_run_stop", "Dry run: formulario listo, envio omitido", utel_page, lambda: self._dry_run_stop(), "03_dry_run_pre_envio")
                         self.status_flags = {key: "skipped" for key in self.status_flags}
                         return self._build_result(config, started_at, timer)
                     if config.defer_crm_verification:
                         page = utel_page
-                        unconfirmed_submission = None
+                        post_submit_signal = None
                         try:
                             await self._run_stage(
                                 5,
                                 "utel_submit",
                                 "Formulario enviado; verificación pendiente al final del lote",
                                 utel_page,
-                                lambda: self._submit_utel_form(utel_page, form),
+                                lambda: self._submit_utel_form(utel_page, form, should_stop),
                                 "03_formulario_enviado",
                             )
-                        except UnconfirmedSubmission as error:
+                            self._submission_attempted = True
+                        except PostSubmitSignal as error:
                             # El clic ya se ejecutó. Nunca se reintenta un envío
                             # incierto: el lote debe comprobar el lead en CRM para
                             # determinar si UTEL lo recibió.
-                            unconfirmed_submission = error
+                            post_submit_signal = error
+                            self._submission_attempted = True
                             self.logger.warning(
                                 "%s Se programará verificación CRM sin reenviar el formulario.",
                                 error,
                             )
-                        self.status_flags["utel_submission"] = "pending" if unconfirmed_submission else "success"
+                        self.status_flags["utel_submission"] = "pending" if post_submit_signal else "success"
                         self.status_flags["utel_submission_message"] = (
-                            f"Confirmación visual pendiente; se verificará en CRM sin reenviar. Aviso: {unconfirmed_submission}"
-                            if unconfirmed_submission
+                            f"Respuesta de UTEL pendiente de conciliación; se verificará en CRM sin reenviar. Aviso: {post_submit_signal}"
+                            if post_submit_signal
                             else "Formulario enviado; pendiente de verificación CRM."
                         )
                         self.status_flags["inconcert_login"] = "skipped"
@@ -225,16 +281,19 @@ class UtelInconcertRunner:
                     await self._run_stage(6, "inconcert_login", "Login de InConcert completado", inconcert_page, lambda: self._login_inconcert(inconcert_page), "04_inconcert_login")
                     self.status_flags["inconcert_login"] = "success"
                     await self._run_stage(7, "inconcert_contacts", "Contactos listos para buscar", inconcert_page, lambda: self._open_contacts(inconcert_page))
+                    self._raise_if_stop_requested(should_stop)
 
                     page = utel_page
-                    unconfirmed = None
+                    post_submit_signal = None
                     try:
-                        await self._run_stage(8, "utel_submit", "Formulario enviado y confirmado", utel_page, lambda: self._submit_utel_form(utel_page, form), "03_formulario_enviado")
-                    except UnconfirmedSubmission as error:
-                        unconfirmed = error
+                        await self._run_stage(8, "utel_submit", "Formulario enviado y confirmado", utel_page, lambda: self._submit_utel_form(utel_page, form, should_stop), "03_formulario_enviado")
+                        self._submission_attempted = True
+                    except PostSubmitSignal as error:
+                        post_submit_signal = error
+                        self._submission_attempted = True
                         self.logger.warning("%s Se verificara en CRM sin reenviar.", error)
-                    self.status_flags["utel_submission"] = "pending" if unconfirmed else "success"
-                    self.status_flags["utel_submission_message"] = str(unconfirmed) if unconfirmed else "Formulario enviado y confirmado correctamente."
+                    self.status_flags["utel_submission"] = "pending" if post_submit_signal else "success"
+                    self.status_flags["utel_submission_message"] = str(post_submit_signal) if post_submit_signal else "Formulario enviado y confirmado correctamente."
 
                     page = inconcert_page
                     try:
@@ -250,30 +309,33 @@ class UtelInconcertRunner:
                         balancer_page = await context.new_page()
                         balancer_page.set_default_timeout(30000)
                         page = balancer_page
-                        await self._run_stage(
-                            10,
-                            "lead_balancer_search",
-                            "Lead localizado en Balanceador",
-                            balancer_page,
-                            lambda: self._search_lead_balancer(balancer_page, config.lead.email, config.lead.name),
-                            "05_lead_balanceador",
-                        )
+                        try:
+                            await self._run_stage(
+                                10,
+                                "lead_balancer_search",
+                                "Lead localizado en Balanceador",
+                                balancer_page,
+                                lambda: self._search_lead_balancer(balancer_page, config.lead.email, config.lead.name),
+                                "05_lead_balanceador",
+                            )
+                        except LeadNotFoundError:
+                            self.status_flags["lead_found"] = "failed"
+                            raise
                         self.status_flags["lead_source"] = "balanceador"
                         self.status_flags["lead_found"] = "success"
                         self.status_flags["conversion_found"] = "skipped"
+                        self._mark_submission_verified(post_submit_signal)
                         return self._build_result(config, started_at, timer)
                     self.status_flags["lead_found"] = "success"
                     await self._run_stage(10, "inconcert_manage", "Gestionar abierto y email confirmado", inconcert_page, lambda: self._open_manage(inconcert_page, config.lead.name, config.lead.email), "06_gestionar")
-                    if unconfirmed:
-                        self.status_flags["utel_submission"] = "success"
-                        self.status_flags["utel_submission_message"] = f"Lead verificado en CRM sin reenviar. Aviso original: {unconfirmed}"
+                    self._mark_submission_verified(post_submit_signal)
                     if config.workflow_mode == "form_validation":
                         self.status_flags["conversion_found"] = "skipped"
                         return self._build_result(config, started_at, timer)
                     await self._run_stage(11, "inconcert_conversion", "Conversion encontrada y programa validado", inconcert_page, lambda: self._confirm_conversion(inconcert_page, config), "07_conversion")
                     self.status_flags["conversion_found"] = "success"
                 finally:
-                    if config.keep_browser_open:
+                    if config.keep_browser_open and not self._cancelled_before_submit:
                         keep_open["value"] = True
                         UtelInconcertRunner._open_session = {
                             "playwright": playwright,
@@ -285,9 +347,13 @@ class UtelInconcertRunner:
                         await context.close()
                         if browser is not None:
                             await browser.close()
+        except UtelRunCancelled:
+            raise
         except UtelQaError as error:
-            if unconfirmed and error.stage.startswith("inconcert_"):
-                error.args = (f"{error} | Aviso del envio: {unconfirmed}. No se reenvio el formulario.",)
+            if post_submit_signal and error.stage.startswith(("inconcert_", "lead_balancer_")):
+                error.args = (
+                    f"{error} | Aviso del envío: {post_submit_signal}. No se reenvió el formulario.",
+                )
             self.logger.exception("Fallo el flujo UTEL en %s", error.stage)
             self._append_failed_stage(len(self.stage_results) + 1, error, error.url, error.screenshot)
         except Exception as error:  # noqa: BLE001 - se devuelve un resumen apto para QA
@@ -330,6 +396,7 @@ class UtelInconcertRunner:
             "lead_name": config.lead.name,
             "lead_email": config.lead.email,
             "lead_phone": config.lead.phone,
+            "utel_submission_attempted": self._submission_attempted,
             "selected_program_name": self.selected_program_name,
             "lead_url": self.lead_url,
             "environment": config.environment,
@@ -339,6 +406,80 @@ class UtelInconcertRunner:
             "stages": self.stage_results,
             "screenshots": self.screenshots,
         }
+
+    def _mark_submission_verified(self, signal: PostSubmitSignal | None) -> None:
+        """Convierte una respuesta dudosa de UTEL en éxito solo si CRM la confirma."""
+
+        if signal is None:
+            return
+        self.status_flags["utel_submission"] = "success"
+        self.status_flags["utel_submission_message"] = (
+            f"Lead verificado en CRM sin reenviar. Aviso original de UTEL: {signal}"
+        )
+
+    async def preflight_inconcert(self, config: UtelQaConfig) -> None:
+        """Comprueba acceso real a InConcert antes de iniciar envíos por lote."""
+
+        safe_config = config.model_copy(
+            update={
+                "dry_run": False,
+                "defer_crm_verification": False,
+                "verification_only": False,
+                "keep_browser_open": False,
+            }
+        )
+        self._validate_config(safe_config)
+        try:
+            from playwright.async_api import async_playwright
+        except ImportError as error:
+            raise UtelQaError(
+                "inconcert_preflight",
+                "No se inició ningún envío: Playwright no está instalado para validar InConcert.",
+            ) from error
+
+        await self._close_open_session()
+        browser = None
+        context = None
+        keep_open = {"value": False}
+        try:
+            async with self._playwright(async_playwright, keep_open) as playwright:
+                try:
+                    if safe_config.browser == "chrome":
+                        profile_directory = self.settings.storage_dir / "browser_profiles" / "chrome-qa"
+                        profile_directory.mkdir(parents=True, exist_ok=True)
+                        context = await playwright.chromium.launch_persistent_context(
+                            str(profile_directory),
+                            channel="chrome",
+                            headless=safe_config.headless,
+                            viewport={"width": 1440, "height": 900},
+                        )
+                    else:
+                        browser_type = getattr(playwright, safe_config.browser)
+                        browser = await browser_type.launch(headless=safe_config.headless)
+                        context = await browser.new_context(viewport={"width": 1440, "height": 900})
+                    page = await context.new_page()
+                    page.set_default_timeout(30000)
+                    await self._open_inconcert(page, safe_config)
+                    await self._login_inconcert(page)
+                    await self._open_contacts(page)
+                finally:
+                    # Cierra navegador y contexto antes de detener Playwright.
+                    if context is not None:
+                        with suppress(Exception):
+                            await context.close()
+                    if browser is not None:
+                        with suppress(Exception):
+                            await browser.close()
+        except UtelQaError as error:
+            raise UtelQaError(
+                "inconcert_preflight",
+                f"No se inició ningún envío: InConcert no superó la validación previa. {error}",
+            ) from error
+        except Exception as error:
+            raise UtelQaError(
+                "inconcert_preflight",
+                "No se inició ningún envío: no fue posible validar el acceso a InConcert y Contactos.",
+            ) from error
 
     @asynccontextmanager
     async def _playwright(self, async_playwright, keep_open: dict[str, bool]):
@@ -395,6 +536,8 @@ class UtelInconcertRunner:
                 )
             )
             return value
+        except UtelRunCancelled:
+            raise
         except Exception as error:  # noqa: BLE001 - Playwright emite errores variados
             failure = error if isinstance(error, UtelQaError) else UtelQaError(stage, self._friendly_error(error))
             # Capturar antes de que run() cierre el contexto del navegador.
@@ -1062,7 +1205,12 @@ class UtelInconcertRunner:
         selected = secrets.choice(options)
         await field.select_option(value=selected["value"])
 
-    async def _submit_utel_form(self, page: Any, form: Any) -> None:
+    async def _submit_utel_form(
+        self,
+        page: Any,
+        form: Any,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> None:
         submit = form.locator('button[type="submit"], input[type="submit"]').first
         try:
             await submit.wait_for(state="visible", timeout=12000)
@@ -1072,71 +1220,253 @@ class UtelInconcertRunner:
                     "El boton de envio permanece deshabilitado; falta completar o validar un campo.",
                     'button[type="submit"], input[type="submit"]',
                 )
-            # El drawer lateral mantiene una animacion/transformacion activa y
-            # Playwright puede esperar indefinidamente a que el boton quede
-            # estable. El click DOM dispara el mismo handler React sin depender
-            # de la geometria animada del elemento.
-            await submit.evaluate("(element) => element.click()")
+            await self._validate_utel_form_before_submit(form)
         except UtelQaError:
             raise
         except Exception as error:
             raise UtelQaError(
                 "utel_submit",
-                "No se pudo activar el boton de envio del formulario.",
+                "No se pudo validar el formulario antes del envio.",
                 'button[type="submit"], input[type="submit"]',
             ) from error
-        # UTEL no usa el mismo mensaje en todos los portales. Se espera un
-        # aviso visible de éxito o error, ya sea dentro del contenedor Chakra
-        # o en una alerta accesible del formulario.
+
+        # Último punto cooperativo: una solicitud recibida mientras se cargaba
+        # o validaba el formulario todavía puede detenerse sin crear un lead.
+        self._raise_if_stop_requested(should_stop)
+
+        # El listener se instala ANTES del clic. UTEL oculta el cuerpo de error
+        # y solo muestra "Contacta a soporte"; capturar POST /api/forms deja un
+        # diagnóstico sanitizado y permite reconocer un 2xx aunque falte toast.
+        loop = asyncio.get_running_loop()
+        api_response = loop.create_future()
+        network_failures: list[str] = []
+
+        def capture_response(response: Any) -> None:
+            try:
+                request = response.request
+                path = urlparse(str(response.url)).path.rstrip("/")
+                if path.endswith("/api/forms") and str(request.method).upper() == "POST":
+                    if not api_response.done():
+                        api_response.set_result(response)
+            except Exception:
+                return
+
+        def capture_failed_request(request: Any) -> None:
+            try:
+                parsed = urlparse(str(request.url))
+                if parsed.netloc == "api.ipify.org" or parsed.path.rstrip("/").endswith("/api/forms"):
+                    failure = str(request.failure or "fallo de red")
+                    network_failures.append(f"{parsed.netloc}{parsed.path}: {failure}")
+            except Exception:
+                return
+
+        listeners_installed = False
         try:
-            feedback_handle = await page.wait_for_function(
-                """() => {
-                    const selectors = [
-                      '#chakra-toast-manager-bottom',
-                      '[role="alert"]',
-                      '[role="status"]',
-                      '.chakra-alert',
-                      '.chakra-toast'
-                    ];
-                    const text = selectors
-                      .flatMap(selector => [...document.querySelectorAll(selector)])
-                      .filter(element => element.getClientRects().length)
-                      .map(element => (element.innerText || element.textContent || '').trim())
-                      .find(value => /env[ií]o|gracias|recib|contactaremos|error|soporte|inv[aá]lid|obligatori|requerid|fall/i.test(value));
-                    return text || null;
-                }""",
-                timeout=18000,
-            )
-            text = ""
-            json_value = getattr(feedback_handle, "json_value", None)
-            if callable(json_value):
-                value = await json_value()
-                if isinstance(value, str):
-                    text = value.strip()
-            if not text:
-                toast = page.locator("#chakra-toast-manager-bottom")
-                text = (await toast.inner_text()).strip()
-            if re.search(self._last_submit_error_pattern, text, re.I):
-                raise UtelQaError("utel_submit", f"El formulario mostro un mensaje de error: {text}")
-            success_pattern = (
-                r"env[ií]o correcto|pronto recibir[aá]s informaci[oó]n|"
-                r"successfully submitted|your information has been received|"
-                r"gracias.*(?:registro|informaci[oó]n|solicitud)|"
-                r"hemos recibido|(?:datos|solicitud|informaci[oó]n).*(?:recibid|enviad)|"
-                r"te contactaremos|nos pondremos en contacto"
-            )
-            if self._last_submit_success_pattern:
-                success_pattern += "|(?:" + self._last_submit_success_pattern + ")"
-            if not re.search(success_pattern, text, re.I):
-                raise UnconfirmedSubmission("utel_submit", f"El mensaje de confirmacion no coincide con el patron configurado: {text}")
-        except UtelQaError:
-            raise
+            page.on("response", capture_response)
+            page.on("requestfailed", capture_failed_request)
+            listeners_installed = True
+        except Exception:
+            # El flujo visual sigue funcionando en navegadores que no expongan
+            # eventos, aunque se pierda este diagnóstico complementario.
+            listeners_installed = False
+
+        # A partir de este punto el clic pudo llegar al servidor incluso si
+        # Playwright pierde la página o el elemento durante la evaluación. La
+        # única operación segura es consultar CRM; nunca se ejecuta otro clic.
+        self._submission_attempted = True
+        try:
+            # El drawer lateral mantiene una animacion/transformacion activa y
+            # Playwright puede esperar indefinidamente a que el boton quede
+            # estable. El click DOM dispara el mismo handler React sin depender
+            # de la geometria animada del elemento.
+            await submit.evaluate("(element) => element.click()")
         except Exception as error:
+            if not api_response.done():
+                api_response.cancel()
+            if listeners_installed:
+                with suppress(Exception):
+                    page.remove_listener("response", capture_response)
+                    page.remove_listener("requestfailed", capture_failed_request)
             raise UnconfirmedSubmission(
                 "utel_submit",
-                "Envio no confirmado: no aparecio una confirmacion del sitio. El lead podria haberse enviado; revisar antes de reintentar.",
+                "No se pudo observar el resultado del clic. El formulario pudo haberse enviado; se verificará en CRM sin reenviar.",
+                'button[type="submit"], input[type="submit"]',
+            ) from error
+
+        feedback_task: asyncio.Task[str] | None = None
+        try:
+            feedback_task = asyncio.create_task(self._wait_for_utel_submit_feedback(page))
+            done, _ = await asyncio.wait(
+                {api_response, feedback_task},
+                timeout=65,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if api_response in done:
+                await self._classify_utel_api_response(api_response.result())
+                return
+
+            text = ""
+            if feedback_task in done:
+                with suppress(Exception):
+                    text = feedback_task.result()
+            if text and re.search(
+                rf"(?:{self._last_submit_error_pattern})|debe\s+ingresar.*v[aá]lid|valor\s+v[aá]lido",
+                text,
+                re.I,
+            ):
+                # El response suele llegar casi al mismo tiempo que el toast.
+                # Una breve gracia permite adjuntar HTTP/body al diagnóstico.
+                try:
+                    response = await asyncio.wait_for(asyncio.shield(api_response), timeout=2)
+                except Exception:
+                    response = None
+                if response is not None:
+                    await self._classify_utel_api_response(response)
+                    return
+                raise RejectedSubmission(
+                    "utel_submit",
+                    f"UTEL mostró un aviso después del clic: {text}",
+                )
+            if text and re.search(self._utel_success_pattern(), text, re.I):
+                return
+
+            if text and not api_response.done():
+                with suppress(Exception):
+                    response = await asyncio.wait_for(asyncio.shield(api_response), timeout=2)
+                    await self._classify_utel_api_response(response)
+                    return
+
+            details = ""
+            if network_failures:
+                details = " Fallos de red observados: " + " | ".join(network_failures[-3:])
+            raise UnconfirmedSubmission(
+                "utel_submit",
+                "Envio no confirmado: UTEL no produjo una respuesta concluyente en 65 segundos. "
+                f"El lead podria haberse enviado; se verificará en CRM sin reenviar.{details}",
+                "#chakra-toast-manager-bottom",
+            )
+        except PostSubmitSignal:
+            raise
+        except Exception as error:
+            # Cualquier fallo inesperado después del clic conserva la misma
+            # política de seguridad: resultado incierto, conciliación en CRM y
+            # ningún segundo envío.
+            raise UnconfirmedSubmission(
+                "utel_submit",
+                "No se pudo interpretar la respuesta posterior al clic. "
+                "El lead podría haberse enviado; se verificará en CRM sin reenviar.",
                 "#chakra-toast-manager-bottom",
             ) from error
+        finally:
+            if feedback_task is not None and not feedback_task.done():
+                feedback_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await feedback_task
+            elif feedback_task is not None:
+                # Recupera una posible excepción si la respuesta HTTP ganó la
+                # carrera, evitando warnings de tareas no observadas.
+                with suppress(asyncio.CancelledError, Exception):
+                    feedback_task.result()
+            if not api_response.done():
+                api_response.cancel()
+            if listeners_installed:
+                with suppress(Exception):
+                    page.remove_listener("response", capture_response)
+                    page.remove_listener("requestfailed", capture_failed_request)
+
+    async def _wait_for_utel_submit_feedback(self, page: Any) -> str:
+        """Espera toast, validación inline o estado accesible tras el clic."""
+
+        feedback_handle = await page.wait_for_function(
+            """() => {
+                const selectors = [
+                  '#chakra-toast-manager-bottom',
+                  '[role="alert"]',
+                  '[role="status"]',
+                  '.chakra-alert',
+                  '.chakra-toast',
+                  '.chakra-form__error-message',
+                  '[data-invalid]'
+                ];
+                const text = selectors
+                  .flatMap(selector => [...document.querySelectorAll(selector)])
+                  .filter(element => element.getClientRects().length)
+                  .map(element => (element.innerText || element.textContent || element.parentElement?.innerText || '').trim())
+                  .find(value => /env[ií]o|gracias|recib|contactaremos|error|soporte|inv[aá]lid|valor v[aá]lido|obligatori|requerid|fall/i.test(value));
+                return text || null;
+            }""",
+            timeout=60000,
+        )
+        json_value = getattr(feedback_handle, "json_value", None)
+        if callable(json_value):
+            value = await json_value()
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        toast = page.locator("#chakra-toast-manager-bottom")
+        return (await toast.inner_text()).strip()
+
+    async def _classify_utel_api_response(self, response: Any) -> None:
+        """Interpreta la respuesta real sin registrar correos ni teléfonos."""
+
+        status = int(getattr(response, "status", 0) or 0)
+        if 200 <= status < 300:
+            return
+        body = ""
+        try:
+            body = await response.text()
+        except Exception:
+            body = ""
+        diagnostic = self._sanitize_submit_diagnostic(body)
+        suffix = f" Detalle: {diagnostic}" if diagnostic else ""
+        raise RejectedSubmission(
+            "utel_submit",
+            f"UTEL rechazó POST /api/forms con HTTP {status or 'desconocido'}.{suffix}",
+        )
+
+    def _utel_success_pattern(self) -> str:
+        """Agrupa las variantes de confirmación conocidas de los portales UTEL."""
+
+        pattern = (
+            r"env[ií]o correcto|pronto recibir[aá]s informaci[oó]n|"
+            r"successfully submitted|your information has been received|"
+            r"gracias.*(?:registro|informaci[oó]n|solicitud)|"
+            r"hemos recibido|(?:datos|solicitud|informaci[oó]n).*(?:recibid|enviad)|"
+            r"te contactaremos|nos pondremos en contacto"
+        )
+        if self._last_submit_success_pattern:
+            pattern += "|(?:" + self._last_submit_success_pattern + ")"
+        return pattern
+
+    @staticmethod
+    def _sanitize_submit_diagnostic(value: str) -> str:
+        """Elimina posibles datos del lead y limita el texto guardado en logs."""
+
+        text = re.sub(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", "[email oculto]", str(value or ""))
+        text = re.sub(r"(?<!\d)\+?\d[\d\s().-]{6,}\d(?!\d)", "[número oculto]", text)
+        return re.sub(r"\s+", " ", text).strip()[:500]
+
+    async def _validate_utel_form_before_submit(self, form: Any) -> None:
+        """Detiene errores HTML inequívocos antes de que exista riesgo de duplicado."""
+
+        controls = form.locator("input, select, textarea")
+        invalid = await controls.evaluate_all(
+            """elements => elements
+                .filter(element => !element.disabled && element.willValidate && !element.checkValidity())
+                .map(element => ({
+                    field: element.dataset.cy || element.name || element.id || element.type || element.tagName,
+                    message: element.validationMessage || 'valor inválido'
+                }))"""
+        )
+        if not invalid:
+            return
+        details = "; ".join(
+            f"{item.get('field', 'campo')}: {item.get('message', 'valor inválido')}"
+            for item in invalid[:5]
+        )
+        raise UtelQaError(
+            "utel_fill",
+            f"El formulario contiene campos inválidos antes del envío: {details}",
+        )
 
     async def _open_inconcert(self, page: Any, config: UtelQaConfig) -> None:
         parsed = urlparse(config.inconcert_url)
@@ -1273,7 +1603,7 @@ class UtelInconcertRunner:
 
     async def _search_lead(self, page: Any, email: str, expected_name: str) -> None:
         # El listado no muestra Email. Filtramos por email y validamos la fila
-        # mediante el nombre sintetico unico DaniloN.
+        # mediante el nombre sintético único generado para cada ejecución.
         indexing_deadline = perf_counter() + 240
         attempt = 0
         email_candidates = []
@@ -1308,7 +1638,7 @@ class UtelInconcertRunner:
 
         # En algunos tenants el filtro Email de la vista basica es inestable.
         # El email se vuelve a comprobar dentro de Gestionar antes de aceptar.
-        # El CRM concatena un apellido vacio como un punto ("Danilo41 .").
+        # Algunos tenants concatenan un apellido vacío como un punto final.
         if await self._search_contact_with_session(page, "Nombre", f"{expected_name} .", expected_name):
             self.logger.warning(
                 "El lead se localizo por el nombre unico %s; el email se verificara en Gestionar.",
@@ -1321,7 +1651,7 @@ class UtelInconcertRunner:
                 expected_name,
             )
             return
-        raise UtelQaError(
+        raise LeadNotFoundError(
             "inconcert_search",
             f"No se encontro el lead por email ({email}) ni por nombre ({expected_name}) despues de esperar su indexacion.",
         )
@@ -1379,7 +1709,7 @@ class UtelInconcertRunner:
             await asyncio.sleep(5)
             await search_button.click()
         if matching_row is None:
-            raise UtelQaError(
+            raise LeadNotFoundError(
                 "lead_balancer_search",
                 f"No se encontro el lead por email ({email}) en el Balanceador despues de esperar su indexacion.",
             )
@@ -1747,18 +2077,80 @@ class UtelInconcertRunner:
 
     async def _set_country_if_possible(self, form: Any, country: str) -> None:
         field = form.locator('[data-cy="countryCallingCode"]').first
-        if not await field.count() or await field.is_disabled():
+        if not await field.count():
             return
-        code = self.COUNTRY_CODES.get(self._normalize(country))
-        try:
-            tag_name = await field.evaluate("(el) => el.tagName.toLowerCase()")
-            if tag_name == "select" and code:
-                await field.select_option(label=re.compile(re.escape(code)))
-            else:
-                await field.fill(country)
-                await field.press("Enter")
-        except Exception:
-            self.logger.info("No se pudo ajustar pais; se usara el valor preseleccionado.")
+        normalized_country = self._normalize(country)
+        aliases = self.COUNTRY_OPTION_ALIASES.get(normalized_country, (normalized_country,))
+        code = self.COUNTRY_CODES.get(normalized_country, "")
+        tag_name = await field.evaluate("(el) => el.tagName.toLowerCase()")
+        if tag_name != "select":
+            raise UtelQaError(
+                "utel_fill",
+                f"El selector de país cambió de formato y no se puede validar de forma segura ({country}, {code}).",
+                '[data-cy="countryCallingCode"]',
+            )
+
+        # Algunas variantes de la página cargan las opciones después de montar
+        # el formulario. Se espera un tiempo breve para no confundir una carga
+        # tardía con un país ausente.
+        selected = None
+        options_locator = field.locator("option")
+        options_deadline = perf_counter() + 10
+        while selected is None:
+            options = await options_locator.evaluate_all(
+                "elements => elements.map(option => ({ text: option.textContent || '', value: option.value || '' }))"
+            )
+            selected = next(
+                (
+                    option
+                    for option in options
+                    if any(
+                        self._country_option_matches(alias, option["value"])
+                        or self._country_option_matches(alias, option["text"])
+                        for alias in aliases
+                    )
+                ),
+                None,
+            )
+            if selected is not None or perf_counter() >= options_deadline:
+                break
+            await asyncio.sleep(0.25)
+        if selected is None:
+            raise UtelQaError(
+                "utel_fill",
+                f"El formulario no ofrece el país requerido: {country}.",
+                '[data-cy="countryCallingCode"]',
+            )
+
+        current = self._normalize(await field.input_value())
+        expected = self._normalize(selected["value"])
+        if current != expected:
+            if await field.is_disabled():
+                raise UtelQaError(
+                    "utel_fill",
+                    f"El formulario fijó el país '{current}' y no permite cambiarlo a '{country}'.",
+                    '[data-cy="countryCallingCode"]',
+                )
+            await field.select_option(value=selected["value"])
+            await asyncio.sleep(0.3)
+
+        confirmed = self._normalize(await field.input_value())
+        if confirmed != expected:
+            raise UtelQaError(
+                "utel_fill",
+                f"No se pudo confirmar el país {country} antes de enviar el formulario.",
+                '[data-cy="countryCallingCode"]',
+            )
+
+    def _country_option_matches(self, alias: str, option_label: str) -> bool:
+        """Compara países sin aceptar coincidencias parciales ambiguas."""
+
+        normalized = self._normalize(option_label)
+        # UTEL usa valores como ``Mexico (México)``. Aceptamos el nombre base,
+        # pero no subcadenas peligrosas como ``India`` dentro de
+        # ``British Indian Ocean Territory``.
+        base_name = normalized.split(" (", 1)[0].strip()
+        return alias == normalized or alias == base_name
 
     async def _check_privacy(self, form: Any) -> None:
         selector = '[data-cy="checkboxGroup"] input[type="checkbox"], input[type="checkbox"]'
@@ -1975,13 +2367,39 @@ class UtelInconcertRunner:
             raise UtelQaError("config", "El tipo de formulario debe ser lateral, tarjeta o footer.")
         if config.program_selection_strategy == "exact_match" and not config.program_name:
             raise UtelQaError("config", "Debes indicar el nombre del programa cuando la estrategia es exact_match.")
-        if not config.dry_run and not config.defer_crm_verification and (not self._inconcert_username() or not self._inconcert_password()):
+        if not config.dry_run and not config.defer_crm_verification and not self.has_inconcert_credentials():
             raise UtelQaError(
                 "config",
                 "Faltan credenciales de InConcert. Configura INCONCERT_USERNAME/INCONCERT_PASSWORD o CRM_USERNAME/CRM_PASSWORD en .env.",
             )
-        self._last_submit_success_pattern = config.submit_success_pattern.strip()
-        self._last_submit_error_pattern = config.submit_error_pattern.strip() or "error|invalido|inválido|obligatorio|requerido|fall"
+        success_pattern = config.submit_success_pattern.strip()
+        error_pattern = config.submit_error_pattern.strip() or "error|invalido|inválido|obligatorio|requerido|fall"
+        # Estos patrones se usan después del clic. Validarlos aquí garantiza
+        # que una expresión mal escrita falle antes de cualquier envío real.
+        for label, pattern in (("éxito", success_pattern), ("error", error_pattern)):
+            if not pattern:
+                continue
+            try:
+                re.compile(pattern, re.I)
+            except re.error as error:
+                raise UtelQaError(
+                    "config",
+                    f"El patrón de {label} para confirmar el envío no es una expresión regular válida: {error}.",
+                ) from error
+        self._last_submit_success_pattern = success_pattern
+        self._last_submit_error_pattern = error_pattern
+
+    def _raise_if_stop_requested(
+        self,
+        should_stop: Callable[[], bool] | None,
+    ) -> None:
+        """Detiene solo cuando aún no existe riesgo de haber enviado el lead."""
+
+        if should_stop is not None and should_stop():
+            self._cancelled_before_submit = True
+            raise UtelRunCancelled(
+                "La ejecución se detuvo antes del clic; no se envió ningún lead."
+            )
 
     async def _hover_center(self, locator: Any, page: Any) -> None:
         await locator.wait_for(state="visible")
@@ -2054,6 +2472,11 @@ class UtelInconcertRunner:
 
     def _inconcert_password(self) -> str:
         return self._secret_value(getattr(self.settings, "inconcert_password", "")) or self._secret_value(self.settings.crm_password)
+
+    def has_inconcert_credentials(self) -> bool:
+        """Indica si un envío real podrá reconciliarse después contra CRM."""
+
+        return bool(self._inconcert_username() and self._inconcert_password())
 
     @staticmethod
     def _normalize(value: str) -> str:

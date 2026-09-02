@@ -173,6 +173,8 @@ El modulo **Bot de verificaciones** ejecuta ahora un flujo especializado de QA:
 
 UTEL -> modalidad/nivel/programa -> formulario BLC -> envio del lead -> InConcert -> Contactos -> busqueda por email -> Gestionar -> Actividad -> Conversion.
 
+En envíos reales, el bot valida primero el acceso a cada CRM regional, los campos y el país; después escucha la respuesta de `POST /api/forms` y espera hasta 65 segundos por portales lentos. Desde el instante del clic, cualquier toast de error o ausencia de confirmación queda **pendiente de conciliación**: el formulario no se vuelve a enviar y el resultado final se decide buscando el mismo email en InConcert y, como respaldo, en el Balanceador. El Excel conserva un checkpoint preventivo, el aviso de UTEL, la evidencia y el enlace del lead confirmado. El botón de reintento automático solo incluye fallos confirmados antes del clic; al detener un lote, termina y concilia la fila activa antes de cerrarse.
+
 Para las filas de **Doctorado** cuyo formulario está en **tarjeta**, los países USA, Bolivia, Chile, Paraguay, República Dominicana, Guatemala, Panamá, El Salvador y Argentina usan un catálogo validado de enlaces PDP directos. El bot rota los programas disponibles por país y abre directamente la página seleccionada, evitando el clic desde el listado que puede activar el bloqueo de acceso. Los demás niveles, países y ubicaciones de formulario conservan su navegación anterior.
 
 Para usarlo:

@@ -33,6 +33,7 @@ def test_business_failure_keeps_selector_and_evidence():
 
 def test_submit_without_confirmation_is_never_success():
     runner = UtelInconcertRunner(Settings())
+    runner._validate_utel_form_before_submit = AsyncMock()
     submit = AsyncMock()
     submit.is_enabled.return_value = True
     form = Mock()
@@ -43,6 +44,54 @@ def test_submit_without_confirmation_is_never_success():
         asyncio.run(runner._submit_utel_form(page, form))
     submit.evaluate.assert_awaited_once()
     submit.scroll_into_view_if_needed.assert_not_awaited()
+
+
+def test_invalid_form_stops_before_click_and_is_safe_to_retry():
+    """Una validación inequívoca previa nunca debe marcar intento de envío."""
+
+    runner = UtelInconcertRunner(Settings())
+    runner._validate_utel_form_before_submit = AsyncMock(
+        side_effect=UtelQaError("utel_fill", "Nombre inválido")
+    )
+    submit = AsyncMock()
+    submit.is_enabled.return_value = True
+    form = Mock()
+    form.locator.return_value.first = submit
+
+    with pytest.raises(UtelQaError, match="Nombre inválido"):
+        asyncio.run(runner._submit_utel_form(Mock(), form))
+
+    submit.evaluate.assert_not_awaited()
+    assert runner._submission_attempted is False
+
+
+def test_http_success_confirms_submission_even_when_toast_is_missing():
+    """La respuesta real de /api/forms tiene prioridad sobre el toast visual."""
+
+    runner = UtelInconcertRunner(Settings())
+    runner._validate_utel_form_before_submit = AsyncMock()
+    callbacks = {}
+    response = Mock(
+        url="https://utel.test/api/forms",
+        status=201,
+        request=Mock(method="POST"),
+    )
+    submit = AsyncMock()
+    submit.is_enabled.return_value = True
+
+    async def click_once(*_):
+        callbacks["response"](response)
+
+    submit.evaluate.side_effect = click_once
+    form = Mock()
+    form.locator.return_value.first = submit
+    page = Mock(wait_for_function=AsyncMock(side_effect=TimeoutError("sin toast")))
+    page.on.side_effect = lambda event, callback: callbacks.__setitem__(event, callback)
+
+    asyncio.run(runner._submit_utel_form(page, form))
+
+    submit.evaluate.assert_awaited_once()
+    assert runner._submission_attempted is True
 
 
 def test_deferred_submission_without_visual_confirmation_waits_for_crm_without_resending(tmp_path):
@@ -81,6 +130,58 @@ def test_deferred_submission_without_visual_confirmation_waits_for_crm_without_r
     assert result["utel_submission"] == "pending"
     assert "sin reenviar" in result["utel_submission_message"]
     runner._submit_utel_form.assert_awaited_once()
+
+
+def test_deferred_explicit_error_waits_for_crm_after_exactly_one_click(tmp_path):
+    """Un toast de error post-clic no autoriza otro envio ni evita la conciliacion."""
+
+    from contextlib import asynccontextmanager
+    from backend.app.schemas.bot import UtelLead, UtelQaConfig
+
+    runner = UtelInconcertRunner(Settings(storage_dir=tmp_path))
+    runner._validate_utel_form_before_submit = AsyncMock()
+    submit = AsyncMock()
+    submit.is_enabled.return_value = True
+    form = Mock()
+    form.locator.return_value.first = submit
+    feedback = Mock(json_value=AsyncMock(return_value="Error al enviar. Contacta a soporte"))
+    page = Mock(url="https://utel.test", wait_for_function=AsyncMock(return_value=feedback))
+    context = Mock(new_page=AsyncMock(return_value=page), close=AsyncMock())
+    browser = Mock(new_context=AsyncMock(return_value=context), close=AsyncMock())
+    playwright = Mock()
+    playwright.chromium.launch = AsyncMock(return_value=browser)
+
+    @asynccontextmanager
+    async def runtime(*args):
+        yield playwright
+
+    runner._playwright = runtime
+    runner._close_open_session = AsyncMock()
+    runner._safe_screenshot = AsyncMock(return_value=None)
+    runner._open_utel = AsyncMock()
+    runner._navigate_utel = AsyncMock()
+    runner._find_utel_form = AsyncMock(return_value=form)
+    runner._fill_utel_form = AsyncMock()
+    config = UtelQaConfig(
+        country="Mexico",
+        utel_url="https://utel.test",
+        inconcert_url="https://crm.test",
+        modality="En linea",
+        level="Licenciatura",
+        form_type="footer",
+        workflow_mode="form_validation",
+        dry_run=False,
+        defer_crm_verification=True,
+        lead=UtelLead(),
+    )
+
+    result = asyncio.run(runner.run(config))
+
+    assert result["status"] == "PASS"
+    assert result["utel_submission"] == "pending"
+    assert "Error al enviar" in result["utel_submission_message"]
+    assert result["lead_found"] == "pending"
+    submit.evaluate.assert_awaited_once_with("(element) => element.click()")
 
 
 def test_screenshot_falls_back_to_viewport_and_preserves_prior_runs(tmp_path):

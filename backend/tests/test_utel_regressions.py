@@ -1,10 +1,20 @@
 import asyncio
+import re
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from backend.app.automations.utel_inconcert.runner import UtelInconcertRunner, UtelQaError, UnconfirmedSubmission
+from backend.app.automations.utel_inconcert.runner import (
+    PostSubmitSignal,
+    RejectedSubmission,
+    UnconfirmedSubmission,
+    UtelInconcertRunner,
+    UtelQaError,
+    UtelRunCancelled,
+)
 from backend.app.config.settings import Settings
+from backend.app.schemas.bot import UtelLead, UtelQaConfig
 from backend.app.services.test_lead_service import TestLeadService
 from backend.app.services.bot_spreadsheet_service import BotSpreadsheetService
 
@@ -20,12 +30,13 @@ def test_global_country_requires_explicit_philippines_context():
 @pytest.mark.parametrize("message,error", [
     ("Successfully submitted\nYour information has been received", None),
     ("Gracias, hemos recibido tu solicitud. Te contactaremos pronto.", None),
-    ("Error al enviar. Contacta a soporte", UtelQaError),
+    ("Error al enviar. Contacta a soporte", RejectedSubmission),
     ("Mensaje desconocido", UnconfirmedSubmission),
 ])
 def test_toast_with_saved_spanish_pattern(message, error):
     runner = UtelInconcertRunner(Settings())
     runner._last_submit_success_pattern = "envio correcto"
+    runner._validate_utel_form_before_submit = AsyncMock()
     submit = AsyncMock()
     submit.is_enabled.return_value = True
     form = Mock()
@@ -40,6 +51,137 @@ def test_toast_with_saved_spanish_pattern(message, error):
     else:
         asyncio.run(runner._submit_utel_form(page, form))
     submit.evaluate.assert_awaited_once()
+
+
+def test_explicit_error_toast_is_a_reconcilable_post_submit_signal():
+    """Un rechazo visual ocurre despues del unico clic y debe conciliarse en CRM."""
+
+    runner = UtelInconcertRunner(Settings())
+    runner._validate_utel_form_before_submit = AsyncMock()
+    submit = AsyncMock()
+    submit.is_enabled.return_value = True
+    form = Mock()
+    form.locator.return_value.first = submit
+    feedback = Mock(json_value=AsyncMock(return_value="Error al enviar. Contacta a soporte"))
+    page = Mock(wait_for_function=AsyncMock(return_value=feedback))
+
+    with pytest.raises(RejectedSubmission) as caught:
+        asyncio.run(runner._submit_utel_form(page, form))
+
+    assert isinstance(caught.value, PostSubmitSignal)
+    assert caught.value.stage == "utel_submit"
+    assert "Error al enviar" in str(caught.value)
+    submit.evaluate.assert_awaited_once_with("(element) => element.click()")
+
+
+def test_invalid_submit_pattern_fails_before_any_click():
+    """Las expresiones configurables se compilan durante la validación previa."""
+
+    runner = UtelInconcertRunner(Settings())
+    config = UtelQaConfig(
+        country="Mexico",
+        utel_url="https://utel.test",
+        modality="En linea",
+        level="Licenciatura",
+        submit_error_pattern="(",
+        lead=UtelLead(),
+    )
+
+    with pytest.raises(UtelQaError) as caught:
+        runner._validate_config(config)
+
+    assert caught.value.stage == "config"
+    assert "expresión regular válida" in str(caught.value)
+    assert runner._submission_attempted is False
+
+
+def test_unexpected_post_click_error_is_reconciled_instead_of_retried():
+    """Incluso un error interno posterior al clic debe producir señal conciliable."""
+
+    runner = UtelInconcertRunner(Settings())
+    runner._last_submit_error_pattern = "("
+    runner._validate_utel_form_before_submit = AsyncMock()
+    submit = AsyncMock()
+    submit.is_enabled.return_value = True
+    form = Mock()
+    form.locator.return_value.first = submit
+    feedback = Mock(json_value=AsyncMock(return_value="Error al enviar"))
+    page = Mock(wait_for_function=AsyncMock(return_value=feedback))
+
+    with pytest.raises(UnconfirmedSubmission) as caught:
+        asyncio.run(runner._submit_utel_form(page, form))
+
+    assert "sin reenviar" in str(caught.value)
+    assert runner._submission_attempted is True
+    submit.evaluate.assert_awaited_once_with("(element) => element.click()")
+
+
+def test_cooperative_stop_during_validation_prevents_the_click():
+    """La ejecución individual todavía puede detenerse hasta el último límite seguro."""
+
+    runner = UtelInconcertRunner(Settings())
+    runner._validate_utel_form_before_submit = AsyncMock()
+    submit = AsyncMock()
+    submit.is_enabled.return_value = True
+    form = Mock()
+    form.locator.return_value.first = submit
+    page = Mock()
+
+    with pytest.raises(UtelRunCancelled):
+        asyncio.run(runner._submit_utel_form(page, form, lambda: True))
+
+    assert runner._submission_attempted is False
+    submit.evaluate.assert_not_awaited()
+
+
+def test_crm_preflight_opens_login_and_contacts_without_submitting(tmp_path):
+    """El preflight comprueba el CRM real con los flags internos desactivados."""
+
+    runner = UtelInconcertRunner(
+        Settings(
+            storage_dir=tmp_path,
+            inconcert_username="test",
+            inconcert_password="test",
+        )
+    )
+    page = Mock(set_default_timeout=Mock())
+    context = Mock(new_page=AsyncMock(return_value=page), close=AsyncMock())
+    browser = Mock(new_context=AsyncMock(return_value=context), close=AsyncMock())
+    playwright = Mock()
+    playwright.chromium.launch = AsyncMock(return_value=browser)
+
+    @asynccontextmanager
+    async def runtime(*args):
+        yield playwright
+
+    runner._playwright = runtime
+    runner._close_open_session = AsyncMock()
+    runner._open_inconcert = AsyncMock()
+    runner._login_inconcert = AsyncMock()
+    runner._open_contacts = AsyncMock()
+    config = UtelQaConfig(
+        country="Mexico",
+        utel_url="https://utel.test",
+        inconcert_url="https://crm.test/login",
+        modality="En linea",
+        level="Licenciatura",
+        dry_run=False,
+        defer_crm_verification=True,
+        verification_only=True,
+        keep_browser_open=True,
+        lead=UtelLead(),
+    )
+
+    asyncio.run(runner.preflight_inconcert(config))
+
+    checked_config = runner._open_inconcert.await_args.args[1]
+    assert checked_config.defer_crm_verification is False
+    assert checked_config.verification_only is False
+    assert checked_config.keep_browser_open is False
+    runner._login_inconcert.assert_awaited_once_with(page)
+    runner._open_contacts.assert_awaited_once_with(page)
+    context.close.assert_awaited_once()
+    browser.close.assert_awaited_once()
 
 
 def test_blocked_heading_is_not_a_program():
@@ -77,3 +219,91 @@ def test_phone_prefix_survives_global_sequence_and_pool_exhaustion(tmp_path):
     with pytest.raises(ValueError, match="agotaron"):
         service.reserve("United States")
     assert service.reserve("Dominicana")["phone"].startswith("80955501")
+
+
+def test_generated_leads_use_alphabetic_names_and_valid_country_shapes(tmp_path):
+    """Evita el rechazo local de Panamá y las series inválidas de AR/PY."""
+
+    service = TestLeadService(tmp_path / "country-shapes.db")
+    argentina = service.reserve("Argentina")
+    paraguay = service.reserve("Paraguay")
+    panama = service.reserve("Panama")
+
+    assert re.fullmatch(r"[A-Za-z]+(?: [A-Za-z]+)+", panama["name"])
+    assert not any(character.isdigit() for character in panama["name"])
+    assert argentina["phone"].startswith("11") and len(argentina["phone"]) == 10
+    assert paraguay["phone"].startswith("981") and len(paraguay["phone"]) == 9
+
+
+def test_country_is_selected_by_option_name_and_verified():
+    """countryCallingCode contiene países; no etiquetas como +54 o +595."""
+
+    runner = UtelInconcertRunner(Settings())
+    field = Mock()
+    field.count = AsyncMock(return_value=1)
+    field.evaluate = AsyncMock(return_value="select")
+    field.input_value = AsyncMock(side_effect=["Mexico (México)", "Argentina"])
+    field.is_disabled = AsyncMock(return_value=False)
+    field.select_option = AsyncMock()
+    options = Mock()
+    options.evaluate_all = AsyncMock(
+        return_value=[
+            {"text": "Mexico (México)", "value": "Mexico (México)"},
+            {"text": "Argentina", "value": "Argentina"},
+        ]
+    )
+    field.locator.return_value = options
+    holder = Mock(first=field)
+    form = Mock()
+    form.locator.return_value = holder
+
+    asyncio.run(runner._set_country_if_possible(form, "Argentina"))
+
+    field.select_option.assert_awaited_once_with(value="Argentina")
+
+
+def test_country_waits_for_options_and_rejects_ambiguous_substrings():
+    """Una carga tardía no debe convertir India en otro territorio."""
+
+    runner = UtelInconcertRunner(Settings())
+    field = Mock()
+    field.count = AsyncMock(return_value=1)
+    field.evaluate = AsyncMock(return_value="select")
+    field.input_value = AsyncMock(return_value="India")
+    field.select_option = AsyncMock()
+    options = Mock()
+    options.evaluate_all = AsyncMock(
+        side_effect=[
+            [],
+            [
+                {"text": "British Indian Ocean Territory", "value": "British Indian Ocean Territory"},
+                {"text": "India", "value": "India"},
+            ],
+        ]
+    )
+    field.locator.return_value = options
+    form = Mock()
+    form.locator.return_value = Mock(first=field)
+
+    asyncio.run(runner._set_country_if_possible(form, "India"))
+
+    assert options.evaluate_all.await_count == 2
+    field.select_option.assert_not_awaited()
+    assert runner._country_option_matches("india", "British Indian Ocean Territory") is False
+    assert runner._country_option_matches("mexico", "Mexico (México)") is True
+
+
+def test_api_error_diagnostic_hides_lead_data():
+    runner = UtelInconcertRunner(Settings())
+    response = Mock(status=422)
+    response.text = AsyncMock(
+        return_value="Email Testing1@testingUtel.com y telefono +595 981 123 456 rechazados"
+    )
+
+    with pytest.raises(RejectedSubmission) as caught:
+        asyncio.run(runner._classify_utel_api_response(response))
+
+    message = str(caught.value)
+    assert "HTTP 422" in message
+    assert "Testing1@testingUtel.com" not in message
+    assert "981 123 456" not in message
