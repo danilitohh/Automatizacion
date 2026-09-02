@@ -1,5 +1,6 @@
 "use strict";
 
+// Controlador de Weekly Auto: configuración, sondeo de estado y resultados por URL.
 const CONFIG_KEY = "qa-automation.weekly-auto-config";
 const JOB_KEY = "qa-automation.weekly-auto-active-job";
 const LAST_JOB_KEY = "qa-automation.weekly-auto-last-job";

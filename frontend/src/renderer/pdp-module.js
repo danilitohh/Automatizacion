@@ -1,5 +1,6 @@
 "use strict";
 
+// Controlador PDP: carga de fuentes y representación segura de hallazgos.
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -73,9 +74,9 @@ function renderResult(result) {
 }
 
 function renderSemanticFinding(finding) {
-  const labels = { MATCH_EXACTO: "MATCH EXACTO", MATCH_NORMALIZADO: "MATCH NORMALIZADO", DIFERENTE: "DIFERENTE", FALTANTE: "FALTANTE", EXTRA: "EXTRA", DUPLICADO: "DUPLICADO", POSIBLE_COINCIDENCIA: "POSIBLE COINCIDENCIA", REVISION_MANUAL: "REVISIÃ“N MANUAL" };
+  const labels = { MATCH_EXACTO: "MATCH EXACTO", MATCH_NORMALIZADO: "MATCH NORMALIZADO", DIFERENTE: "DIFERENTE", FALTANTE: "FALTANTE", EXTRA: "EXTRA", DUPLICADO: "DUPLICADO", POSIBLE_COINCIDENCIA: "POSIBLE COINCIDENCIA", REVISION_MANUAL: "REVISIÓN MANUAL" };
   const className = { MATCH_EXACTO: "success", MATCH_NORMALIZADO: "success", DIFERENTE: "warning", FALTANTE: "error", EXTRA: "warning", DUPLICADO: "warning", POSIBLE_COINCIDENCIA: "warning", REVISION_MANUAL: "warning" }[finding.status] || "pending";
-  return `<details class="pdp-semantic-finding ${className}" open><summary><span class="status-badge ${className}">${labels[finding.status] || escapeHtml(finding.status)}</span><strong>${escapeHtml(finding.section || "Sin secciÃ³n")}</strong><span>${escapeHtml(finding.expected || finding.actual)}</span></summary><div class="pdp-finding-detail"><div><b>Esperado</b><p>${escapeHtml(finding.expected || "No existe en el documento")}</p></div><div><b>Encontrado</b><p>${escapeHtml(finding.actual || "No encontrado")}</p></div><small>Confianza: ${Math.round((finding.confidence || 0) * 100)}% Â· ${escapeHtml(finding.reason || "")}</small></div></details>`;
+  return `<details class="pdp-semantic-finding ${className}" open><summary><span class="status-badge ${className}">${labels[finding.status] || escapeHtml(finding.status)}</span><strong>${escapeHtml(finding.section || "Sin sección")}</strong><span>${escapeHtml(finding.expected || finding.actual)}</span></summary><div class="pdp-finding-detail"><div><b>Esperado</b><p>${escapeHtml(finding.expected || "No existe en el documento")}</p></div><div><b>Encontrado</b><p>${escapeHtml(finding.actual || "No encontrado")}</p></div><small>Confianza: ${Math.round((finding.confidence || 0) * 100)}% · ${escapeHtml(finding.reason || "")}</small></div></details>`;
 }
 
 function renderSemanticResult(result) {
@@ -83,14 +84,14 @@ function renderSemanticResult(result) {
   const list = document.querySelector("#pdp-semantic-results");
   const status = document.querySelector("#pdp-semantic-status");
   const data = result.summary || {};
-  const cards = [[data.sections, "Secciones"], [data.exact_matches, "Match exacto"], [data.normalized_matches, "Normalizados"], [data.different, "Diferentes"], [data.missing, "Faltantes"], [data.extra, "Extras"], [data.possible_matches, "Posibles"], [data.manual_review, "RevisiÃ³n manual"]];
+  const cards = [[data.sections, "Secciones"], [data.exact_matches, "Match exacto"], [data.normalized_matches, "Normalizados"], [data.different, "Diferentes"], [data.missing, "Faltantes"], [data.extra, "Extras"], [data.possible_matches, "Posibles"], [data.manual_review, "Revisión manual"]];
   summary.innerHTML = cards.map(([value, label]) => `<div class="pdp-summary-card"><strong>${escapeHtml(value ?? 0)}</strong><span>${label}</span></div>`).join("");
   status.className = `pdp-run-status ${result.status === "PASS" ? "success" : "warning"}`;
   const ai = result.ai || {};
   const successfulProvider = ai.successful_provider ? ` Proveedor usado: ${ai.successful_provider}.` : "";
   const fallbackNotice = ai.fallback_mode === "deterministic" ? " Las IAs no estuvieron disponibles; se usó el comparador sin IA y los casos ambiguos requieren revisión manual." : "";
-  status.textContent = result.status === "PASS" ? `VerificaciÃ³n completada: no se detectaron diferencias.${successfulProvider}` : `VerificaciÃ³n completada: revisa los hallazgos antes de tomar una decisiÃ³n.${successfulProvider}${fallbackNotice}`;
-  list.innerHTML = result.findings?.length ? result.findings.map(renderSemanticFinding).join("") : `<div class="bot-empty"><strong>No se encontraron diferencias.</strong><span>La pÃ¡gina coincide con el documento en los elementos extraÃ­dos.</span></div>`;
+  status.textContent = result.status === "PASS" ? `Verificación completada: no se detectaron diferencias.${successfulProvider}` : `Verificación completada: revisa los hallazgos antes de tomar una decisión.${successfulProvider}${fallbackNotice}`;
+  list.innerHTML = result.findings?.length ? result.findings.map(renderSemanticFinding).join("") : `<div class="bot-empty"><strong>No se encontraron diferencias.</strong><span>La página coincide con el documento en los elementos extraídos.</span></div>`;
 }
 
 export function initializePdpModule({ showToast, validatePdp, validatePdpSemantic }) {
@@ -154,11 +155,11 @@ export function initializePdpModule({ showToast, validatePdp, validatePdpSemanti
     semanticRun.disabled = true;
     semanticRun.classList.add("loading");
     semanticStatus.className = "pdp-run-status running";
-    semanticStatus.textContent = "Extrayendo la estructura del documento y de la pÃ¡gina. Puede tardar unos segundos...";
+    semanticStatus.textContent = "Extrayendo la estructura del documento y de la página. Puede tardar unos segundos...";
     try {
       const result = await validatePdpSemantic(sourceFile, pageUrl.value.trim(), useAi.checked);
       renderSemanticResult(result);
-      showToast("ComparaciÃ³n genÃ©rica terminada.", "info");
+      showToast("Comparación genérica terminada.", "info");
     } catch (error) {
       semanticStatus.className = "pdp-run-status error";
       semanticStatus.textContent = error.message;

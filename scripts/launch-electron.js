@@ -1,5 +1,6 @@
 "use strict";
 
+// Punto de arranque de escritorio: delega en Electron el proceso principal del frontend.
 const { spawn } = require("node:child_process");
 const path = require("node:path");
 

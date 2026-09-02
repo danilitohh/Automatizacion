@@ -1,9 +1,11 @@
 "use strict";
 
+// Proceso principal de Electron: crea la ventana y coordina el backend local.
 const { app, BrowserWindow, dialog } = require("electron");
 const path = require("node:path");
 const { launchBackend, stopBackend } = require("./backend-process");
 
+// Estado del proceso FastAPI iniciado para la aplicación de escritorio.
 let backendProcess;
 
 async function startBackend() {

@@ -1,10 +1,12 @@
 "use strict";
 
+// Coordinador de la interfaz: navegación, dashboard e historial compartido.
 import { api } from "../services/api.js";
 import { initializeBotModule } from "./bot-module.js?v=telemetry-layout-2";
 import { initializePdpModule } from "./pdp-module.js";
 import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
 
+// Estado mínimo persistido para restaurar la última pantalla abierta.
 const LAST_VIEW_KEY = "qa-automation.last-view";
 const state = { activeView: "dashboard" };
 const runtimeMode = window.desktop ? "desktop" : "web";
@@ -21,6 +23,7 @@ const viewMeta = {
   settings: { title: "Configuración", description: "Administración" },
 };
 
+// Referencias centralizadas al DOM para evitar selectores repetidos.
 function selectElements() {
   return {
     title: document.querySelector("#page-title"),
@@ -98,6 +101,7 @@ function executionRow(execution) {
   </tr>`;
 }
 
+// Renderizado de datos procedentes de la API; todo valor dinámico se escapa antes.
 function renderHistory(executions) {
   const body = document.querySelector("#history-body");
   const fullBody = document.querySelector("#full-history-body");
@@ -165,6 +169,7 @@ async function refreshDashboard() {
   }
 }
 
+// Navegación interna SPA: activa un único panel y actualiza el encabezado.
 function navigate(viewName) {
   if (!viewMeta[viewName]) return;
   state.activeView = viewName;

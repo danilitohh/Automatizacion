@@ -1,5 +1,6 @@
 "use strict";
 
+// Controlador visual del Bot: formulario, pasos, validación y ejecución.
 const STORAGE_KEY = "qa-automation.utel-inconcert-config";
 const ACTIVE_SINGLE_JOB_KEY = "qa-automation.utel-inconcert-active-job";
 const LAST_SINGLE_JOB_KEY = "qa-automation.utel-inconcert-last-job";

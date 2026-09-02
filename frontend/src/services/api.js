@@ -1,8 +1,10 @@
 "use strict";
 
+// Cliente HTTP único: las pantallas consumen estas funciones, no `fetch` directamente.
 const WEB_BASE_URL = ["http:", "https:"].includes(window.location.protocol) ? window.location.origin : "";
 const API_BASE_URL = window.desktop?.apiUrl || WEB_BASE_URL || "http://127.0.0.1:8000";
 
+// Normaliza las peticiones, cuerpos JSON/FormData y errores devueltos por FastAPI.
 async function request(path, options = {}) {
   const isFormData = options.body instanceof FormData;
   let response;
@@ -31,6 +33,7 @@ async function request(path, options = {}) {
   return payload;
 }
 
+// API de alto nivel organizada por dominio funcional.
 export const api = {
   baseUrl: API_BASE_URL,
   health: () => request("/api/health"),

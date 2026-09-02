@@ -1,5 +1,6 @@
 "use strict";
 
+// Inicia FastAPI para servir en un mismo origen la API y la interfaz web.
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");

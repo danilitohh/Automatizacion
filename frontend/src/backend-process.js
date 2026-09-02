@@ -1,5 +1,6 @@
 "use strict";
 
+// Utilidades de ciclo de vida del backend FastAPI invocadas por Electron.
 const fs = require("node:fs");
 const net = require("node:net");
 const path = require("node:path");

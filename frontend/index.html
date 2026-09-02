@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- Estructura de la aplicación web: navegación lateral, vistas y cargador global. -->
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -289,17 +290,17 @@
         <section class="view" id="view-pdp" data-view-panel="pdp">
           <div class="section-intro"><p class="eyebrow accent">Nuevo módulo</p><h2>Validación PDP vs DOCX</h2><p class="muted">Compara el contenido de las páginas de producto con la matriz Excel y su documento de referencia.</p></div>
           <article class="panel pdp-semantic-panel">
-            <div class="panel-header"><div><p class="eyebrow">MVP genÃ©rico</p><h3>Cualquier documento vs una pÃ¡gina</h3></div><span class="status-badge success">DOCUMENTO = VERDAD</span></div>
-            <p class="pdp-help">Carga un documento nuevo y escribe la URL. El sistema detectarÃ¡ tÃ­tulos, secciones, listas, tablas, preguntas, relaciones y contenido visible sin depender de nombres fijos.</p>
+            <div class="panel-header"><div><p class="eyebrow">MVP genérico</p><h3>Cualquier documento vs una página</h3></div><span class="status-badge success">DOCUMENTO = VERDAD</span></div>
+            <p class="pdp-help">Carga un documento nuevo y escribe la URL. El sistema detectará títulos, secciones, listas, tablas, preguntas, relaciones y contenido visible sin depender de nombres fijos.</p>
             <div class="pdp-semantic-form">
-              <label class="pdp-file-field"><span>Documento fuente</span><input id="pdp-source-file" type="file" accept=".pdf,.docx,.xlsx,.txt,.md,.csv" /><small id="pdp-source-name">AÃºn no has seleccionado un documento.</small></label>
-              <label class="pdp-file-field"><span>URL de la pÃ¡gina</span><input id="pdp-page-url" type="url" placeholder="https://ejemplo.com/pagina" /><small>Se analiza el contenido visible y relevante.</small></label>
-              <label class="pdp-ai-option"><input id="pdp-use-ai" type="checkbox" checked /><span>Usar IA para posibles equivalencias y ambigÃ¼edades (Gemini + Groq + Ollama).</span></label>
-              <button class="primary-button pdp-run-button" id="pdp-semantic-run" type="button">Analizar y comparar <span>â†’</span></button>
+              <label class="pdp-file-field"><span>Documento fuente</span><input id="pdp-source-file" type="file" accept=".pdf,.docx,.xlsx,.txt,.md,.csv" /><small id="pdp-source-name">Aún no has seleccionado un documento.</small></label>
+              <label class="pdp-file-field"><span>URL de la página</span><input id="pdp-page-url" type="url" placeholder="https://ejemplo.com/pagina" /><small>Se analiza el contenido visible y relevante.</small></label>
+              <label class="pdp-ai-option"><input id="pdp-use-ai" type="checkbox" checked /><span>Usar IA para posibles equivalencias y ambigüedades (Gemini + Groq + Ollama).</span></label>
+              <button class="primary-button pdp-run-button" id="pdp-semantic-run" type="button">Analizar y comparar <span>→</span></button>
             </div>
-            <div class="pdp-run-status" id="pdp-semantic-status">Selecciona un documento y una URL para iniciar la verificaciÃ³n.</div>
+            <div class="pdp-run-status" id="pdp-semantic-status">Selecciona un documento y una URL para iniciar la verificación.</div>
             <div class="pdp-summary" id="pdp-semantic-summary"></div>
-            <div class="pdp-results-list" id="pdp-semantic-results"><div class="bot-empty"><div class="empty-icon">â–¤</div><strong>No hay reporte todavÃ­a</strong><span>Los hallazgos aparecerÃ¡n agrupados por secciÃ³n.</span></div></div>
+            <div class="pdp-results-list" id="pdp-semantic-results"><div class="bot-empty"><div class="empty-icon">▤</div><strong>No hay reporte todavía</strong><span>Los hallazgos aparecerán agrupados por sección.</span></div></div>
           </article>
           <div class="pdp-layout">
             <article class="panel pdp-upload-panel">
