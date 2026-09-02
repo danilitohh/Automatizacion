@@ -1,6 +1,6 @@
-# QA Automation Desktop
+# UTEL QA Automation Web + Desktop
 
-Aplicación desktop para centralizar automatizaciones de QA. Esta primera entrega implementa la **Fase 1**: shell de Electron, dashboard, backend FastAPI local, SQLite, logs diarios, configuración y comunicación segura entre procesos.
+Aplicación web y desktop para centralizar automatizaciones de QA. La interfaz puede abrirse directamente desde un navegador o desde Electron; ambos modos comparten el mismo backend FastAPI, SQLite, logs y automatizaciones.
 
 Las automatizaciones reales de formularios, monitoreo visual y Excel/Strapi se incorporarán en las fases siguientes. También se añadió el módulo **Bot de verificaciones**, que permite construir flujos y ejecutarlos con Playwright.
 
@@ -9,14 +9,14 @@ El módulo **PDP vs documentos** compara las páginas de producto con un Excel d
 ## Arquitectura
 
 ```text
-Electron (frontend)
-    ↓ HTTP local
+Navegador web o Electron
+    ↓ HTTP
 FastAPI (backend)
     ↓
 SQLite + logs organizados
 ```
 
-Electron arranca FastAPI automáticamente cuando se inicia la aplicación. El renderer no tiene acceso a Node ni a secretos. Las credenciales futuras se leerán únicamente desde `.env` en el backend.
+Electron arranca FastAPI automáticamente cuando se inicia la aplicación desktop. En modo web, FastAPI también sirve la interfaz. El navegador nunca recibe las credenciales, que se leen únicamente desde `.env` en el backend.
 
 ## Requisitos
 
@@ -49,7 +49,15 @@ No completes todavía las variables de CRM o Strapi con credenciales reales; eso
 
 ## Ejecución
 
-### Opción recomendada: Electron + FastAPI
+### Opción web
+
+```powershell
+npm run web
+```
+
+Después abre `http://127.0.0.1:8000`. Esta primera fase web se ejecuta en la misma computadora para conservar el acceso a Chromium, los archivos locales, Ollama y las sesiones de QA. Electron continúa disponible mientras se completa la migración.
+
+### Opción desktop: Electron + FastAPI
 
 ```powershell
 npm run dev
@@ -164,6 +172,8 @@ Cada automatización tendrá su propio módulo dentro de `backend/app/automation
 El modulo **Bot de verificaciones** ejecuta ahora un flujo especializado de QA:
 
 UTEL -> modalidad/nivel/programa -> formulario BLC -> envio del lead -> InConcert -> Contactos -> busqueda por email -> Gestionar -> Actividad -> Conversion.
+
+Para las filas de **Doctorado** cuyo formulario está en **tarjeta**, los países USA, Bolivia, Chile, Paraguay, República Dominicana, Guatemala, Panamá, El Salvador y Argentina usan un catálogo validado de enlaces PDP directos. El bot rota los programas disponibles por país y abre directamente la página seleccionada, evitando el clic desde el listado que puede activar el bloqueo de acceso. Los demás niveles, países y ubicaciones de formulario conservan su navegación anterior.
 
 Para usarlo:
 

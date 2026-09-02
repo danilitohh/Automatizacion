@@ -28,6 +28,25 @@ def test_health_and_dashboard_endpoints(tmp_path):
     assert dashboard_response.json()["total_today"] == 0
 
 
+def test_web_frontend_is_served_by_fastapi(tmp_path):
+    """La misma interfaz se puede abrir en un navegador sin depender de Electron."""
+
+    settings = Settings(database_path=tmp_path / "web-test.db", storage_dir=tmp_path / "storage")
+    application = create_app(settings)
+
+    with TestClient(application) as client:
+        page_response = client.get("/")
+        module_response = client.get("/src/services/api.js")
+        health_response = client.get("/api/health")
+
+    assert page_response.status_code == 200
+    assert "UTEL QA Automation" in page_response.text
+    assert 'type="module"' in page_response.text
+    assert module_response.status_code == 200
+    assert "window.location.origin" in module_response.text
+    assert health_response.status_code == 200
+
+
 def test_pdp_validation_rejects_wrong_file_extensions(tmp_path):
     """El endpoint PDP detiene archivos equivocados antes de abrir Playwright."""
 

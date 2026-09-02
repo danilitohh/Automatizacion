@@ -69,3 +69,74 @@ def test_cards_rotate_and_click_explore(tmp_path):
         assert runner.selected_program_name == expected
     for target in targets:
         target.click.assert_awaited_once()
+
+
+def _philippines_master_config(**overrides):
+    values = {
+        "country": "Filipinas",
+        "level": "Master's Degree",
+        "navigation_level": "Master",
+        "modality": "Online",
+        "form_type": "lateral",
+        "utel_url": "https://utel.edu.mx/philippines/master-online",
+        "dry_run": True,
+        "lead": UtelLead(),
+    }
+    values.update(overrides)
+    return UtelQaConfig(**values)
+
+
+def test_philippines_master_options_rotate_through_the_complete_available_list(tmp_path):
+    names = [
+        "Master in Business Administration (MBA)",
+        "Master in Data Science for Business",
+        "Master in Digital Marketing and e-Commerce",
+        "Master in Education",
+        "Master in Executive Coaching and Organizational Consulting",
+        "Master in Innovation Project Management",
+    ]
+    candidates = options(*names)
+    selected = []
+
+    for _ in names:
+        runner = UtelInconcertRunner(Settings(database_path=tmp_path / "rotation.db"))
+        selected.append(
+            runner._rotate_program(candidates, "https://utel.edu.mx/philippines/master-online", _philippines_master_config())["text"]
+        )
+
+    assert selected == names
+    runner = UtelInconcertRunner(Settings(database_path=tmp_path / "rotation.db"))
+    assert runner._rotate_program(
+        candidates,
+        "https://utel.edu.mx/philippines/master-online",
+        _philippines_master_config(),
+    )["text"] == names[0]
+
+
+def test_philippines_master_ignores_generic_page_heading_and_uses_form_rotation(tmp_path):
+    runner = UtelInconcertRunner(Settings(database_path=tmp_path / "rotation.db"))
+    runner.selected_program_name = "Master's Degree"
+    runner._set_dynamic_field = AsyncMock()
+    runner._academic_values = AsyncMock(return_value=[])
+    runner._select_optional_bachillerato = AsyncMock()
+    runner._select_random_city = AsyncMock()
+    runner._select_preferred_contact_channel = AsyncMock()
+    runner._fill_first_available = AsyncMock()
+    runner._set_country_if_possible = AsyncMock()
+    runner._check_privacy = AsyncMock()
+
+    async def choose_program(page, form, selector, config):
+        assert runner.selected_program_name == ""
+        runner.selected_program_name = "Master in Education"
+
+    runner._select_random_program = AsyncMock(side_effect=choose_program)
+
+    asyncio.run(runner._fill_utel_form(Mock(), Mock(), _philippines_master_config()))
+
+    runner._select_random_program.assert_awaited_once()
+    product_assignments = [
+        call for call in runner._set_dynamic_field.await_args_list
+        if call.args[1] == '[data-cy="productsInput"]'
+    ]
+    assert product_assignments == []
+    assert runner.selected_program_name == "Master in Education"

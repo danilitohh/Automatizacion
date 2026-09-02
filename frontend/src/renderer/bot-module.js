@@ -1,6 +1,10 @@
 "use strict";
 
 const STORAGE_KEY = "qa-automation.utel-inconcert-config";
+const ACTIVE_SINGLE_JOB_KEY = "qa-automation.utel-inconcert-active-job";
+const LAST_SINGLE_JOB_KEY = "qa-automation.utel-inconcert-last-job";
+const ACTIVE_BATCH_JOB_KEY = "qa-automation.utel-inconcert-active-batch";
+const LAST_BATCH_JOB_KEY = "qa-automation.utel-inconcert-last-batch";
 
 const state = {
   config: {
@@ -424,6 +428,8 @@ async function pollJob(showToast, statusApi, jobId) {
     window.clearInterval(state.pollTimer);
     state.pollTimer = null;
     state.activeJobId = null;
+    localStorage.removeItem(ACTIVE_SINGLE_JOB_KEY);
+    localStorage.setItem(LAST_SINGLE_JOB_KEY, jobId);
     document.querySelector("#bot-run").disabled = false;
     document.querySelector("#bot-stop")?.setAttribute("hidden", "");
     document.querySelector("#bot-run").classList.remove("loading");
@@ -442,16 +448,12 @@ async function pollJob(showToast, statusApi, jobId) {
     ]);
     showToast(job.status === "PASS" ? "Flujo UTEL/InConcert completado." : "El flujo UTEL/InConcert termino con errores.", job.status === "PASS" ? "info" : "error");
   } catch (error) {
-    window.clearInterval(state.pollTimer);
-    state.pollTimer = null;
-    state.activeJobId = null;
-    document.querySelector("#bot-run").disabled = false;
-    document.querySelector("#bot-run").classList.remove("loading");
-    document.querySelector("#bot-run").innerHTML = "Ejecutar prueba <span>-></span>";
     const status = document.querySelector("#bot-run-status");
     status.className = "bot-run-status error";
-    status.innerHTML = `<strong>NO SE PUDO CONSULTAR</strong><span>${escapeHtml(error.message)}</span>`;
-    showToast(`No se pudo consultar la ejecucion: ${error.message}`, "error");
+    const retryHint = error.status === 404
+      ? "No se encontró temporalmente el registro del job en memoria del backend. Probablemente regresará al retomar la sesión."
+      : "El trabajo continúa en el backend; la página volverá a consultar automáticamente.";
+    status.innerHTML = `<strong>RECONECTANDO CON LA EJECUCIÓN</strong><span>${escapeHtml(error.message)}</span><small>${retryHint}</small>`;
   }
 }
 
@@ -486,6 +488,8 @@ async function executeBot(showToast, runApi, statusApi) {
       showToast(`Datos generados: ${job.lead_email}`, "info");
     }
     state.activeJobId = job.job_id;
+    localStorage.setItem(ACTIVE_SINGLE_JOB_KEY, job.job_id);
+    localStorage.removeItem(LAST_SINGLE_JOB_KEY);
     status.innerHTML = `<strong>FLUJO EN SEGUNDO PLANO</strong><span>Puedes seguir usando la app mientras se ejecuta.</span><small>ID de ejecucion: ${escapeHtml(job.job_id)}</small>`;
     state.pollTimer = window.setInterval(() => pollJob(showToast, statusApi, job.job_id), 1000);
     showToast("Flujo UTEL/InConcert iniciado.", "info");
@@ -524,6 +528,106 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
   let batchTimer = null;
   let activeBatchJobId = null;
   let importedRows = [];
+
+  const stopBatchPolling = () => {
+    if (batchTimer) window.clearInterval(batchTimer);
+    batchTimer = null;
+  };
+
+  const pollBatchJob = async (jobId, announceCompletion = true) => {
+    try {
+      const current = await utelBatchStatus(jobId);
+      const running = current.status === "RUNNING" || current.status === "QUEUED";
+      const liveError = current.last_error ? ` · Último error: fila ${current.current_row} (${current.current_program}): ${current.last_error}` : "";
+      document.querySelector("#bot-run-status").textContent = `${current.dry_run ? "Dry run (sin envío)" : "Lote"}: ${current.completed}/${current.total} filas procesadas · OK: ${current.success} · Errores: ${current.failed}${liveError}`;
+      renderBatchTerminal(current, running);
+      renderErrorLog(current);
+
+      if (running) return current;
+
+      stopBatchPolling();
+      activeBatchJobId = null;
+      localStorage.removeItem(ACTIVE_BATCH_JOB_KEY);
+      localStorage.setItem(LAST_BATCH_JOB_KEY, jobId);
+      stopButton.hidden = true;
+      batchButton.disabled = false;
+      document.querySelector("#bot-run").disabled = false;
+      if (current.status === "PASS") {
+        const apiBase = window.desktop?.apiUrl || window.location.origin;
+        document.querySelector("#bot-run-status").innerHTML = `${current.dry_run ? "Dry run completado (sin envío)" : "Lote completado"}: ${current.success} OK, ${current.failed} con error. <a href="${apiBase}${current.download_url}" download>Descargar Excel actualizado</a>`;
+        renderBatchResults(current);
+        if (announceCompletion) showToast("Excel actualizado generado correctamente.", "info");
+      } else {
+        setValidation(current.summary || "El lote terminó con errores.", "error");
+        if (announceCompletion) showToast(current.summary || "El lote terminó con errores.", "error");
+      }
+      return current;
+    } catch (error) {
+      const status = document.querySelector("#bot-run-status");
+      status.className = "bot-run-status error";
+      const retryHint = error.status === 404
+        ? "No se encontró temporalmente el job en memoria. Si el backend se reinició, se perdería el lote en curso."
+        : "El trabajo continúa en el backend; la página volverá a consultar automáticamente.";
+      status.innerHTML = `<strong>RECONECTANDO CON EL LOTE</strong><span>${escapeHtml(error.message)}</span><small>${retryHint}</small>`;
+      return null;
+    }
+  };
+
+  const watchBatchJob = async (jobId, { persist = true, announceCompletion = true } = {}) => {
+    stopBatchPolling();
+    activeBatchJobId = jobId;
+    if (persist) {
+      localStorage.setItem(ACTIVE_BATCH_JOB_KEY, jobId);
+      localStorage.removeItem(LAST_BATCH_JOB_KEY);
+    }
+    stopButton.hidden = false;
+    batchButton.disabled = true;
+    document.querySelector("#bot-run").disabled = true;
+    await pollBatchJob(jobId, announceCompletion);
+    if (activeBatchJobId === jobId) {
+      batchTimer = window.setInterval(() => void pollBatchJob(jobId), 1000);
+    }
+  };
+
+  const watchSingleJob = async (jobId, { announce = true } = {}) => {
+    state.activeJobId = jobId;
+    const runButton = document.querySelector("#bot-run");
+    runButton.disabled = true;
+    runButton.classList.add("loading");
+    runButton.innerHTML = "<span>◌</span> Ejecutando...";
+    stopButton.hidden = false;
+    await pollJob(announce ? showToast : () => {}, utelInconcertStatus, jobId);
+    if (state.activeJobId === jobId) {
+      state.pollTimer = window.setInterval(() => void pollJob(showToast, utelInconcertStatus, jobId), 1000);
+    }
+  };
+
+  const restoreRememberedJob = async () => {
+    const activeBatch = localStorage.getItem(ACTIVE_BATCH_JOB_KEY);
+    if (activeBatch) {
+      document.querySelector("#bot-run-status").innerHTML = "<strong>RECUPERANDO LOTE</strong><span>Consultando el progreso que continuó en segundo plano.</span>";
+      await watchBatchJob(activeBatch, { persist: false, announceCompletion: false });
+      if (activeBatchJobId === activeBatch) showToast("Ejecución por lote recuperada. Continúa en segundo plano.", "info");
+      return;
+    }
+
+    const activeSingle = localStorage.getItem(ACTIVE_SINGLE_JOB_KEY);
+    if (activeSingle) {
+      document.querySelector("#bot-run-status").innerHTML = "<strong>RECUPERANDO EJECUCIÓN</strong><span>Consultando el progreso que continuó en segundo plano.</span>";
+      await watchSingleJob(activeSingle, { announce: false });
+      if (state.activeJobId === activeSingle) showToast("Ejecución recuperada. Continúa en segundo plano.", "info");
+      return;
+    }
+
+    const lastBatch = localStorage.getItem(LAST_BATCH_JOB_KEY);
+    if (lastBatch) {
+      await watchBatchJob(lastBatch, { persist: false, announceCompletion: false });
+      return;
+    }
+
+    const lastSingle = localStorage.getItem(LAST_SINGLE_JOB_KEY);
+    if (lastSingle) await watchSingleJob(lastSingle, { announce: false });
+  };
   copyErrorsButton.addEventListener("click", async () => {
     const content = document.querySelector("#bot-error-terminal")?.dataset.log || "";
     if (!content) return;
@@ -726,32 +830,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     setValidation(state.config.dry_run ? "Dry run iniciado: se rellenarán las filas sin enviar leads." : "Lote iniciado. Se procesarán las filas una por una.", "success");
     try {
       const job = await runUtelBatch(spreadsheetFile, state.config, selectedMapping);
-      activeBatchJobId = job.job_id;
-      stopButton.hidden = false;
-      batchTimer = window.setInterval(async () => {
-        const current = await utelBatchStatus(job.job_id);
-        const liveError = current.last_error ? ` · Último error: fila ${current.current_row} (${current.current_program}): ${current.last_error}` : "";
-        document.querySelector("#bot-run-status").textContent = `${current.dry_run ? "Dry run (sin envío)" : "Lote"}: ${current.completed}/${current.total} filas procesadas · OK: ${current.success} · Errores: ${current.failed}${liveError}`;
-        renderBatchTerminal(current, current.status === "RUNNING");
-        renderErrorLog(current);
-        if (current.status !== "RUNNING") {
-          window.clearInterval(batchTimer);
-          batchTimer = null;
-          activeBatchJobId = null;
-          stopButton.hidden = true;
-          batchButton.disabled = false;
-          runButton.disabled = false;
-          if (current.status === "PASS") {
-            const apiBase = window.desktop?.apiUrl || "http://127.0.0.1:8000";
-            document.querySelector("#bot-run-status").innerHTML = `${current.dry_run ? "Dry run completado (sin envío)" : "Lote completado"}: ${current.success} OK, ${current.failed} con error. <a href="${apiBase}${current.download_url}" download>Descargar Excel actualizado</a>`;
-            renderBatchResults(current);
-            showToast("Excel actualizado generado correctamente.", "info");
-          } else {
-            setValidation(current.summary || "El lote terminó con errores.", "error");
-            showToast(current.summary || "El lote terminó con errores.", "error");
-          }
-        }
-      }, 1000);
+      await watchBatchJob(job.job_id);
     } catch (error) {
       batchButton.disabled = false;
       document.querySelector("#bot-run").disabled = false;
@@ -765,12 +844,15 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       stopButton.disabled = true;
       if (activeBatchJobId && cancelUtelBatch) await cancelUtelBatch(activeBatchJobId);
       else if (state.activeJobId && cancelUtelInconcert) await cancelUtelInconcert(state.activeJobId);
-      if (batchTimer) window.clearInterval(batchTimer);
+      stopBatchPolling();
       if (state.pollTimer) window.clearInterval(state.pollTimer);
-      batchTimer = null;
       state.pollTimer = null;
       activeBatchJobId = null;
       state.activeJobId = null;
+      localStorage.removeItem(ACTIVE_BATCH_JOB_KEY);
+      localStorage.removeItem(LAST_BATCH_JOB_KEY);
+      localStorage.removeItem(ACTIVE_SINGLE_JOB_KEY);
+      localStorage.removeItem(LAST_SINGLE_JOB_KEY);
       document.querySelector("#bot-run").disabled = false;
       document.querySelector("#bot-run").classList.remove("loading");
       stopButton.hidden = true;
@@ -863,4 +945,5 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     setValidation("Completa la configuracion para validar el flujo UTEL/InConcert.");
     showToast("Configuracion limpiada.", "info");
   });
+  void restoreRememberedJob();
 }

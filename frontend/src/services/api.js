@@ -1,6 +1,7 @@
 "use strict";
 
-const API_BASE_URL = window.desktop?.apiUrl || "http://127.0.0.1:8000";
+const WEB_BASE_URL = ["http:", "https:"].includes(window.location.protocol) ? window.location.origin : "";
+const API_BASE_URL = window.desktop?.apiUrl || WEB_BASE_URL || "http://127.0.0.1:8000";
 
 async function request(path, options = {}) {
   const isFormData = options.body instanceof FormData;
@@ -11,7 +12,7 @@ async function request(path, options = {}) {
       headers: { ...(isFormData ? {} : { "Content-Type": "application/json" }), ...(options.headers || {}) },
     });
   } catch (error) {
-    throw new Error(`No se pudo conectar con FastAPI local en ${API_BASE_URL}. Inicia la app nuevamente o verifica que el backend esté ejecutándose.`);
+    throw new Error(`No se pudo conectar con el servidor de automatizaciones en ${API_BASE_URL}. Verifica que el backend esté ejecutándose.`);
   }
   let payload;
 
@@ -22,7 +23,9 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(payload?.detail || `La API respondió con ${response.status}.`);
+    const error = new Error(payload?.detail || `La API respondió con ${response.status}.`);
+    error.status = response.status;
+    throw error;
   }
 
   return payload;
@@ -55,6 +58,9 @@ export const api = {
   startBotRecorder: (config) => request("/api/bots/recorder/start", { method: "POST", body: JSON.stringify(config) }),
   botRecorderEvents: (sessionId) => request(`/api/bots/recorder/${sessionId}/events`),
   stopBotRecorder: (sessionId) => request(`/api/bots/recorder/${sessionId}/stop`, { method: "POST" }),
+  runWeeklyAuto: (config) => request("/api/weekly-auto/run", { method: "POST", body: JSON.stringify(config) }),
+  weeklyAutoStatus: (jobId) => request(`/api/weekly-auto/runs/${jobId}`),
+  cancelWeeklyAuto: (jobId) => request(`/api/weekly-auto/runs/${jobId}/cancel`, { method: "POST" }),
   aiProviders: () => request("/api/ai/providers"),
   aiGenerate: (payload) => request("/api/ai/generate", { method: "POST", body: JSON.stringify(payload) }),
   validatePdp: (excelFile, docxFile) => {

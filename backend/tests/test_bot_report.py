@@ -50,3 +50,36 @@ def test_dry_run_clears_previous_lead_link_only_for_processed_rows():
     sheet = BotReportService().build(data.getvalue(), {}, [result]).active
     assert sheet["C2"].value is None and sheet["C2"].hyperlink is None
     assert sheet["C3"].value == "https://crm.test/old"
+
+
+def test_report_writes_lead_into_blank_inconcert_balanceador_column():
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Nivel", "URL", "Location", "Locale", "inconcert/balanceador"])
+    sheet.append(["Licenciatura", "https://utel.test", "footer", "Mexico", None])
+    data = BytesIO()
+    workbook.save(data)
+    link = "https://mas-utel.inconcertcc.com/mas/contact/people/view/123"
+    result = {
+        "row": {"sheet": "Sheet", "row_number": 2},
+        "result": {
+            "status": "PASS",
+            "dry_run": False,
+            "lead_url": link,
+            "lead_email": "qa@example.test",
+            "summary": "Verificado",
+            "stages": [],
+        },
+    }
+
+    output = BotReportService().build(
+        data.getvalue(),
+        {"inconcert_url": "inconcert/balanceador", "lead_url": "URL LEAD"},
+        [result],
+    )
+    sheet = output.active
+    headers = [cell.value for cell in sheet[1]]
+
+    assert "URL LEAD" not in headers
+    assert sheet["E2"].value == link
+    assert sheet["E2"].hyperlink.target == link

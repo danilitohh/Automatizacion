@@ -7,8 +7,9 @@
       content="width=device-width, initial-scale=1.0"
     />
     <meta name="theme-color" content="#0b1220" />
+    <meta name="description" content="Centro de automatización y validación para el equipo QA de UTEL." />
     <link rel="stylesheet" href="./src/renderer/styles.css" />
-    <title>QA Automation</title>
+    <title>UTEL QA Automation</title>
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -49,6 +50,11 @@
             <span>Bot de verificaciones</span>
             <span class="nav-phase">NUEVO</span>
           </button>
+          <button class="nav-item" data-view="weekly-auto">
+            <span class="nav-icon">🧭</span>
+            <span>Weekly Auto</span>
+            <span class="nav-phase">NUEVO</span>
+          </button>
           <button class="nav-item" data-view="pdp">
             <span class="nav-icon">▤</span>
             <span>PDP vs documentos</span>
@@ -70,7 +76,7 @@
           <div class="connection-dot" id="connection-dot"></div>
           <div>
             <p id="connection-label">Conectando...</p>
-            <span>FastAPI local</span>
+            <span id="runtime-label">Aplicación web</span>
           </div>
         </div>
       </aside>
@@ -241,6 +247,45 @@
           </div>
         </section>
 
+        <section class="view" id="view-weekly-auto" data-view-panel="weekly-auto">
+          <div class="section-intro"><p class="eyebrow accent">Nuevo módulo</p><h2>Weekly Auto</h2><p class="muted">Ejecuta un ciclo de apertura y captura de URLs en lote con pausa anti-bloqueo.</p></div>
+          <article class="panel">
+            <div class="panel-header"><div><p class="eyebrow">Configuración semanal</p><h3>Captura automática de páginas</h3><p class="panel-subtitle">Usa URLs manuales o la lista por defecto para revisar disponibilidad y generar evidencia.</p></div><span class="status-badge success">AUTOMÁTICO</span></div>
+            <div class="bot-fields">
+              <label class="field full"><span>Nombre de corrida</span><input id="weekly-auto-name" type="text" placeholder="Weekly Auto" /></label>
+              <label class="toggle-field full-toggle"><input id="weekly-auto-use-default" type="checkbox" checked /><span><strong>Usar URLs por defecto</strong><small>Carga las URLs del catálogo semanal.</small></span></label>
+              <label class="field full"><span>URLs</span><textarea id="weekly-auto-urls" rows="10" placeholder="https://utel.edu.mx\nhttps://utlenlinea.com/...."></textarea></label>
+              <label class="field"><span>Navegador</span><select id="weekly-auto-browser"><option value="chromium">Chromium aislado</option><option value="chrome">Google Chrome - Perfil QA</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select></label>
+              <label class="toggle-field"><input id="weekly-auto-headless" type="checkbox" checked /><span><strong>Ejecutar en segundo plano</strong><small>No muestra la ventana del navegador</small></span></label>
+              <label class="toggle-field full-toggle"><input id="weekly-auto-keep-open" type="checkbox" /><span><strong>Dejar navegador abierto</strong><small>Se conserva la última sesión para revisión manual</small></span></label>
+              <div class="bot-fields">
+                <label class="field"><span>Ancho viewport</span><input id="weekly-auto-viewport-width" type="number" min="200" max="7680" step="1" value="1280" /></label>
+                <label class="field"><span>Alto viewport</span><input id="weekly-auto-viewport-height" type="number" min="200" max="7680" step="1" value="680" /></label>
+                <label class="field"><span>Delay entre URLs (seg)</span><input id="weekly-auto-delay" type="number" min="0" step="1" value="0" /></label>
+                <label class="field"><span>Pausa scroll (ms)</span><input id="weekly-auto-scroll-pause" type="number" min="0" step="100" value="2000" /></label>
+                <label class="field"><span>Espera de estabilización (ms)</span><input id="weekly-auto-settle-wait" type="number" min="0" step="100" value="1000" /></label>
+                <label class="field"><span>Límite máximo de URLs</span><input id="weekly-auto-max-urls" type="number" min="1" step="1" placeholder="Sin límite" /></label>
+              </div>
+            </div>
+            <div class="bot-flow-actions" style="margin-top: 12px;">
+              <div>
+                <button class="secondary-button" id="weekly-auto-save" type="button">Guardar configuración</button>
+                <button class="secondary-button" id="weekly-auto-run-preview" type="button">Validar configuración</button>
+                <button class="secondary-button" id="weekly-auto-clear" type="button">Restaurar predeterminados</button>
+              </div>
+              <div>
+                <button class="danger-button" id="weekly-auto-stop" type="button" hidden>Detener corrida</button>
+                <button class="primary-button" id="weekly-auto-run" type="button">Iniciar semanal <span>→</span></button>
+              </div>
+            </div>
+            <div class="bot-run-status" id="weekly-auto-run-status">Configura la corrida para empezar.</div>
+            <div id="weekly-auto-message" class="bot-summary muted" style="margin-top: 10px;">Sin actividad.</div>
+            <pre class="bot-terminal" id="weekly-auto-terminal" aria-live="polite">[sistema] Esperando inicio de ejecución.</pre>
+            <div id="weekly-auto-stats" class="pdp-summary" style="margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;"></div>
+            <div class="bot-steps-list" id="weekly-auto-results"></div>
+          </article>
+        </section>
+
         <section class="view" id="view-pdp" data-view-panel="pdp">
           <div class="section-intro"><p class="eyebrow accent">Nuevo módulo</p><h2>Validación PDP vs DOCX</h2><p class="muted">Compara el contenido de las páginas de producto con la matriz Excel y su documento de referencia.</p></div>
           <article class="panel pdp-semantic-panel">
@@ -280,8 +325,8 @@
         </section>
 
         <section class="view" id="view-settings" data-view-panel="settings">
-          <div class="section-intro"><p class="eyebrow accent">Entorno</p><h2>Configuración</h2><p class="muted">Valores generales de la aplicación local.</p></div>
-          <article class="panel settings-card"><div class="setting-row"><div><strong>API local</strong><span>Endpoint que utiliza el renderer de Electron</span></div><code id="api-url-label">http://127.0.0.1:8000</code></div><div class="setting-row"><div><strong>Persistencia</strong><span>Base de datos inicial de la Fase 1</span></div><code>SQLite</code></div><div class="setting-row"><div><strong>Credenciales</strong><span>Se configuran exclusivamente en el archivo .env del backend</span></div><span class="status-badge success">PROTEGIDAS</span></div></article>
+          <div class="section-intro"><p class="eyebrow accent">Entorno</p><h2>Configuración</h2><p class="muted">Valores generales del servidor de automatizaciones.</p></div>
+          <article class="panel settings-card"><div class="setting-row"><div><strong>API del servidor</strong><span>Endpoint utilizado por la interfaz web o desktop</span></div><code id="api-url-label">http://127.0.0.1:8000</code></div><div class="setting-row"><div><strong>Persistencia</strong><span>Base de datos del servidor local</span></div><code>SQLite</code></div><div class="setting-row"><div><strong>Credenciales</strong><span>Se configuran exclusivamente en el archivo .env del backend</span></div><span class="status-badge success">PROTEGIDAS</span></div></article>
         </section>
       </main>
     </div>

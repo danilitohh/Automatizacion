@@ -58,3 +58,16 @@ def test_screenshot_falls_back_to_viewport_and_preserves_prior_runs(tmp_path):
     assert page.screenshot.await_args_list[0].kwargs["full_page"] is True
     assert page.screenshot.await_args_list[1].kwargs["full_page"] is False
     assert runner.screenshots == [path]
+
+
+def test_screenshot_retries_without_disabling_animations(tmp_path):
+    runner = UtelInconcertRunner(Settings(storage_dir=tmp_path / "storage"))
+    runner.evidence_directory = runner._evidence_directory("slow page")
+    page = AsyncMock()
+    page.screenshot.side_effect = [TimeoutError("full"), TimeoutError("viewport"), None]
+
+    path = asyncio.run(runner._safe_screenshot(page, "slow"))
+
+    assert path is not None
+    assert page.screenshot.await_count == 3
+    assert "animations" not in page.screenshot.await_args_list[2].kwargs

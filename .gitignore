@@ -6,6 +6,7 @@ venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.codex-tmp-*/
 .coverage
 
 # Los archivos de ejecución pueden contener información sensible.

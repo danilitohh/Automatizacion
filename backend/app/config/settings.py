@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.3-70b-versatile"
     gemini_api_key: SecretStr = SecretStr("")
     gemini_model: str = "gemini-2.5-flash"
+    # Pausa entre filas cuando se ejecutan lotes UTEL-InConcert para
+    # reducir bloqueos por tasa de solicitudes repetidas.
+    batch_delay_seconds: int = 60
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",

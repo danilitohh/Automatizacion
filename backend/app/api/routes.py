@@ -5,12 +5,14 @@ import asyncio
 import os
 from datetime import datetime
 from uuid import uuid4
+from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 
 from ..automations.generic_bot.runner import BotRunner
 from ..automations.utel_inconcert.runner import UtelInconcertRunner
+from ..automations.weekly_auto.runner import WeeklyAutoRunner
 from ..database.repository import ExecutionRepository
 from ..schemas.bot import (
     BotConfig,
@@ -19,6 +21,10 @@ from ..schemas.bot import (
     BotStartResponse,
     UtelQaConfig,
     UtelQaJobResponse,
+)
+from ..schemas.weekly_auto import (
+    WeeklyAutoConfig,
+    WeeklyAutoJobResponse,
 )
 from ..schemas.ai import AICompletionRequest, AICompletionResponse, AIProvidersResponse
 from ..schemas.recorder import (
@@ -71,6 +77,8 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
 
     settings = application.state.settings
     job = application.state.utel_batch_jobs[job_id]
+    inter_row_delay = max(0, int(settings.batch_delay_seconds))
+    logger.info("Lote %s con pausa anti-bloqueo entre filas: %ss", job_id, inter_row_delay)
     try:
         service = BotSpreadsheetService()
         rows = service.rows_for_mapping(content, mapping)
@@ -88,6 +96,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             "program_name": rows[0]["program_name"],
             "dry_run": raw_config.get("dry_run", True),
             "workflow_mode": workflow_mode,
+            "source_filename": filename,
         })
         results = []
         for index, row in enumerate(rows, 1):
@@ -153,6 +162,8 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "last_error": failed_stage["message"] if failed_stage else "",
                 "results": results,
             })
+            if index < len(rows) and inter_row_delay > 0:
+                await asyncio.sleep(inter_row_delay)
 
         workbook = BotReportService().build(content, mapping, results)
 
@@ -161,6 +172,9 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
         output_path = output_dir / f"{job_id}_{filename.rsplit('.', 1)[0]}.xlsx"
         workbook.save(output_path)
         job.update({"status": "PASS", "finished_at": datetime.now().isoformat(timespec="seconds"), "download_url": f"/api/bots/utel-inconcert/batch/{job_id}/download", "results": results})
+    except asyncio.CancelledError:
+        job.update({"status": "CANCELLED", "finished_at": datetime.now().isoformat(timespec="seconds"), "summary": "Lote cancelado durante la ejecución."})
+        raise
     except Exception as error:  # noqa: BLE001
         logger.exception("No se pudo completar el lote UTEL/InConcert %s", job_id)
         job.update({"status": "FAIL", "finished_at": datetime.now().isoformat(timespec="seconds"), "summary": str(error)})
@@ -234,6 +248,61 @@ async def download_utel_batch(request: Request, job_id: str) -> FileResponse:
     if path is None or not path.is_file():
         raise HTTPException(status_code=404, detail="No se encontró el Excel generado.")
     return FileResponse(path, filename=path.name, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@router.post("/weekly-auto/run", response_model=WeeklyAutoJobResponse, status_code=202)
+async def run_weekly_auto(request: Request, config: WeeklyAutoConfig) -> dict:
+    """Inicia la captura semanal sin bloquear la interfaz."""
+
+    if not config.urls and not config.use_default_urls:
+        raise HTTPException(status_code=400, detail="Debes indicar URLs o activar el uso de URLs por defecto.")
+    job_id = uuid4().hex
+    started_at = datetime.now().isoformat(timespec="seconds")
+    request.app.state.weekly_auto_jobs[job_id] = {
+        "job_id": job_id,
+        "name": config.name,
+        "status": "RUNNING",
+        "started_at": started_at,
+        "finished_at": None,
+        "duration_seconds": None,
+        "total_urls": None,
+        "completed": 0,
+        "successful": 0,
+        "failed": 0,
+        "skipped": 0,
+        "current_url": None,
+        "current_index": None,
+        "summary": "Weekly Auto ejecutándose en segundo plano.",
+        "result": None,
+    }
+    task = asyncio.create_task(_run_weekly_auto_job(request.app, job_id, config))
+    request.app.state.bot_tasks[job_id] = task
+    task.add_done_callback(lambda _: request.app.state.bot_tasks.pop(job_id, None))
+    return request.app.state.weekly_auto_jobs[job_id]
+
+
+@router.get("/weekly-auto/runs/{job_id}", response_model=WeeklyAutoJobResponse)
+async def weekly_auto_status(request: Request, job_id: str) -> dict:
+    """Consulta el estado de la corrida semanal."""
+
+    job = request.app.state.weekly_auto_jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="La corrida semanal no existe o ya no está disponible.")
+    return job
+
+
+@router.post("/weekly-auto/runs/{job_id}/cancel")
+async def cancel_weekly_auto_run(request: Request, job_id: str) -> dict:
+    """Cancela una corrida semanal en curso."""
+
+    job = request.app.state.weekly_auto_jobs.get(job_id)
+    task = request.app.state.bot_tasks.get(job_id)
+    if job is None or task is None or task.done():
+        raise HTTPException(status_code=404, detail="La corrida ya terminó o no existe.")
+    job.update({"status": "CANCELLED", "finished_at": datetime.now().isoformat(timespec="seconds"), "summary": "Corrida cancelada por el usuario."})
+    task.cancel()
+    return job
+
 logger = get_logger()
 
 
@@ -439,6 +508,107 @@ async def _run_utel_inconcert_job(application, job_id: str, config: UtelQaConfig
             "started_at": application.state.utel_inconcert_jobs[job_id]["started_at"],
             "finished_at": now,
             "duration_seconds": None,
+            "summary": str(error),
+            "result": None,
+        }
+
+
+async def _run_weekly_auto_job(application, job_id: str, config: WeeklyAutoConfig) -> None:
+    """Ejecuta la corrida semanal en background y actualiza el estado."""
+
+    settings = application.state.settings
+    try:
+        logger.info("Iniciando Weekly Auto: %s (%s)", config.name, job_id)
+        def progress(payload: dict[str, Any]) -> None:
+            job = application.state.weekly_auto_jobs.get(job_id)
+            if not job:
+                return
+            job.update(
+                {
+                    "current_index": payload["index"],
+                    "total_urls": payload["total"],
+                    "current_url": payload["url"],
+                    "completed": payload["index"] - (1 if payload["status"] == "SKIPPED" else 0),
+                    "successful": job.get("successful", 0) + (1 if payload["status"] == "PASS" else 0),
+                    "failed": job.get("failed", 0) + (1 if payload["status"] == "FAIL" else 0),
+                    "skipped": job.get("skipped", 0) + (1 if payload["status"] == "SKIPPED" else 0),
+                    "summary": f"Proceso {payload['index']}/{payload['total']}: {payload['status']} - {payload['url']}",
+                }
+            )
+
+        result = await WeeklyAutoRunner(settings).run(config, progress_callback=progress)
+        serializable_result = result
+        logger.info("Weekly Auto finalizado: %s", config.name)
+
+        ExecutionRepository(settings.database_path).create_execution(
+            {
+                "automation_type": "weekly_auto",
+                "name": config.name,
+                "status": "SUCCESS" if result["status"] == "PASS" else "FAIL",
+                "started_at": result["started_at"],
+                "finished_at": result["finished_at"],
+                "duration_seconds": result["duration_seconds"],
+                "summary": result["summary"],
+                "error_message": None if result["status"] == "PASS" else result["summary"],
+                "evidence_json": json.dumps(serializable_result, ensure_ascii=False),
+                "created_at": result["finished_at"],
+            }
+        )
+        application.state.weekly_auto_jobs[job_id] = {
+            "job_id": job_id,
+            "name": config.name,
+            "status": result["status"],
+            "started_at": result["started_at"],
+            "finished_at": result["finished_at"],
+            "duration_seconds": result["duration_seconds"],
+            "total_urls": result["total_urls"],
+            "completed": result["completed"],
+            "successful": result["successful"],
+            "failed": result["failed"],
+            "skipped": result["skipped"],
+            "current_url": None,
+            "current_index": None,
+            "summary": result["summary"],
+            "result": serializable_result,
+        }
+        logger.info("Weekly Auto finalizado: %s - %s", config.name, result["status"])
+    except asyncio.CancelledError:
+        logger.info("Weekly Auto cancelado durante ejecución: %s (%s)", config.name, job_id)
+        application.state.weekly_auto_jobs[job_id] = {
+            "job_id": job_id,
+            "name": config.name,
+            "status": "CANCELLED",
+            "started_at": application.state.weekly_auto_jobs[job_id]["started_at"],
+            "finished_at": datetime.now().isoformat(timespec="seconds"),
+            "duration_seconds": None,
+            "total_urls": None,
+            "completed": 0,
+            "successful": 0,
+            "failed": 0,
+            "skipped": 0,
+            "current_url": None,
+            "current_index": None,
+            "summary": "Corrida cancelada por el usuario.",
+            "result": None,
+        }
+        return
+    except Exception as error:  # noqa: BLE001 - se regresa a la UI en forma de estado
+        logger.exception("No se pudo completar Weekly Auto %s", config.name)
+        now = datetime.now().isoformat(timespec="seconds")
+        application.state.weekly_auto_jobs[job_id] = {
+            "job_id": job_id,
+            "name": config.name,
+            "status": "FAIL",
+            "started_at": application.state.weekly_auto_jobs[job_id]["started_at"],
+            "finished_at": now,
+            "duration_seconds": None,
+            "total_urls": None,
+            "completed": 0,
+            "successful": 0,
+            "failed": 0,
+            "skipped": 0,
+            "current_url": None,
+            "current_index": None,
             "summary": str(error),
             "result": None,
         }

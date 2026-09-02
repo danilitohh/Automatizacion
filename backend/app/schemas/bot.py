@@ -130,6 +130,7 @@ class UtelQaConfig(BaseModel):
     headless: bool = True
     keep_browser_open: bool = False
     workflow_mode: Literal["product_release", "form_validation"] = "product_release"
+    source_filename: str = Field(default="", max_length=260)
     navigation_modality: str = Field(default="", max_length=120)
     navigation_level: str = Field(default="", max_length=160)
     navigation_sublevel: str = Field(default="", max_length=160)

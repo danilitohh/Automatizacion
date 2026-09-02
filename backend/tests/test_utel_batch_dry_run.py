@@ -31,7 +31,13 @@ def test_batch_preserves_safe_mode_and_marks_excel(tmp_path, monkeypatch, dry_ru
         config["dry_run"] = dry_run
     mapping = {"level": "Nivel", "utel_url": "URL", "form_type": "Location", "country": "Locale",
                "selected_sheet": "Sheet", "selected_row_number": 3}
-    app = create_app(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage"))
+    app = create_app(
+        Settings(
+            database_path=tmp_path / "test.db",
+            storage_dir=tmp_path / "storage",
+            batch_delay_seconds=0,
+        )
+    )
     with TestClient(app) as client:
         response = client.post('/api/bots/utel-inconcert/batch-run',
                                data={"config": json.dumps(config), "mapping": json.dumps(mapping)},
@@ -44,6 +50,7 @@ def test_batch_preserves_safe_mode_and_marks_excel(tmp_path, monkeypatch, dry_ru
         assert len(seen) == 1
         assert seen[0].dry_run is (dry_run is not False)
         assert seen[0].level == "Maestria"
+        assert seen[0].source_filename == "test.xlsx"
         report = client.get(job["download_url"])
     sheet = load_workbook(io.BytesIO(report.content)).active
     assert sheet.cell(2, 5).value is None
@@ -72,7 +79,13 @@ def test_each_batch_row_uses_its_country_crm_not_a_stale_url(tmp_path, monkeypat
     content = io.BytesIO()
     workbook.save(content)
     mapping = {"level": "Nivel", "utel_url": "URL", "form_type": "Location", "country": "Locale", "inconcert_url": "CRM"}
-    app = create_app(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage"))
+    app = create_app(
+        Settings(
+            database_path=tmp_path / "test.db",
+            storage_dir=tmp_path / "storage",
+            batch_delay_seconds=0,
+        )
+    )
     with TestClient(app) as client:
         response = client.post('/api/bots/utel-inconcert/batch-run',
                                data={"config": json.dumps({"lead": {}, "dry_run": True, "inconcert_url": "https://stale.test"}), "mapping": json.dumps(mapping)},

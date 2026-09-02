@@ -3,8 +3,11 @@
 import { api } from "../services/api.js";
 import { initializeBotModule } from "./bot-module.js";
 import { initializePdpModule } from "./pdp-module.js";
+import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
 
+const LAST_VIEW_KEY = "qa-automation.last-view";
 const state = { activeView: "dashboard" };
+const runtimeMode = window.desktop ? "desktop" : "web";
 
 const viewMeta = {
   dashboard: { title: "Dashboard", description: "Resumen operativo" },
@@ -12,6 +15,7 @@ const viewMeta = {
   visual: { title: "Monitoreo visual", description: "Automatizaciones" },
   excel: { title: "Excel vs Web / Strapi", description: "Automatizaciones" },
   bot: { title: "Bot de verificaciones", description: "Automatizaciones" },
+  "weekly-auto": { title: "Weekly Auto", description: "Automatizaciones" },
   pdp: { title: "Validación PDP vs DOCX", description: "Automatizaciones" },
   history: { title: "Historial", description: "Trazabilidad" },
   settings: { title: "Configuración", description: "Administración" },
@@ -30,6 +34,8 @@ function selectElements() {
     apiDot: document.querySelector("#api-dot"),
     apiStatus: document.querySelector("#api-status"),
     healthPulse: document.querySelector("#health-pulse"),
+    runtimeLabel: document.querySelector("#runtime-label"),
+    userAvatar: document.querySelector(".user-avatar"),
   };
 }
 
@@ -144,6 +150,7 @@ async function refreshDashboard() {
 function navigate(viewName) {
   if (!viewMeta[viewName]) return;
   state.activeView = viewName;
+  localStorage.setItem(LAST_VIEW_KEY, viewName);
   elements.navigation.forEach((item) => item.classList.toggle("active", item.dataset.view === viewName));
   elements.views.forEach((view) => view.classList.toggle("active", view.dataset.viewPanel === viewName));
   elements.title.textContent = viewMeta[viewName].title;
@@ -154,9 +161,13 @@ function bindEvents() {
   elements.refreshButton.addEventListener("click", refreshDashboard);
   document.querySelector("#today-label").textContent = new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
   document.querySelector("#api-url-label").textContent = api.baseUrl;
+  document.documentElement.dataset.runtime = runtimeMode;
+  if (elements.runtimeLabel) elements.runtimeLabel.textContent = runtimeMode === "desktop" ? "Aplicación desktop" : "Aplicación web";
+  if (elements.userAvatar) elements.userAvatar.title = runtimeMode === "desktop" ? "Sesión local desktop" : "Sesión web local";
 }
 
 bindEvents();
+state.activeView = localStorage.getItem(LAST_VIEW_KEY) || state.activeView;
 navigate(state.activeView);
 initializeBotModule({
   showToast,
@@ -167,6 +178,12 @@ initializeBotModule({
   runUtelBatch: api.runUtelBatch,
   utelBatchStatus: api.utelBatchStatus,
   cancelUtelBatch: api.cancelUtelBatch,
+});
+initializeWeeklyAutoModule({
+  showToast,
+  runWeeklyAuto: api.runWeeklyAuto,
+  weeklyAutoStatus: api.weeklyAutoStatus,
+  cancelWeeklyAuto: api.cancelWeeklyAuto,
 });
 initializePdpModule({ showToast, validatePdp: api.validatePdp, validatePdpSemantic: api.validatePdpSemantic });
 refreshDashboard();
