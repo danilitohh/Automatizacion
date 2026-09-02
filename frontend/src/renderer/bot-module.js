@@ -562,9 +562,12 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       retryErrorsButton.hidden = !spreadsheetFile || failedRows.length === 0;
       retryErrorsButton.disabled = failedRows.length === 0;
       retryErrorsButton.textContent = `Reintentar ${failedRows.length} error${failedRows.length === 1 ? "" : "es"}`;
-      if (current.status === "PASS") {
+      if (current.download_url) {
         const apiBase = window.desktop?.apiUrl || window.location.origin;
-        document.querySelector("#bot-run-status").innerHTML = `${current.dry_run ? "Dry run completado (sin envío)" : "Lote completado"}: ${current.success} OK, ${current.failed} con error. <a href="${apiBase}${current.download_url}" download>Descargar Excel actualizado</a>`;
+        const label = current.status === "PASS"
+          ? (current.dry_run ? "Dry run completado (sin envío)" : "Lote completado")
+          : "Lote finalizado con resultados parciales";
+        document.querySelector("#bot-run-status").innerHTML = `${label}: ${current.success} OK, ${current.failed} con error. <a href="${apiBase}${current.download_url}" download>Descargar Excel actualizado</a>`;
         renderBatchResults(current);
         if (announceCompletion) showToast("Excel actualizado generado correctamente.", "info");
       } else {
@@ -585,7 +588,8 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
         batchButton.disabled = false;
         document.querySelector("#bot-run").disabled = false;
         status.className = "bot-run-status";
-        status.innerHTML = "<strong>SIN LOTE PENDIENTE</strong><span>No hay una ejecución activa para recuperar.</span><small>La referencia anterior se eliminó automáticamente.</small>";
+        const apiBase = window.desktop?.apiUrl || window.location.origin;
+        status.innerHTML = `<strong>LOTE NO RECUPERABLE</strong><span>El backend se reinició y ya no conserva el estado en memoria.</span><a href="${apiBase}/api/bots/utel-inconcert/batch/${jobId}/download" download>Descargar Excel parcial, si ya fue generado</a><small>Los reportes guardados permanecen disponibles aunque el proceso se reinicie.</small>`;
         return null;
       }
       status.className = "bot-run-status error";

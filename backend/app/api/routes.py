@@ -51,6 +51,24 @@ from ..services.test_lead_service import TestLeadService
 router = APIRouter(prefix="/api")
 
 
+def _save_utel_batch_report(
+    settings: Any,
+    job_id: str,
+    filename: str,
+    content: bytes,
+    mapping: dict[str, Any],
+    results: list[dict[str, Any]],
+) -> None:
+    """Guarda un checkpoint descargable, incluso mientras el lote sigue activo."""
+
+    if not results:
+        return
+    output_dir = settings.storage_dir / "reports" / "bot"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"{job_id}_{filename.rsplit('.', 1)[0]}.xlsx"
+    BotReportService().build(content, mapping, results).save(output_path)
+
+
 @router.get("/runtime")
 def backend_runtime() -> dict:
     """Permite a Electron reconocer su proceso, sin exponer secretos."""
@@ -78,6 +96,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
     settings = application.state.settings
     job = application.state.utel_batch_jobs[job_id]
     inter_row_delay = max(0, int(settings.batch_delay_seconds))
+    results: list[dict[str, Any]] = []
     logger.info("Lote %s con pausa anti-bloqueo entre filas: %ss", job_id, inter_row_delay)
     try:
         service = BotSpreadsheetService()
@@ -105,7 +124,6 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             "workflow_mode": workflow_mode,
             "source_filename": filename,
         })
-        results = []
         verification_queue = []
         job["phase"] = "UTEL: enviando formularios"
         for index, row in enumerate(rows, 1):
@@ -163,6 +181,10 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             result = await UtelInconcertRunner(settings).run(config)
             serializable_result = {**result, "stages": [stage.model_dump() for stage in result["stages"]]}
             results.append({"row": row, "result": serializable_result})
+            # El reporte se actualiza fila por fila para no perder los enlaces
+            # ya obtenidos si el backend se reinicia o el lote se detiene.
+            _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
+            job["download_url"] = f"/api/bots/utel-inconcert/batch/{job_id}/download"
             if serializable_result["status"] == "PASS" and not config.dry_run:
                 verification_queue.append((len(results) - 1, config))
             failed_stage = next((stage for stage in serializable_result["stages"] if stage["status"] == "FAIL"), None)
@@ -208,6 +230,8 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     "selected_program_name": submission.get("selected_program_name"),
                     "stages": [*submission["stages"], *serializable_verification["stages"]],
                 }
+                # Sustituye el checkpoint con el enlace CRM confirmado.
+                _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
                 job.update({
                     "completed": len(rows),
                     "success": sum(1 for item in results if item["result"]["status"] == "PASS"),
@@ -217,18 +241,15 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 if verification_index < len(verification_queue) and inter_row_delay > 0:
                     await asyncio.sleep(inter_row_delay)
 
-        workbook = BotReportService().build(content, mapping, results)
-
-        output_dir = settings.storage_dir / "reports" / "bot"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / f"{job_id}_{filename.rsplit('.', 1)[0]}.xlsx"
-        workbook.save(output_path)
+        _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
         job.update({"status": "PASS", "finished_at": datetime.now().isoformat(timespec="seconds"), "download_url": f"/api/bots/utel-inconcert/batch/{job_id}/download", "results": results})
     except asyncio.CancelledError:
+        _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
         job.update({"status": "CANCELLED", "finished_at": datetime.now().isoformat(timespec="seconds"), "summary": "Lote cancelado durante la ejecución."})
         raise
     except Exception as error:  # noqa: BLE001
         logger.exception("No se pudo completar el lote UTEL/InConcert %s", job_id)
+        _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
         job.update({"status": "FAIL", "finished_at": datetime.now().isoformat(timespec="seconds"), "summary": str(error)})
 
 
@@ -300,13 +321,10 @@ async def cancel_utel_batch(request: Request, job_id: str) -> dict:
 
 @router.get("/bots/utel-inconcert/batch/{job_id}/download")
 async def download_utel_batch(request: Request, job_id: str) -> FileResponse:
-    job = request.app.state.utel_batch_jobs.get(job_id)
-    if not job or job.get("status") != "PASS":
-        raise HTTPException(status_code=404, detail="El Excel todavía no está disponible.")
     output_dir = request.app.state.settings.storage_dir / "reports" / "bot"
     path = next(output_dir.glob(f"{job_id}_*.xlsx"), None)
     if path is None or not path.is_file():
-        raise HTTPException(status_code=404, detail="No se encontró el Excel generado.")
+        raise HTTPException(status_code=404, detail="El Excel todavía no está disponible.")
     return FileResponse(path, filename=path.name, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
