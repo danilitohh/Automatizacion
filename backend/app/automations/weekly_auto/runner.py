@@ -141,11 +141,9 @@ class WeeklyAutoRunner:
                     browser = await browser_type.launch(headless=config.headless if not config.keep_browser_open else False)
                     context = await browser.new_context(viewport={"width": config.viewport_width, "height": config.viewport_height})
 
-                page = await context.new_page()
-                page.set_default_timeout(30_000)
-
                 for index, url in enumerate(urls, start=1):
                     start = perf_counter()
+                    page = None
                     current = {
                         "index": index,
                         "url": url,
@@ -157,7 +155,9 @@ class WeeklyAutoRunner:
 
                     try:
                         if not self._is_valid_url(url):
-                            raise WeeklyAutoError(url, "URL inválida.")
+                            raise WeeklyAutoError(url, "URL inválida. Solo se permiten direcciones HTTP o HTTPS.")
+                        page = await context.new_page()
+                        page.set_default_timeout(30_000)
                         await page.goto(url, wait_until="domcontentloaded")
                         await self._progressive_scroll(page, config.scroll_pause_ms)
                         await self._stabilize_page(page, config.settle_wait_ms)
@@ -181,6 +181,12 @@ class WeeklyAutoRunner:
                         self.logger.exception("Error procesando %s", url)
                         current["status"] = "FAIL"
                         current["message"] = str(error)
+                    finally:
+                        if page is not None and not page.is_closed():
+                            try:
+                                await page.close()
+                            except Exception:  # noqa: BLE001 - el contexto hará la limpieza final
+                                self.logger.warning("No fue posible cerrar la pestaña de %s.", url, exc_info=True)
 
                     current["elapsed_seconds"] = round(perf_counter() - start, 2)
                     self.results.append(current)
@@ -215,15 +221,25 @@ class WeeklyAutoRunner:
             return
         total_height = await page.evaluate("() => document.body.scrollHeight")
         viewport_height = await page.evaluate("() => window.innerHeight")
+        if not isinstance(total_height, (int, float)) or not isinstance(viewport_height, (int, float)) or viewport_height <= 0:
+            return
         current_position = 0
-        while current_position < total_height:
-            current_position += viewport_height
-            await page.evaluate(f"window.scrollTo(0, {current_position})")
-            await page.wait_for_timeout(pause_ms)
-            new_height = await page.evaluate("() => document.body.scrollHeight")
-            if new_height > total_height:
-                total_height = new_height
-        await page.evaluate("window.scrollTo(0, 0)")
+        # Evita que una página con scroll infinito bloquee toda la corrida.
+        max_steps = 100
+        try:
+            for _ in range(max_steps):
+                if current_position >= total_height:
+                    break
+                current_position = min(current_position + viewport_height, total_height)
+                await page.evaluate("position => window.scrollTo(0, position)", current_position)
+                await page.wait_for_timeout(pause_ms)
+                new_height = await page.evaluate("() => document.body.scrollHeight")
+                if isinstance(new_height, (int, float)) and new_height > total_height:
+                    total_height = new_height
+            else:
+                self.logger.warning("Se alcanzó el límite de scroll progresivo; se continuará con la captura.")
+        finally:
+            await page.evaluate("() => window.scrollTo(0, 0)")
 
     async def _stabilize_page(self, page: Any, pause_ms: int) -> None:
         """Dale tiempo al DOM para resolver cambios tras el scroll."""
@@ -231,18 +247,20 @@ class WeeklyAutoRunner:
         if pause_ms > 0:
             await page.wait_for_timeout(pause_ms)
 
-    async def _save_screenshot(self, page: Any, url: str, index: int) -> str | None:
+    async def _save_screenshot(self, page: Any, url: str, index: int) -> str:
         if self.evidence_directory is None:
-            return None
+            raise WeeklyAutoError(url, "No se pudo determinar el directorio de evidencias.")
         path = self.evidence_directory / f"{index:03d}_{self._safe_name(url)}_web.png"
         try:
             await page.screenshot(path=str(path), full_page=True, animations="disabled")
+            if not path.is_file() or path.stat().st_size == 0:
+                raise OSError("Playwright no generó un archivo PNG válido.")
             relative = path.relative_to(self.settings.storage_dir).as_posix()
             self.screenshots.append(relative)
             return relative
         except Exception:
             self.logger.exception("No fue posible guardar screenshot para %s", url)
-            return None
+            raise WeeklyAutoError(url, "No fue posible guardar la captura de pantalla.") from None
 
     @staticmethod
     def _safe_name(url: str) -> str:
@@ -256,7 +274,7 @@ class WeeklyAutoRunner:
     @staticmethod
     def _is_valid_url(url: str) -> bool:
         parsed = urlparse(url)
-        return bool(parsed.scheme and parsed.netloc)
+        return parsed.scheme.lower() in {"http", "https"} and bool(parsed.netloc)
 
     def _evidence_directory(self, name: str) -> Path:
         now = datetime.now()

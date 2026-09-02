@@ -216,7 +216,10 @@ async function watchJob(jobId, { showToast, weeklyAutoStatus, cancelWeeklyAuto }
     }
   };
   await poll();
-  state.pollTimer = window.setInterval(poll, 1800);
+  // La primera consulta puede encontrar un trabajo que ya terminó.
+  if (state.jobId === jobId) {
+    state.pollTimer = window.setInterval(poll, 1800);
+  }
 }
 
 function setupEvents({ showToast, runWeeklyAuto, weeklyAutoStatus, cancelWeeklyAuto }) {

@@ -83,3 +83,31 @@ def test_report_writes_lead_into_blank_inconcert_balanceador_column():
     assert "URL LEAD" not in headers
     assert sheet["E2"].value == link
     assert sheet["E2"].hyperlink.target == link
+
+
+def test_report_keeps_link_when_manage_email_validation_times_out():
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Nivel", "URL", "inconcert/balanceador"])
+    sheet.append(["Licenciatura", "https://utel.test", None])
+    data = BytesIO()
+    workbook.save(data)
+    link = "https://crm.test/mas/contact/people/view/123"
+    result = {
+        "row": {"sheet": "Sheet", "row_number": 2},
+        "result": {
+            "status": "FAIL",
+            "dry_run": False,
+            "lead_url": link,
+            "lead_email": "qa@example.test",
+            "summary": "Falló la validación visual",
+            "stages": [{"status": "FAIL", "stage": "inconcert_manage", "message": "Timeout esperando el email"}],
+        },
+    }
+
+    sheet = BotReportService().build(data.getvalue(), {"inconcert_url": "inconcert/balanceador"}, [result]).active
+
+    assert sheet["C2"].value == link
+    assert sheet["C2"].hyperlink.target == link
+    assert sheet["D2"].value == "LEAD LOCALIZADO - VALIDACION PENDIENTE"
+    assert "Faltó validar visualmente el email" in sheet["E2"].value

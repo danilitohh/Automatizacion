@@ -28,7 +28,7 @@ def _settings(tmp_path) -> Settings:
     return Settings(database_path=tmp_path / "qa.db", storage_dir=tmp_path / "storage")
 
 
-def test_catalog_contains_source_rows_except_the_twelve_excluded_administration_links():
+def test_catalog_includes_administration_as_a_form_option_on_education_pdp():
     countries = [
         "USA",
         "Bolivia",
@@ -45,28 +45,36 @@ def test_catalog_contains_source_rows_except_the_twelve_excluded_administration_
     ]
     counts = {country: len(DoctorateLinkCatalog.programs(country)) for country in countries}
 
-    assert sum(counts.values()) == 66
-    assert counts["Dominicana"] == 3
-    assert counts["Mexico"] == 20
-    assert counts["Colombia"] == 19
-    assert counts["Peru"] == 16
+    assert sum(counts.values()) == 78
+    assert counts["Dominicana"] == 4
+    assert counts["Mexico"] == 21
+    assert counts["Colombia"] == 20
+    assert counts["Peru"] == 17
     assert all(
-        count == 1
+        count == 2
         for country, count in counts.items()
         if country not in {"Dominicana", "Mexico", "Colombia", "Peru"}
     )
 
 
-def test_administration_strategic_business_is_excluded_in_every_country():
+def test_administration_strategic_business_is_available_in_every_country():
     countries = [
         "USA", "Bolivia", "Chile", "Paraguay", "Dominicana", "Guatemala",
         "Panama", "El Salvador", "Argentina", "Mexico", "Colombia", "Peru",
     ]
 
     assert all(
-        DoctorateLinkCatalog.resolve(country, "Administración Estratégica Empresarial") is None
+        DoctorateLinkCatalog.resolve(country, "administracion estrategica empresarial") is not None
         for country in countries
     )
+
+
+def test_administration_uses_education_page_without_opening_its_own_pdp():
+    selected = DoctorateLinkCatalog.resolve("Mexico", "administracion estrategica empresarial")
+
+    assert selected is not None
+    assert selected["url"] == "https://utel.edu.mx/doctorado-en-educacion"
+    assert selected["page_title"] == "Doctorado en Educación"
 
 
 @pytest.mark.parametrize(

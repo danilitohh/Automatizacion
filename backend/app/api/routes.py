@@ -82,9 +82,16 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
     try:
         service = BotSpreadsheetService()
         rows = service.rows_for_mapping(content, mapping)
+        selected_rows = {
+            (str(item.get("sheet")), int(item.get("row_number")))
+            for item in mapping.get("selected_rows", [])
+            if item.get("sheet") and item.get("row_number") is not None
+        }
         selected_sheet = mapping.get("selected_sheet")
         selected_row_number = mapping.get("selected_row_number")
-        if selected_sheet and selected_row_number is not None:
+        if selected_rows:
+            rows = [row for row in rows if (row["sheet"], row["row_number"]) in selected_rows]
+        elif selected_sheet and selected_row_number is not None:
             rows = [row for row in rows if row["sheet"] == selected_sheet and row["row_number"] == int(selected_row_number)]
         if not rows:
             raise ValueError("No se encontraron filas con Programa/Nivel y URL usando las columnas seleccionadas.")
@@ -99,6 +106,8 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             "source_filename": filename,
         })
         results = []
+        verification_queue = []
+        job["phase"] = "UTEL: enviando formularios"
         for index, row in enumerate(rows, 1):
             row_config = dict(base_config)
             if row.get("workflow_mode") == "form_validation" and not row.get("country"):
@@ -141,6 +150,8 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             config = UtelQaConfig.model_validate(row_config)
             lead = TestLeadService(settings.database_path).reserve(config.country)
             config = config.model_copy(update={"lead": config.lead.model_copy(update=lead)})
+            if not config.dry_run:
+                config = config.model_copy(update={"defer_crm_verification": True})
             job.update({
                 "current_program": row.get("test_case") or row["program_name"] or row["level"],
                 "current_row": row["row_number"],
@@ -152,6 +163,8 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             result = await UtelInconcertRunner(settings).run(config)
             serializable_result = {**result, "stages": [stage.model_dump() for stage in result["stages"]]}
             results.append({"row": row, "result": serializable_result})
+            if serializable_result["status"] == "PASS" and not config.dry_run:
+                verification_queue.append((len(results) - 1, config))
             failed_stage = next((stage for stage in serializable_result["stages"] if stage["status"] == "FAIL"), None)
             job.update({
                 "completed": index,
@@ -164,6 +177,45 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             })
             if index < len(rows) and inter_row_delay > 0:
                 await asyncio.sleep(inter_row_delay)
+
+        if verification_queue:
+            job["phase"] = "CRM: verificando leads por país"
+            logger.info(
+                "Lote %s con pausa entre verificaciones CRM: %ss",
+                job_id,
+                inter_row_delay,
+            )
+            for verification_index, (result_index, submitted_config) in enumerate(
+                sorted(verification_queue, key=lambda item: item[1].country.casefold()),
+                1,
+            ):
+                verify_config = submitted_config.model_copy(
+                    update={"defer_crm_verification": False, "verification_only": True}
+                )
+                job.update({
+                    "current_program": results[result_index]["row"].get("test_case") or results[result_index]["row"]["program_name"] or results[result_index]["row"]["level"],
+                    "current_row": results[result_index]["row"]["row_number"],
+                    "current_lead_name": verify_config.lead.name,
+                    "current_lead_email": verify_config.lead.email,
+                    "current_lead_phone": verify_config.lead.phone,
+                    "last_error": "",
+                })
+                verification = await UtelInconcertRunner(settings).run(verify_config)
+                serializable_verification = {**verification, "stages": [stage.model_dump() for stage in verification["stages"]]}
+                submission = results[result_index]["result"]
+                results[result_index]["result"] = {
+                    **serializable_verification,
+                    "selected_program_name": submission.get("selected_program_name"),
+                    "stages": [*submission["stages"], *serializable_verification["stages"]],
+                }
+                job.update({
+                    "completed": len(rows),
+                    "success": sum(1 for item in results if item["result"]["status"] == "PASS"),
+                    "failed": sum(1 for item in results if item["result"]["status"] == "FAIL"),
+                    "results": results,
+                })
+                if verification_index < len(verification_queue) and inter_row_delay > 0:
+                    await asyncio.sleep(inter_row_delay)
 
         workbook = BotReportService().build(content, mapping, results)
 
@@ -193,9 +245,16 @@ async def run_utel_batch(request: Request, file: UploadFile = File(...), config:
             raise ValueError("Selecciona una columna de Programa o Nivel, además de la columna URL.")
         content = await file.read()
         preview_rows = BotSpreadsheetService().rows_for_mapping(content, selected_mapping)
+        selected_rows = {
+            (str(item.get("sheet")), int(item.get("row_number")))
+            for item in selected_mapping.get("selected_rows", [])
+            if item.get("sheet") and item.get("row_number") is not None
+        }
         selected_sheet = selected_mapping.get("selected_sheet")
         selected_row_number = selected_mapping.get("selected_row_number")
-        if selected_sheet and selected_row_number is not None:
+        if selected_rows:
+            preview_rows = [row for row in preview_rows if (row["sheet"], row["row_number"]) in selected_rows]
+        elif selected_sheet and selected_row_number is not None:
             preview_rows = [row for row in preview_rows if row["sheet"] == selected_sheet and row["row_number"] == int(selected_row_number)]
         if not preview_rows:
             raise ValueError("No se encontraron filas válidas con el mapeo seleccionado.")
@@ -209,6 +268,7 @@ async def run_utel_batch(request: Request, file: UploadFile = File(...), config:
         "completed": 0,
         "success": 0,
         "failed": 0,
+        "phase": "UTEL: preparando envíos",
         "download_url": None,
         "workflow_mode": preview_rows[0].get("workflow_mode", "product_release"),
         "dry_run": raw_config.get("dry_run", True),

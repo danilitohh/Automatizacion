@@ -91,8 +91,13 @@ class BotReportService:
                 status = "ERROR"
                 if result["status"] == "PASS":
                     status = "DRY RUN - NO ENVIADO" if dry_run else "EXITOSO" if link else "SIN LINK VERIFICADO"
+                elif link and failure and failure.get("stage") == "inconcert_manage":
+                    status = "LEAD LOCALIZADO - VALIDACION PENDIENTE"
                 sheet.cell(row, status_col).value = status
-                sheet.cell(row, detail_col).value = (failure["message"] if failure else result.get("summary", ""))[:32767]
+                detail = failure["message"] if failure else result.get("summary", "")
+                if status == "LEAD LOCALIZADO - VALIDACION PENDIENTE":
+                    detail = f"Lead localizado y enlace guardado. Faltó validar visualmente el email en InConcert: {detail}"
+                sheet.cell(row, detail_col).value = detail[:32767]
                 cell = sheet.cell(row, link_col)
                 cell.value = link
                 cell.hyperlink = link

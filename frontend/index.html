@@ -25,49 +25,49 @@
         <nav class="navigation" aria-label="Navegación principal">
           <p class="navigation-label">Principal</p>
           <button class="nav-item active" data-view="dashboard">
-            <span class="nav-icon">⌂</span>
+            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-6h6v6"/></svg></span>
             <span>Dashboard</span>
           </button>
 
           <p class="navigation-label">Automatizaciones</p>
           <button class="nav-item" data-view="forms">
-            <span class="nav-icon">▣</span>
+            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h5M8 16h3"/><path class="nav-icon-dot" d="M17 16h.01"/></svg></span>
             <span>Formularios</span>
             <span class="nav-phase">F2</span>
           </button>
           <button class="nav-item" data-view="visual">
-            <span class="nav-icon">◉</span>
+            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></span>
             <span>Monitoreo visual</span>
             <span class="nav-phase">F3</span>
           </button>
           <button class="nav-item" data-view="excel">
-            <span class="nav-icon">▤</span>
+            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h2m2 0h4M8 16h2m2 0h4"/></svg></span>
             <span>Excel vs Web</span>
             <span class="nav-phase">F4</span>
           </button>
           <button class="nav-item" data-view="bot">
-            <span class="nav-icon">◇</span>
+            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 5v8l-8 5-8-5V8z"/><path d="m8 12 2.5 2.5L16 9"/></svg></span>
             <span>Bot de verificaciones</span>
             <span class="nav-phase">NUEVO</span>
           </button>
           <button class="nav-item" data-view="weekly-auto">
-            <span class="nav-icon">🧭</span>
+            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2.1 4.8-4.9 2.2 2.1-4.9z"/><path d="M12 3v2M21 12h-2M12 21v-2M3 12h2"/></svg></span>
             <span>Weekly Auto</span>
             <span class="nav-phase">NUEVO</span>
           </button>
           <button class="nav-item" data-view="pdp">
-            <span class="nav-icon">▤</span>
+            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>
             <span>PDP vs documentos</span>
             <span class="nav-phase">NUEVO</span>
           </button>
 
           <p class="navigation-label">Administración</p>
           <button class="nav-item" data-view="history">
-            <span class="nav-icon">↺</span>
+            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/><path d="M12 7v5l3 2"/></svg></span>
             <span>Historial</span>
           </button>
           <button class="nav-item" data-view="settings">
-            <span class="nav-icon">⚙</span>
+            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.1 2.1-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-3v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2.1-2.1.1-.1A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.5-1H5.3v-3h.2A1.7 1.7 0 0 0 7 10a1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.1-2.1.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h3v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.1 2.1-.1.1A1.7 1.7 0 0 0 19.4 10a1.7 1.7 0 0 0 1.5 1h.2v3h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
             <span>Configuración</span>
           </button>
         </nav>
@@ -331,6 +331,11 @@
       </main>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="./src/renderer/app.js"></script>
+    <div class="interface-loader" id="interface-loader" aria-hidden="true">
+      <div class="loader-orbit"><i></i><i></i><i></i></div>
+      <div class="loader-copy"><span id="loader-kicker">SISTEMA</span><strong id="loader-message">Sincronizando telemetría</strong><small>Canal seguro · procesamiento local</small></div>
+      <div class="loader-progress"><span></span></div>
+    </div>
+    <script type="module" src="./src/renderer/app.js?v=telemetry-layout-2"></script>
   </body>
 </html>

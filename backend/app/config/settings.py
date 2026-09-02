@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     crm_password: str = ""
     inconcert_username: str = ""
     inconcert_password: str = ""
+    lead_balancer_url: str = "https://lead-balancer.scalahed.com/leads/"
+    lead_balancer_username: str = ""
+    lead_balancer_password: SecretStr = SecretStr("")
 
     # Servicios de IA: las claves se cargan desde .env y nunca se envían al renderer.
     ollama_api_key: SecretStr = SecretStr("")

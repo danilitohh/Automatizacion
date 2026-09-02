@@ -58,6 +58,23 @@ def test_footer_scrolls_before_returning_form(monkeypatch):
     assert form.is_visible.await_count == 2
 
 
+def test_tarjeta_does_not_scroll_before_returning_form(monkeypatch):
+    runner = UtelInconcertRunner(Settings())
+    form = AsyncMock()
+    form.count.return_value = 1
+    form.is_visible.return_value = True
+    body = AsyncMock()
+    body.inner_text.return_value = "Página UTEL"
+    page = Mock()
+    page.locator.side_effect = lambda selector: body if selector == "body" else Mock(first=form)
+    monkeypatch.setattr("backend.app.automations.utel_inconcert.runner.asyncio.sleep", AsyncMock())
+
+    result = asyncio.run(runner._find_utel_form(page, _config("tarjeta")))
+
+    assert result is form
+    form.scroll_into_view_if_needed.assert_not_awaited()
+
+
 def test_delayed_tarjeta_is_requeried_instead_of_reported_missing(monkeypatch):
     runner = UtelInconcertRunner(Settings())
     runner.FORM_POLL_INTERVAL_SECONDS = 0.001
@@ -75,7 +92,7 @@ def test_delayed_tarjeta_is_requeried_instead_of_reported_missing(monkeypatch):
     result = asyncio.run(runner._find_utel_form(page, _config("tarjeta")))
 
     assert result is form
-    assert form.is_visible.await_count == 4
+    assert form.is_visible.await_count == 3
     page.reload.assert_not_awaited()
 
 

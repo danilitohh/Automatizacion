@@ -134,6 +134,8 @@ class UtelQaConfig(BaseModel):
     navigation_modality: str = Field(default="", max_length=120)
     navigation_level: str = Field(default="", max_length=160)
     navigation_sublevel: str = Field(default="", max_length=160)
+    defer_crm_verification: bool = False
+    verification_only: bool = False
     lead: UtelLead
 
     @field_validator("program_name")

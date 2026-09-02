@@ -47,8 +47,11 @@ def test_batch_preserves_safe_mode_and_marks_excel(tmp_path, monkeypatch, dry_ru
         job = client.get(f'/api/bots/utel-inconcert/batch/{job_id}').json()
         assert job["status"] == "PASS", job
         assert job["completed"] == job["total"] == 1
-        assert len(seen) == 1
+        assert len(seen) == (2 if dry_run is False else 1)
         assert seen[0].dry_run is (dry_run is not False)
+        if dry_run is False:
+            assert seen[0].defer_crm_verification is True
+            assert seen[1].verification_only is True
         assert seen[0].level == "Maestria"
         assert seen[0].source_filename == "test.xlsx"
         report = client.get(job["download_url"])
@@ -94,3 +97,39 @@ def test_each_batch_row_uses_its_country_crm_not_a_stale_url(tmp_path, monkeypat
         job = client.get(f'/api/bots/utel-inconcert/batch/{response.json()["job_id"]}').json()
         assert job["status"] == "PASS", job
     assert seen == [(country, f"https://{tenant}.inconcertcc.com/login?redirect=%2Fmas%2Fhome") for country, tenant in countries]
+
+
+def test_batch_can_run_only_the_rows_selected_for_retry(tmp_path, monkeypatch):
+    seen = []
+
+    async def fake_run(self, config):
+        seen.append(config.level)
+        return {"status": "PASS", "dry_run": True, "stages": [], "summary": "Prueba local"}
+
+    monkeypatch.setattr(UtelInconcertRunner, "run", fake_run)
+    workbook = Workbook()
+    workbook.active.append(["Nivel", "URL", "Location", "Locale"])
+    workbook.active.append(["Licenciatura", "https://example.test", "footer", "Mexico"])
+    workbook.active.append(["Maestria", "https://example.test", "lateral", "Mexico"])
+    workbook.active.append(["Doctorado", "https://example.test", "tarjeta", "Mexico"])
+    content = io.BytesIO()
+    workbook.save(content)
+    mapping = {
+        "level": "Nivel",
+        "utel_url": "URL",
+        "form_type": "Location",
+        "country": "Locale",
+        "selected_rows": [{"sheet": "Sheet", "row_number": 3}, {"sheet": "Sheet", "row_number": 4}],
+    }
+    app = create_app(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage", batch_delay_seconds=0))
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/bots/utel-inconcert/batch-run",
+            data={"config": json.dumps({"lead": {}, "dry_run": True}), "mapping": json.dumps(mapping)},
+            files={"file": ("test.xlsx", content.getvalue())},
+        )
+        assert response.status_code == 202, response.text
+        job = client.get(f'/api/bots/utel-inconcert/batch/{response.json()["job_id"]}').json()
+        assert job["status"] == "PASS", job
+        assert job["total"] == job["completed"] == 2
+    assert seen == ["Maestria", "Doctorado"]

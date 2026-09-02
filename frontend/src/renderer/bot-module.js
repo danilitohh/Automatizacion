@@ -42,6 +42,7 @@ const stageLabels = {
   inconcert_login: "Login InConcert",
   inconcert_contacts: "Abrir contactos",
   inconcert_search: "Buscar lead",
+  lead_balancer_search: "Buscar lead en Balanceador",
   inconcert_manage: "Abrir Gestionar",
   inconcert_conversion: "Confirmar conversion",
   config: "Validar configuracion",
@@ -88,18 +89,18 @@ function renderModuleShell() {
           <p class="muted">El nombre, email y teléfono se generan automáticamente al ejecutar cada caso (Danilo1, Danilo2...). Son datos sintéticos y no se deben usar para contactar personas.</p>
         </div>
       </article>
+      <section class="bot-error-log-panel bot-error-log-panel--standalone">
+        <div class="bot-error-log-heading"><div><p class="eyebrow">Diagnóstico</p><h4>Log exclusivo de errores</h4><small>Incluye fila, etapa, URL, selector, captura y mensaje técnico completo.</small></div><div><button class="secondary-button" id="bot-copy-errors" type="button" disabled>Copiar errores</button><button class="secondary-button" id="bot-download-errors" type="button" disabled>Descargar .txt</button></div></div>
+        <pre class="bot-error-terminal" id="bot-error-terminal" aria-live="polite">Sin errores registrados en esta ejecución.</pre>
+      </section>
       <article class="panel bot-flow-panel">
         <div class="panel-header"><div><p class="eyebrow">Resultado</p><h3>Seguimiento de ejecucion</h3><p class="panel-subtitle">Sigue en tiempo real el progreso del flujo.</p></div><span class="step-count">UTEL → InConcert</span></div>
         <div class="bot-validation" id="bot-validation">Completa los campos con * y pulsa <strong>Ejecutar prueba</strong>. En Dry run no necesitas URL ni credenciales de InConcert.</div>
         <div class="bot-run-status" id="bot-run-status">El flujo todavia no se ha ejecutado.</div>
+        <div class="bot-flow-actions"><div><button class="secondary-button" id="bot-clear" type="button">Limpiar</button></div><div><button class="secondary-button" id="bot-save" type="button">Guardar</button><button class="secondary-button" id="bot-validate" type="button">Validar</button><button class="secondary-button" id="bot-batch-run" type="button" hidden>Ejecutar todas las filas</button><button class="secondary-button" id="bot-retry-errors" type="button" hidden>Reintentar errores</button><button class="danger-button" id="bot-stop" type="button" hidden>Detener ejecución</button><button class="primary-button" id="bot-run" type="button">Ejecutar prueba <span>-></span></button></div></div>
         <pre class="bot-terminal" id="bot-terminal" aria-live="polite">[sistema] Esperando el inicio de la ejecución...</pre>
-        <section class="bot-error-log-panel">
-          <div class="bot-error-log-heading"><div><p class="eyebrow">Diagnóstico</p><h4>Log exclusivo de errores</h4><small>Incluye fila, etapa, URL, selector, captura y mensaje técnico completo.</small></div><div><button class="secondary-button" id="bot-copy-errors" type="button" disabled>Copiar errores</button><button class="secondary-button" id="bot-download-errors" type="button" disabled>Descargar .txt</button></div></div>
-          <pre class="bot-error-terminal" id="bot-error-terminal" aria-live="polite">Sin errores registrados en esta ejecución.</pre>
-        </section>
         <div class="pdp-summary" id="bot-summary"></div>
         <div class="bot-steps-list" id="bot-stages-list"></div>
-        <div class="bot-flow-actions"><div><button class="secondary-button" id="bot-clear" type="button">Limpiar</button></div><div><button class="secondary-button" id="bot-save" type="button">Guardar</button><button class="secondary-button" id="bot-validate" type="button">Validar</button><button class="secondary-button" id="bot-batch-run" type="button" hidden>Ejecutar todas las filas</button><button class="danger-button" id="bot-stop" type="button" hidden>Detener ejecución</button><button class="primary-button" id="bot-run" type="button">Ejecutar prueba <span>-></span></button></div></div>
         <details class="bot-preview"><summary>Ver configuracion generada</summary><pre id="bot-preview">{}</pre></details>
       </article>
     </div>`;
@@ -520,6 +521,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
   const spreadsheetRow = document.querySelector("#bot-spreadsheet-row");
   const analyzeSpreadsheetButton = document.querySelector("#bot-analyze-spreadsheet");
   const batchButton = document.querySelector("#bot-batch-run");
+  const retryErrorsButton = document.querySelector("#bot-retry-errors");
   const stopButton = document.querySelector("#bot-stop");
   const copyErrorsButton = document.querySelector("#bot-copy-errors");
   const downloadErrorsButton = document.querySelector("#bot-download-errors");
@@ -528,6 +530,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
   let batchTimer = null;
   let activeBatchJobId = null;
   let importedRows = [];
+  let lastFinishedBatch = null;
 
   const stopBatchPolling = () => {
     if (batchTimer) window.clearInterval(batchTimer);
@@ -539,7 +542,8 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       const current = await utelBatchStatus(jobId);
       const running = current.status === "RUNNING" || current.status === "QUEUED";
       const liveError = current.last_error ? ` · Último error: fila ${current.current_row} (${current.current_program}): ${current.last_error}` : "";
-      document.querySelector("#bot-run-status").textContent = `${current.dry_run ? "Dry run (sin envío)" : "Lote"}: ${current.completed}/${current.total} filas procesadas · OK: ${current.success} · Errores: ${current.failed}${liveError}`;
+      const phase = current.phase ? `${current.phase} · ` : "";
+      document.querySelector("#bot-run-status").textContent = `${phase}${current.dry_run ? "Dry run (sin envío)" : "Lote"}: ${current.completed}/${current.total} filas procesadas · OK: ${current.success} · Errores: ${current.failed}${liveError}`;
       renderBatchTerminal(current, running);
       renderErrorLog(current);
 
@@ -552,6 +556,11 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       stopButton.hidden = true;
       batchButton.disabled = false;
       document.querySelector("#bot-run").disabled = false;
+      lastFinishedBatch = current;
+      const failedRows = (current.results || []).filter((item) => item.result?.status === "FAIL");
+      retryErrorsButton.hidden = !spreadsheetFile || failedRows.length === 0;
+      retryErrorsButton.disabled = failedRows.length === 0;
+      retryErrorsButton.textContent = `Reintentar ${failedRows.length} error${failedRows.length === 1 ? "" : "es"}`;
       if (current.status === "PASS") {
         const apiBase = window.desktop?.apiUrl || window.location.origin;
         document.querySelector("#bot-run-status").innerHTML = `${current.dry_run ? "Dry run completado (sin envío)" : "Lote completado"}: ${current.success} OK, ${current.failed} con error. <a href="${apiBase}${current.download_url}" download>Descargar Excel actualizado</a>`;
@@ -564,11 +573,22 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       return current;
     } catch (error) {
       const status = document.querySelector("#bot-run-status");
+      if (error.status === 404) {
+        // El backend guarda jobs solo en memoria. Si se reinició, un ID que
+        // quedó en localStorage ya no representa un lote recuperable.
+        stopBatchPolling();
+        if (activeBatchJobId === jobId) activeBatchJobId = null;
+        if (localStorage.getItem(ACTIVE_BATCH_JOB_KEY) === jobId) localStorage.removeItem(ACTIVE_BATCH_JOB_KEY);
+        if (localStorage.getItem(LAST_BATCH_JOB_KEY) === jobId) localStorage.removeItem(LAST_BATCH_JOB_KEY);
+        stopButton.hidden = true;
+        batchButton.disabled = false;
+        document.querySelector("#bot-run").disabled = false;
+        status.className = "bot-run-status";
+        status.innerHTML = "<strong>SIN LOTE PENDIENTE</strong><span>No hay una ejecución activa para recuperar.</span><small>La referencia anterior se eliminó automáticamente.</small>";
+        return null;
+      }
       status.className = "bot-run-status error";
-      const retryHint = error.status === 404
-        ? "No se encontró temporalmente el job en memoria. Si el backend se reinició, se perdería el lote en curso."
-        : "El trabajo continúa en el backend; la página volverá a consultar automáticamente.";
-      status.innerHTML = `<strong>RECONECTANDO CON EL LOTE</strong><span>${escapeHtml(error.message)}</span><small>${retryHint}</small>`;
+      status.innerHTML = `<strong>RECONECTANDO CON EL LOTE</strong><span>${escapeHtml(error.message)}</span><small>El trabajo continúa en el backend; la página volverá a consultar automáticamente.</small>`;
       return null;
     }
   };
@@ -777,6 +797,8 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       const file = spreadsheetInput.files[0];
     if (!file || !previewBotSpreadsheet) return;
     spreadsheetFile = file;
+    lastFinishedBatch = null;
+    retryErrorsButton.hidden = true;
     if (spreadsheetInput.dataset.requestAnalyze !== "true") {
       importedRows = [];
       selectedMapping = {};
@@ -815,10 +837,11 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     document.querySelector("#bot-spreadsheet-status").textContent = "Analizando hojas, columnas y filas...";
     void analyzeSpreadsheetFile(spreadsheetInput.files[0]);
   });
-  const executeBatch = async () => {
+  const executeBatch = async (mappingOverride = null, retryCount = 0) => {
     if (!spreadsheetFile || !runUtelBatch) return;
     readForm();
-    if (!(selectedMapping.program_name || selectedMapping.level) || !selectedMapping.utel_url) {
+    const mappingToRun = mappingOverride || selectedMapping;
+    if (!(mappingToRun.program_name || mappingToRun.level) || !mappingToRun.utel_url) {
       showToast("Selecciona Programa o Nivel, además de la columna URL.", "error");
       return;
     }
@@ -826,10 +849,13 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     renderTerminal([`[${new Date().toLocaleTimeString("es-CO", { hour12: false })}] [SISTEMA] Iniciando una nueva ejecucion por lote...`]);
     renderErrorLog({ results: [] });
     batchButton.disabled = true;
+    retryErrorsButton.hidden = true;
     runButton.disabled = true;
-    setValidation(state.config.dry_run ? "Dry run iniciado: se rellenarán las filas sin enviar leads." : "Lote iniciado. Se procesarán las filas una por una.", "success");
+    setValidation(retryCount
+      ? `Reintento iniciado: se procesarán únicamente ${retryCount} fila${retryCount === 1 ? "" : "s"} con error.`
+      : (state.config.dry_run ? "Dry run iniciado: se rellenarán las filas sin enviar leads." : "Lote iniciado. Se procesarán las filas una por una."), "success");
     try {
-      const job = await runUtelBatch(spreadsheetFile, state.config, selectedMapping);
+      const job = await runUtelBatch(spreadsheetFile, state.config, mappingToRun);
       await watchBatchJob(job.job_id);
     } catch (error) {
       batchButton.disabled = false;
@@ -839,6 +865,20 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     }
   };
   batchButton.addEventListener("click", executeBatch);
+  retryErrorsButton.addEventListener("click", () => {
+    const failedRows = (lastFinishedBatch?.results || [])
+      .filter((item) => item.result?.status === "FAIL")
+      .map((item) => ({ sheet: item.row?.sheet, row_number: item.row?.row_number }))
+      .filter((row) => row.sheet && Number.isInteger(Number(row.row_number)));
+    if (!spreadsheetFile || !failedRows.length) {
+      showToast("No hay filas fallidas disponibles para reintentar. Vuelve a cargar el Excel si reiniciaste la página.", "error");
+      return;
+    }
+    const retryMapping = { ...selectedMapping, selected_rows: failedRows };
+    delete retryMapping.selected_sheet;
+    delete retryMapping.selected_row_number;
+    void executeBatch(retryMapping, failedRows.length);
+  });
   stopButton.addEventListener("click", async () => {
     try {
       stopButton.disabled = true;

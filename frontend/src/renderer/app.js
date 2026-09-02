@@ -1,7 +1,7 @@
 "use strict";
 
 import { api } from "../services/api.js";
-import { initializeBotModule } from "./bot-module.js";
+import { initializeBotModule } from "./bot-module.js?v=telemetry-layout-2";
 import { initializePdpModule } from "./pdp-module.js";
 import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
 
@@ -36,7 +36,24 @@ function selectElements() {
     healthPulse: document.querySelector("#health-pulse"),
     runtimeLabel: document.querySelector("#runtime-label"),
     userAvatar: document.querySelector(".user-avatar"),
+    loader: document.querySelector("#interface-loader"),
+    loaderKicker: document.querySelector("#loader-kicker"),
+    loaderMessage: document.querySelector("#loader-message"),
   };
+}
+
+let loaderTimer;
+function showInterfaceLoader(message = "Sincronizando telemetría", kicker = "SISTEMA", duration = 520) {
+  if (!elements.loader) return;
+  window.clearTimeout(loaderTimer);
+  elements.loaderKicker.textContent = kicker;
+  elements.loaderMessage.textContent = message;
+  elements.loader.classList.add("active");
+  elements.loader.setAttribute("aria-hidden", "false");
+  loaderTimer = window.setTimeout(() => {
+    elements.loader.classList.remove("active");
+    elements.loader.setAttribute("aria-hidden", "true");
+  }, duration);
 }
 
 const elements = selectElements();
@@ -133,6 +150,7 @@ function showToast(message, type = "info") {
 
 async function refreshDashboard() {
   elements.refreshButton.classList.add("loading");
+  showInterfaceLoader("Actualizando señales operativas", "SINCRONIZACIÓN", 650);
   try {
     const [health, summary, history] = await Promise.all([api.health(), api.dashboardSummary(), api.executions(20)]);
     renderSummary(summary);
@@ -154,6 +172,7 @@ function navigate(viewName) {
   elements.navigation.forEach((item) => item.classList.toggle("active", item.dataset.view === viewName));
   elements.views.forEach((view) => view.classList.toggle("active", view.dataset.viewPanel === viewName));
   elements.title.textContent = viewMeta[viewName].title;
+  showInterfaceLoader(`Cargando módulo: ${viewMeta[viewName].title}`, "NAVEGACIÓN", 430);
 }
 
 function bindEvents() {

@@ -25,6 +25,7 @@ _COUNTRY_ROUTES: dict[str, tuple[str, str]] = {
 }
 
 _PROGRAM_NAMES = {
+    "administracion-estrategica-empresarial": "Doctorado en Administración Estratégica Empresarial",
     "educacion": "Doctorado en Educación",
     "gestion-e-innovacion-tecnologica": "Doctorado en Gestión e Innovación Tecnológica",
     "finanzas": "Doctorado en Finanzas",
@@ -165,7 +166,20 @@ class DoctorateLinkCatalog:
     @classmethod
     def programs(cls, country: str) -> list[dict[str, str]]:
         key = cls.canonical_country(country)
-        return [{"text": text, "url": url} for text, url in _CATALOG.get(key, ())]
+        programs = [{"text": text, "url": url} for text, url in _CATALOG.get(key, ())]
+        education = next((item for item in programs if cls._program_key(item["text"]) == "educacion"), None)
+        if education:
+            # Esta PDP es estable. Administración Estratégica Empresarial se
+            # elige dentro de su TarjetaBLC, sin abrir su PDP propia, que ha
+            # presentado bloqueos de acceso.
+            programs.append(
+                {
+                    "text": _PROGRAM_NAMES["administracion-estrategica-empresarial"],
+                    "url": education["url"],
+                    "page_title": education["text"],
+                }
+            )
+        return programs
 
     @classmethod
     def resolve(cls, country: str, program_name: str) -> dict[str, str] | None:
