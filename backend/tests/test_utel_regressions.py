@@ -166,6 +166,127 @@ def test_form_validation_retries_when_utel_rebuilds_the_dom():
     assert controls.evaluate_all.await_count == 2
 
 
+def test_balancer_reuses_logged_profile_and_searches_exact_email_without_credentials():
+    """Una sesión activa entra en /leads/ y no vuelve a pedir el login."""
+
+    runner = UtelInconcertRunner(Settings(
+        lead_balancer_url="https://lead-balancer.scalahed.com/login/",
+        lead_balancer_username="",
+        lead_balancer_password="",
+    ))
+    email = "qa-session@testingUtel.com"
+    page = Mock(url="")
+    response = Mock(status=200)
+
+    async def goto(url, **_kwargs):
+        page.url = url if "/detail/" in url else "https://lead-balancer.scalahed.com/leads/"
+        return response
+
+    page.goto = AsyncMock(side_effect=goto)
+    page.wait_for_url = AsyncMock()
+    password = Mock(count=AsyncMock(return_value=0))
+    email_input = Mock(count=AsyncMock(return_value=1), fill=AsyncMock())
+    email_input.first = email_input
+    search_button = Mock(click=AsyncMock())
+    search_button.first = search_button
+    async def open_detail():
+        page.url = "https://lead-balancer.scalahed.com/leads/detail/123"
+
+    detail_link = Mock(
+        count=AsyncMock(return_value=1),
+        get_attribute=AsyncMock(side_effect=["/leads/detail/123", None]),
+        click=AsyncMock(side_effect=open_detail),
+    )
+    detail_link.first = detail_link
+    row = Mock(inner_text=AsyncMock(return_value=f"Lead de prueba {email}"))
+    row.locator.return_value = detail_link
+    # La tabla tarda dos ciclos de observación en aparecer. El bot debe esperar
+    # sin volver a pulsar Buscar y reconocerla apenas se renderice.
+    rows = Mock(count=AsyncMock(side_effect=[0, 0, 1]))
+    rows.nth.return_value = row
+    body = Mock(inner_text=AsyncMock(return_value=email))
+
+    def locator(selector):
+        if selector == "input[type='password']:visible":
+            return password
+        if selector == "table tbody tr:visible":
+            return rows
+        if selector == "body":
+            return body
+        return Mock(count=AsyncMock(return_value=0))
+
+    page.locator.side_effect = locator
+    page.get_by_label.return_value = email_input
+    page.get_by_role.return_value = search_button
+
+    asyncio.run(runner._search_lead_balancer(page, email, "QA Session"))
+
+    assert page.goto.await_args_list[0].args[0] == "https://lead-balancer.scalahed.com/leads/"
+    email_input.fill.assert_awaited_once_with(email)
+    search_button.click.assert_awaited_once()
+    assert runner.lead_url == "https://lead-balancer.scalahed.com/leads/detail/123"
+
+
+def test_balancer_opens_green_action_when_email_wraps_inside_the_row():
+    """Un salto visual dentro del email no debe provocar clics repetidos en Buscar."""
+
+    runner = UtelInconcertRunner(Settings(
+        lead_balancer_url="https://lead-balancer.scalahed.com/leads/",
+    ))
+    email = "Testing2026-09-03N37@testingUtel.com"
+    page = Mock(url="")
+    response = Mock(status=200)
+
+    async def goto(url, **_kwargs):
+        page.url = url
+        return response
+
+    page.goto = AsyncMock(side_effect=goto)
+    page.wait_for_url = AsyncMock()
+    password = Mock(count=AsyncMock(return_value=0))
+    email_input = Mock(count=AsyncMock(return_value=1), fill=AsyncMock())
+    email_input.first = email_input
+    search_button = Mock(click=AsyncMock())
+    search_button.first = search_button
+    async def open_detail():
+        page.url = "https://lead-balancer.scalahed.com/leads/3141175"
+
+    green_action = Mock(
+        count=AsyncMock(return_value=1),
+        get_attribute=AsyncMock(side_effect=["/leads/3141175", None]),
+        click=AsyncMock(side_effect=open_detail),
+    )
+    green_action.first = green_action
+    row = Mock(
+        inner_text=AsyncMock(
+            return_value="3141175 Danilo Prueba IQ Testing2026-09-\n03N37@testingUtel.com Ecuador"
+        )
+    )
+    row.locator.return_value = green_action
+    rows = Mock(count=AsyncMock(return_value=1))
+    rows.nth.return_value = row
+    body = Mock(inner_text=AsyncMock(return_value="Email: Testing2026-09-\n03N37@testingUtel.com"))
+
+    def locator(selector):
+        if selector == "input[type='password']:visible":
+            return password
+        if selector == "table tbody tr:visible":
+            return rows
+        if selector == "body":
+            return body
+        return Mock(count=AsyncMock(return_value=0))
+
+    page.locator.side_effect = locator
+    page.get_by_label.return_value = email_input
+    page.get_by_role.return_value = search_button
+
+    asyncio.run(runner._search_lead_balancer(page, email, "Danilo Prueba IQ"))
+
+    search_button.click.assert_awaited_once()
+    green_action.click.assert_awaited_once()
+    assert runner.lead_url == "https://lead-balancer.scalahed.com/leads/3141175"
+
+
 def test_cooperative_stop_during_validation_prevents_the_click():
     """La ejecución individual todavía puede detenerse hasta el último límite seguro."""
 

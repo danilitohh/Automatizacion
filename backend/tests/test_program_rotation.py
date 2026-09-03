@@ -142,8 +142,8 @@ def test_philippines_master_ignores_generic_page_heading_and_uses_form_rotation(
     assert runner.selected_program_name == "Master in Education"
 
 
-def test_direct_program_keeps_products_input_preselected_by_utel(tmp_path):
-    """Una PDP directa no debe revalidar el programa contra el desplegable."""
+def test_direct_program_recovers_only_when_utel_did_not_preselect_it(tmp_path):
+    """Una PDP directa delega al recuperador sin rotar programas al azar."""
 
     runner = UtelInconcertRunner(Settings(database_path=tmp_path / "rotation.db"))
     runner._set_dynamic_field = AsyncMock()
@@ -155,16 +155,41 @@ def test_direct_program_keeps_products_input_preselected_by_utel(tmp_path):
     runner._set_country_if_possible = AsyncMock()
     runner._check_privacy = AsyncMock()
     runner._select_random_program = AsyncMock()
+    runner._recover_missing_program_selection = AsyncMock()
     config = _philippines_master_config().model_copy(
         update={"program_name": "Maestría en Arquitectura de Software"}
     )
 
-    asyncio.run(runner._fill_utel_form(Mock(), Mock(), config))
+    page = Mock()
+    form = Mock()
+    asyncio.run(runner._fill_utel_form(page, form, config))
 
-    product_assignments = [
-        call for call in runner._set_dynamic_field.await_args_list
-        if call.args[1] == '[data-cy="productsInput"]'
-    ]
-    assert product_assignments == []
+    runner._recover_missing_program_selection.assert_awaited_once_with(form, config)
     runner._select_random_program.assert_not_awaited()
-    assert runner.selected_program_name == "Maestría en Arquitectura de Software"
+
+
+def test_missing_preselected_program_is_recovered_and_reported(tmp_path):
+    """El formulario puede mostrar el programa sin el prefijo Maestría/Carrera."""
+
+    runner = UtelInconcertRunner(Settings(database_path=tmp_path / "rotation.db"))
+    field = Mock(
+        count=AsyncMock(return_value=1),
+        input_value=AsyncMock(side_effect=["", "Ingeniería de Datos e Infraestructura"]),
+    )
+    field.first = field
+    form = Mock()
+    form.locator.return_value = field
+    runner._set_dynamic_field = AsyncMock()
+    config = _philippines_master_config().model_copy(
+        update={"program_name": "Maestría en Ingeniería de Datos e Infraestructura"}
+    )
+
+    asyncio.run(runner._recover_missing_program_selection(form, config))
+
+    runner._set_dynamic_field.assert_awaited_once_with(
+        form,
+        '[data-cy="productsInput"]',
+        "Maestría en Ingeniería de Datos e Infraestructura",
+    )
+    assert runner.selected_program_name == "Maestría en Ingeniería de Datos e Infraestructura"
+    assert "sin preselección" in runner.program_selection_notice

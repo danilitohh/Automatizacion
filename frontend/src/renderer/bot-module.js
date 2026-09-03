@@ -142,13 +142,24 @@ function organizeBotForm() {
   });
   moveFields(["bot-name", "bot-country", "bot-spreadsheet"], source);
   moveFields(["bot-spreadsheet-row", "bot-utel-url"], advanced);
-  moveFields(["bot-modality", "bot-level", "bot-form-type", "bot-program-strategy", "bot-program-name", "bot-inconcert-url", "bot-environment", "bot-success-pattern", "bot-error-pattern", "bot-browser", "bot-dry-run", "bot-headless", "bot-keep-browser-open"], advanced);
-  ["bot-modality", "bot-level", "bot-form-type", "bot-program-strategy", "bot-program-name", "bot-inconcert-url"].forEach((id) => field(id)?.classList.add("bot-internal-field"));
+  moveFields([
+    "bot-form-type",
+    "bot-program-strategy",
+    "bot-program-name",
+    "bot-success-pattern",
+    "bot-error-pattern",
+    "bot-inconcert-url",
+    "bot-browser",
+    "bot-dry-run",
+    "bot-headless",
+    "bot-keep-browser-open",
+    "bot-environment",
+  ], advanced);
   const securityNote = document.querySelector(".security-note");
   if (securityNote) advanced.append(securityNote);
   fields.replaceWith(sections);
   ["bot-country", "bot-utel-url", "bot-modality", "bot-level"].forEach((id) => {
-    const title = field(id).querySelector("span");
+    const title = field(id)?.querySelector("span");
     if (title && !title.textContent.includes("*")) title.textContent += " *";
   });
 }
@@ -165,50 +176,67 @@ function loadConfig() {
   }
 }
 
+function getInputValue(selector, { asBoolean = false } = {}) {
+  const element = document.querySelector(selector);
+  if (!element) return asBoolean ? false : "";
+  if (asBoolean) return Boolean(element.checked);
+  return element.value;
+}
+
+function setInputValue(selector, value, { asBoolean = false } = {}) {
+  const element = document.querySelector(selector);
+  if (!element) return;
+  if (asBoolean) {
+    element.checked = Boolean(value);
+    return;
+  }
+  element.value = value ?? "";
+}
+
 function readForm() {
-  state.config.name = document.querySelector("#bot-name").value.trim();
-  state.config.environment = document.querySelector("#bot-environment").value;
-  state.config.dry_run = document.querySelector("#bot-dry-run").checked;
-  state.config.country = document.querySelector("#bot-country").value.trim();
-  state.config.utel_url = document.querySelector("#bot-utel-url").value.trim();
-  state.config.inconcert_url = document.querySelector("#bot-inconcert-url").value.trim();
-  state.config.modality = document.querySelector("#bot-modality").value.trim();
-  state.config.level = document.querySelector("#bot-level").value.trim();
-  state.config.form_type = document.querySelector("#bot-form-type").value;
-  state.config.program_selection_strategy = document.querySelector("#bot-program-strategy").value;
-  state.config.program_name = document.querySelector("#bot-program-name").value.trim();
-  state.config.submit_success_pattern = document.querySelector("#bot-success-pattern").value.trim();
-  state.config.submit_error_pattern = document.querySelector("#bot-error-pattern").value.trim();
-  state.config.browser = document.querySelector("#bot-browser").value;
-  state.config.headless = document.querySelector("#bot-headless").checked;
-  state.config.keep_browser_open = document.querySelector("#bot-keep-browser-open").checked;
+  state.config.name = (getInputValue("#bot-name") || "").trim();
+  state.config.environment = getInputValue("#bot-environment") || state.config.environment;
+  state.config.dry_run = getInputValue("#bot-dry-run", { asBoolean: true });
+  state.config.country = (getInputValue("#bot-country") || "").trim();
+  state.config.utel_url = (getInputValue("#bot-utel-url") || "").trim();
+  state.config.inconcert_url = (getInputValue("#bot-inconcert-url") || "").trim();
+  state.config.modality = (getInputValue("#bot-modality") || "").trim();
+  state.config.level = (getInputValue("#bot-level") || "").trim();
+  state.config.form_type = getInputValue("#bot-form-type") || state.config.form_type;
+  state.config.program_selection_strategy = getInputValue("#bot-program-strategy") || state.config.program_selection_strategy;
+  state.config.program_name = (getInputValue("#bot-program-name") || "").trim();
+  state.config.submit_success_pattern = (getInputValue("#bot-success-pattern") || state.config.submit_success_pattern);
+  state.config.submit_error_pattern = (getInputValue("#bot-error-pattern") || state.config.submit_error_pattern);
+  state.config.browser = getInputValue("#bot-browser") || state.config.browser;
+  state.config.headless = getInputValue("#bot-headless", { asBoolean: true });
+  state.config.keep_browser_open = getInputValue("#bot-keep-browser-open", { asBoolean: true });
   state.config.lead = {
-    name: document.querySelector("#bot-lead-name").value.trim() || "pending",
-    email: document.querySelector("#bot-lead-email").value.trim(),
-    phone: document.querySelector("#bot-lead-phone").value.trim(),
+    name: (getInputValue("#bot-lead-name") || "pending").trim() || "pending",
+    email: (getInputValue("#bot-lead-email") || "").trim(),
+    phone: (getInputValue("#bot-lead-phone") || "").trim(),
   };
 }
 
 function writeForm() {
-  document.querySelector("#bot-name").value = state.config.name;
-  document.querySelector("#bot-environment").value = state.config.environment;
-  document.querySelector("#bot-dry-run").checked = state.config.dry_run;
-  document.querySelector("#bot-country").value = state.config.country;
-  document.querySelector("#bot-utel-url").value = state.config.utel_url;
-  document.querySelector("#bot-inconcert-url").value = state.config.inconcert_url;
-  document.querySelector("#bot-modality").value = state.config.modality;
-  document.querySelector("#bot-level").value = state.config.level;
-  document.querySelector("#bot-form-type").value = state.config.form_type;
-  document.querySelector("#bot-program-strategy").value = state.config.program_selection_strategy;
-  document.querySelector("#bot-program-name").value = state.config.program_name;
-  document.querySelector("#bot-success-pattern").value = state.config.submit_success_pattern;
-  document.querySelector("#bot-error-pattern").value = state.config.submit_error_pattern;
-  document.querySelector("#bot-browser").value = state.config.browser;
-  document.querySelector("#bot-headless").checked = state.config.headless;
-  document.querySelector("#bot-keep-browser-open").checked = state.config.keep_browser_open;
-  document.querySelector("#bot-lead-name").value = state.config.lead.name;
-  document.querySelector("#bot-lead-email").value = state.config.lead.email;
-  document.querySelector("#bot-lead-phone").value = state.config.lead.phone;
+  setInputValue("#bot-name", state.config.name);
+  setInputValue("#bot-environment", state.config.environment);
+  setInputValue("#bot-dry-run", state.config.dry_run, { asBoolean: true });
+  setInputValue("#bot-country", state.config.country);
+  setInputValue("#bot-utel-url", state.config.utel_url);
+  setInputValue("#bot-inconcert-url", state.config.inconcert_url);
+  setInputValue("#bot-modality", state.config.modality);
+  setInputValue("#bot-level", state.config.level);
+  setInputValue("#bot-form-type", state.config.form_type);
+  setInputValue("#bot-program-strategy", state.config.program_selection_strategy);
+  setInputValue("#bot-program-name", state.config.program_name);
+  setInputValue("#bot-success-pattern", state.config.submit_success_pattern);
+  setInputValue("#bot-error-pattern", state.config.submit_error_pattern);
+  setInputValue("#bot-browser", state.config.browser);
+  setInputValue("#bot-headless", state.config.headless, { asBoolean: true });
+  setInputValue("#bot-keep-browser-open", state.config.keep_browser_open, { asBoolean: true });
+  setInputValue("#bot-lead-name", state.config.lead.name);
+  setInputValue("#bot-lead-email", state.config.lead.email);
+  setInputValue("#bot-lead-phone", state.config.lead.phone);
 }
 
 function saveConfig(showToast) {
@@ -580,7 +608,11 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       const phase = current.phase ? `${current.phase} · ` : "";
       const pendingCount = Number(current.pending || 0);
       const pendingLabel = pendingCount ? ` · Pendientes CRM: ${pendingCount}` : "";
-      document.querySelector("#bot-run-status").textContent = `${phase}${current.dry_run ? "Dry run (sin envío)" : "Lote"}: ${current.completed}/${current.total} filas procesadas · OK: ${current.success} · Errores: ${current.failed}${pendingLabel}${liveError}`;
+      const progressText = `${phase}${current.dry_run ? "Dry run (sin envío)" : "Lote"}: ${current.completed}/${current.total} filas procesadas · OK: ${current.success} · Errores: ${current.failed}${pendingLabel}${liveError}`;
+      const checkpointLink = current.download_url && Number(current.last_checkpoint_rows || 0) > 0
+        ? ` <a href="${window.desktop?.apiUrl || window.location.origin}${current.download_url}" download>Descargar Excel acumulado (${current.last_checkpoint_rows} filas)</a>`
+        : "";
+      document.querySelector("#bot-run-status").innerHTML = `${escapeHtml(progressText)}${checkpointLink}`;
       renderBatchTerminal(current, running);
       renderErrorLog(current);
 
@@ -828,13 +860,22 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     }));
   };
   const analyzeSpreadsheetFile = async (file) => {
-    if (!file || !previewBotSpreadsheet) return;
+    if (!previewBotSpreadsheet) {
+      const message = "El API de preview de Excel no está disponible.";
+      document.querySelector("#bot-spreadsheet-status").textContent = `No se pudo analizar el Excel: ${message}`;
+      showToast(message, "error");
+      return;
+    }
+    if (!file) return;
     spreadsheetFile = file;
     analyzeSpreadsheetButton.disabled = true;
     analyzeSpreadsheetButton.textContent = "Analizando...";
     document.querySelector("#bot-spreadsheet-status").textContent = "Analizando hojas, columnas y filas...";
     try {
       const preview = await previewBotSpreadsheet(file);
+      if (!preview || !Array.isArray(preview.sheets)) {
+        throw new Error("La respuesta de análisis del Excel no tiene el formato esperado.");
+      }
       importedRows = preview.sheets.flatMap((sheet) => sheet.rows.map((row) => ({ ...row, sheet: sheet.name })));
       spreadsheetRow.innerHTML = '<option value="">Selecciona una fila</option>' + importedRows.map((row, index) => `<option value="${index}">${escapeHtml(row.sheet)} - fila ${row.row_number} - ${escapeHtml(row.program_name || row.level || row.utel_url || "sin nombre")}</option>`).join("");
       const firstSheet = preview.sheets[0];
@@ -848,8 +889,9 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       showToast("Excel analizado. Confirma las columnas y selecciona la fila.", "info");
     } catch (error) {
       setMultiCountryMode(false);
-      document.querySelector("#bot-spreadsheet-status").textContent = "No se pudo analizar el Excel.";
-      showToast(`No se pudo analizar el Excel: ${error.message}`, "error");
+      const message = error?.message || "Respuesta inválida del backend.";
+      document.querySelector("#bot-spreadsheet-status").textContent = `No se pudo analizar el Excel: ${message}`;
+      showToast(`No se pudo analizar el Excel: ${message}`, "error");
     } finally {
       analyzeSpreadsheetButton.disabled = false;
       analyzeSpreadsheetButton.textContent = "Analizar Excel";
@@ -892,6 +934,9 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     event.preventDefault();
     event.stopPropagation();
     if (!spreadsheetInput.files[0]) {
+      spreadsheetInput.dataset.requestAnalyze = "true";
+      spreadsheetInput.value = "";
+      spreadsheetInput.click();
       showToast("Selecciona primero un archivo .xlsx.", "error");
       return;
     }

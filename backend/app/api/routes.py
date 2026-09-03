@@ -61,6 +61,13 @@ def _batch_dry_run(raw_config: dict[str, Any]) -> bool:
     return value
 
 
+def _is_new_products_scope(sheet_name: str, filename: str) -> bool:
+    """Detecta documentos orientados a links directos de nuevos productos."""
+
+    source = f"{sheet_name} {filename}".casefold()
+    return "nuevos productos" in source
+
+
 def _save_utel_batch_report(
     settings: Any,
     job_id: str,
@@ -118,6 +125,11 @@ def _merge_utel_and_crm_results(
         "selected_program_name": (
             submission.get("selected_program_name")
             or verification.get("selected_program_name")
+            or ""
+        ),
+        "program_selection_notice": (
+            submission.get("program_selection_notice")
+            or verification.get("program_selection_notice")
             or ""
         ),
         "utel_submission_attempted": bool(
@@ -299,9 +311,15 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
 
     settings = application.state.settings
     job = application.state.utel_batch_jobs[job_id]
-    inter_row_delay = max(0, int(settings.batch_delay_seconds))
+    batch_size = max(1, int(settings.batch_size))
+    batch_pause_seconds = max(0, int(settings.batch_delay_seconds))
     results: list[dict[str, Any]] = []
-    logger.info("Lote %s con pausa anti-bloqueo entre filas: %ss", job_id, inter_row_delay)
+    logger.info(
+        "Lote %s en tandas de %s filas, sin pausa interna y con %ss entre tandas",
+        job_id,
+        batch_size,
+        batch_pause_seconds,
+    )
     try:
         batch_dry_run = _batch_dry_run(raw_config)
         service = BotSpreadsheetService(settings.program_catalog_path)
@@ -319,10 +337,14 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             rows = [row for row in rows if row["sheet"] == selected_sheet and row["row_number"] == int(selected_row_number)]
         if not rows:
             raise ValueError("No se encontraron filas con Programa/Nivel y URL usando las columnas seleccionadas.")
-        if not batch_dry_run:
-            # El lote diferido envía primero y consulta CRM al final. Validar
-            # aquí evita crear decenas de leads si faltan las credenciales que
-            # serán necesarias para reconciliar cada clic de forma segura.
+        needs_inconcert = any(
+            not _is_balanceador_url(row.get("lead_origin_url", ""))
+            for row in rows
+        )
+        if not batch_dry_run and needs_inconcert:
+            # InConcert se valida antes del primer clic. Los lotes cuyo origen
+            # es exclusivamente Balanceador reutilizan la sesión chrome-qa y no
+            # deben exigir credenciales de un CRM que nunca van a consultar.
             crm_preflight = UtelInconcertRunner(settings)
             if not crm_preflight.has_inconcert_credentials():
                 raise ValueError(
@@ -344,6 +366,10 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
         prepared_rows: list[tuple[dict[str, Any], UtelQaConfig]] = []
         for row in rows:
             row_config = dict(base_config)
+            skip_preselected_fields = _is_new_products_scope(
+                row.get("sheet", ""),
+                filename,
+            )
             if row.get("workflow_mode") == "form_validation" and not row.get("country"):
                 raise ValueError(
                     f"La fila {row['row_number']} no tiene pais en la columna Locale/Country."
@@ -403,6 +429,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "name": f"{raw_config.get('name', 'QA UTEL')} - {row.get('test_case') or row['program_name'] or row['level']}",
                 "defer_crm_verification": False,
                 "verification_only": False,
+                "skip_preselected_fields": skip_preselected_fields,
                 # Cloudflare reconoce mejor el perfil persistente de Chrome que
                 # un Chromium aislado nuevo. Balanceador se abre visible para
                 # permitir completar un desafío legítimo si vuelve a solicitarlo.
@@ -606,17 +633,32 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             })
             if job.get("cancel_requested"):
                 break
-            if index < len(rows) and inter_row_delay > 0:
-                await asyncio.sleep(inter_row_delay)
+            if index % batch_size == 0:
+                completed_batch = index // batch_size
+                # El checkpoint ya contiene esta tanda y todas las anteriores.
+                # La misma URL sirve siempre el Excel acumulado más reciente.
+                job.update({
+                    "completed_batches": completed_batch,
+                    "last_checkpoint_rows": index,
+                    "summary": (
+                        f"Tanda {completed_batch} completada: Excel acumulado listo "
+                        f"con {index} filas procesadas."
+                    ),
+                })
+                if index < len(rows):
+                    job["phase"] = (
+                        f"Tanda {completed_batch} completada · pausa de "
+                        f"{batch_pause_seconds} segundos"
+                    )
+                    if batch_pause_seconds > 0:
+                        await asyncio.sleep(batch_pause_seconds)
+                    if job.get("cancel_requested"):
+                        break
+                    job["phase"] = f"UTEL: procesando tanda {completed_batch + 1}"
 
         if temporary_block_queue and not job.get("cancel_requested"):
             job["phase"] = "UTEL: reintentando bloqueos temporales"
-            if inter_row_delay > 0:
-                await asyncio.sleep(inter_row_delay)
-            for retry_index, (result_index, blocked_config) in enumerate(
-                temporary_block_queue,
-                1,
-            ):
+            for result_index, blocked_config in temporary_block_queue:
                 row = results[result_index]["row"]
                 job.update({
                     "current_program": row.get("test_case") or row["program_name"] or row["level"],
@@ -641,19 +683,15 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
                 counts = _utel_batch_counts(results)
                 job.update({"completed": len(results), **counts, "results": results})
-                if retry_index < len(temporary_block_queue) and inter_row_delay > 0:
-                    await asyncio.sleep(inter_row_delay)
 
         if verification_queue:
             job["phase"] = "CRM: reintentando verificaciones bloqueadas"
             logger.info(
-                "Lote %s con pausa antes de reintentar verificaciones bloqueadas: %ss",
+                "Lote %s reintentando verificaciones bloqueadas sin pausa entre consultas",
                 job_id,
-                inter_row_delay,
             )
-            for verification_index, (result_index, submitted_config) in enumerate(
-                sorted(verification_queue, key=lambda item: item[1].country.casefold()),
-                1,
+            for result_index, submitted_config in sorted(
+                verification_queue, key=lambda item: item[1].country.casefold()
             ):
                 verify_config = submitted_config.model_copy(
                     update={"defer_crm_verification": False, "verification_only": True}
@@ -682,8 +720,6 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     **counts,
                     "results": results,
                 })
-                if verification_index < len(verification_queue) and inter_row_delay > 0:
-                    await asyncio.sleep(inter_row_delay)
 
         _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
         counts = _utel_batch_counts(results)
@@ -695,6 +731,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
         )
         job.update({
             "status": final_status,
+            "phase": "Lote completado" if not cancel_requested else job.get("phase"),
             "finished_at": datetime.now().isoformat(timespec="seconds"),
             "download_url": (
                 f"/api/bots/utel-inconcert/batch/{job_id}/download" if results else None
@@ -756,6 +793,9 @@ async def run_utel_batch(request: Request, file: UploadFile = File(...), config:
         "failed": 0,
         "pending": 0,
         "phase": "UTEL: preparando envíos",
+        "batch_size": max(1, int(request.app.state.settings.batch_size)),
+        "completed_batches": 0,
+        "last_checkpoint_rows": 0,
         "download_url": None,
         "workflow_mode": preview_rows[0].get("workflow_mode", "product_release"),
         "dry_run": batch_dry_run,

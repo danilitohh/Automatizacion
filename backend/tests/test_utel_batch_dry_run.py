@@ -597,7 +597,9 @@ def test_batch_cancel_finishes_current_row_and_reconciles_before_stopping(
     assert "conciliados" in job["summary"]
 
 
-def test_cloudflare_during_crm_is_retried_at_end_without_resubmitting(tmp_path, monkeypatch):
+def test_cloudflare_during_crm_is_retried_at_end_without_resubmitting(
+    tmp_path, monkeypatch, crm_preflight
+):
     """Un bloqueo en Balanceador repite la consulta, nunca el formulario."""
 
     calls = []
@@ -639,8 +641,6 @@ def test_cloudflare_during_crm_is_retried_at_end_without_resubmitting(tmp_path, 
         database_path=tmp_path / "test.db",
         storage_dir=tmp_path / "storage",
         batch_delay_seconds=0,
-        inconcert_username="test",
-        inconcert_password="test",
         utel_test_phones_json='{"Mexico":["+525512345678"]}',
     ))
 
@@ -657,8 +657,65 @@ def test_cloudflare_during_crm_is_retried_at_end_without_resubmitting(tmp_path, 
     assert calls[1].verification_only is True
     assert calls[0].browser == "chrome"
     assert calls[0].headless is False
+    crm_preflight.assert_not_awaited()
     final = job["results"][0]["result"]
     assert final["status"] == "PASS"
     assert final["lead_url"].endswith("/123")
     assert final["temporary_block_retry_attempted"] is True
     assert final["screenshots"] == ["cloudflare.png", "lead.png"]
+
+
+def test_batch_of_ten_publishes_an_accumulated_excel_without_row_delays(
+    tmp_path, monkeypatch
+):
+    """La primera tanda deja 10 filas y el resultado final agrega la siguiente."""
+
+    calls = []
+
+    async def fake_run(self, config):
+        calls.append(config)
+        return {
+            "status": "PASS", "dry_run": True,
+            "summary": "Formulario validado sin envío.",
+            "lead_url": None, "utel_submission_attempted": False,
+            "utel_submission": "skipped", "lead_found": "skipped",
+            "stages": [], "screenshots": [],
+        }
+
+    monkeypatch.setattr(UtelInconcertRunner, "run", fake_run)
+    workbook = Workbook()
+    workbook.active.append(["Nivel", "URL", "Location", "Locale"])
+    for row_number in range(1, 12):
+        workbook.active.append([
+            f"Nivel {row_number}", f"https://example.test/{row_number}",
+            "footer", "Mexico",
+        ])
+    content = io.BytesIO()
+    workbook.save(content)
+    mapping = {
+        "level": "Nivel", "utel_url": "URL",
+        "form_type": "Location", "country": "Locale",
+    }
+    app = create_app(Settings(
+        database_path=tmp_path / "test.db",
+        storage_dir=tmp_path / "storage",
+        batch_size=10,
+        batch_delay_seconds=0,
+    ))
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/bots/utel-inconcert/batch-run",
+            data={"config": json.dumps({"lead": {}, "dry_run": True}), "mapping": json.dumps(mapping)},
+            files={"file": ("test.xlsx", content.getvalue())},
+        )
+        job = client.get(f'/api/bots/utel-inconcert/batch/{response.json()["job_id"]}').json()
+        report = client.get(job["download_url"])
+
+    assert len(calls) == 11
+    assert job["completed"] == 11
+    assert job["completed_batches"] == 1
+    assert job["last_checkpoint_rows"] == 10
+    sheet = load_workbook(io.BytesIO(report.content)).active
+    result_header = next(cell.column for cell in sheet[1] if cell.value == "RESULTADO FORMULARIO")
+    assert all(sheet.cell(row, result_header).value == "DRY RUN - NO ENVIADO" for row in range(2, 13))

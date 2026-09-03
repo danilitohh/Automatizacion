@@ -117,6 +117,7 @@ class UtelInconcertRunner:
         self._crm_origin = ""
         self._submission_attempted = False
         self._cancelled_before_submit = False
+        self.program_selection_notice = ""
         self.status_flags = {
             "utel_submission": "pending",
             "utel_submission_message": "Formulario pendiente de envio.",
@@ -148,6 +149,7 @@ class UtelInconcertRunner:
         self._crm_origin = ""
         self._submission_attempted = False
         self._cancelled_before_submit = False
+        self.program_selection_notice = ""
         self.status_flags = {key: "pending" for key in self.status_flags}
         self.evidence_directory = self._evidence_directory(config.name)
         page = None
@@ -352,6 +354,7 @@ class UtelInconcertRunner:
                         balancer_page = await context.new_page()
                         page = balancer_page
                         balancer_page.set_default_timeout(30000)
+                        await self._show_active_page(balancer_page)
                         await self._run_stage(
                             9,
                             "lead_balancer_search",
@@ -369,6 +372,10 @@ class UtelInconcertRunner:
                         return self._build_result(config, started_at, timer)
 
                     page = inconcert_page
+                    # La página de agradecimiento queda abierta como evidencia
+                    # del envío, pero el CRM debe quedar visible mientras se
+                    # concilia el lead para no aparentar que el flujo se detuvo.
+                    await self._show_active_page(inconcert_page)
                     try:
                         await self._run_stage(9, "inconcert_search", "Lead localizado y verificado", inconcert_page, lambda: self._search_lead(inconcert_page, config.lead.email, config.lead.name), "05_lead_encontrado")
                         self.status_flags["lead_source"] = "inconcert"
@@ -382,6 +389,7 @@ class UtelInconcertRunner:
                         balancer_page = await context.new_page()
                         balancer_page.set_default_timeout(30000)
                         page = balancer_page
+                        await self._show_active_page(balancer_page)
                         try:
                             await self._run_stage(
                                 10,
@@ -471,6 +479,7 @@ class UtelInconcertRunner:
             "lead_phone": config.lead.phone,
             "utel_submission_attempted": self._submission_attempted,
             "selected_program_name": self.selected_program_name,
+            "program_selection_notice": self.program_selection_notice,
             "lead_url": self.lead_url,
             "environment": config.environment,
             "dry_run": config.dry_run,
@@ -619,6 +628,14 @@ class UtelInconcertRunner:
             if failure is error:
                 raise
             raise failure from error
+
+    async def _show_active_page(self, page: Any) -> None:
+        """Trae al frente la pestaña que el Bot está procesando, sin afectar el flujo."""
+
+        try:
+            await page.bring_to_front()
+        except Exception as error:  # noqa: BLE001 - el foco visual no es crítico
+            self.logger.debug("No fue posible enfocar la pestaña activa del Bot: %s", error)
 
     async def _open_utel(self, page: Any, config: UtelQaConfig) -> None:
         direct_program = self._select_direct_doctorate_program(config)
@@ -1009,22 +1026,26 @@ class UtelInconcertRunner:
         )
 
     async def _fill_utel_form(self, page: Any, form: Any, config: UtelQaConfig) -> None:
-        await self._set_dynamic_field(form, '[data-cy="formModalityInput"]', config.modality)
-        await self._set_dynamic_field(form, '[data-cy="educationLevelInput"]', config.level)
-        rotate_philippines_master = self._should_rotate_philippines_master(config)
-        if config.program_name:
-            # Una URL directa de programa ya entrega productsInput seleccionado
-            # por UTEL. No se vuelve a elegir ni se compara contra las opciones
-            # del desplegable: los productos recién publicados pueden existir
-            # en la PDP antes de aparecer en el catálogo general del formulario.
-            self.selected_program_name = config.program_name
+        academic_values: list[dict[str, str]] = []
+        if config.skip_preselected_fields:
+            self.logger.info("Fila marcada como 'Nuevos productos': se omite selección de modalidad/nivel/programa.")
+            self.selected_program_name = config.program_name or self.selected_program_name
         else:
-            if rotate_philippines_master:
-                # El H1 del listado puede contener "Master's Degree", pero no
-                # representa uno de los programas disponibles en el lateral.
-                self.selected_program_name = ""
-            await self._select_random_program(page, form, '[data-cy="productsInput"]', config)
-        academic_values = await self._academic_values(form)
+            await self._set_dynamic_field(form, '[data-cy="formModalityInput"]', config.modality)
+            await self._set_dynamic_field(form, '[data-cy="educationLevelInput"]', config.level)
+            rotate_philippines_master = self._should_rotate_philippines_master(config)
+            if config.program_name:
+                # Normalmente UTEL recibe el producto seleccionado desde la URL
+                # directa. Si falla esa preselección, se recupera usando el nombre
+                # del Excel; el selector ya contempla el nombre sin nivel.
+                await self._recover_missing_program_selection(form, config)
+            else:
+                if rotate_philippines_master:
+                    # El H1 del listado puede contener "Master's Degree", pero no
+                    # representa uno de los programas disponibles en el lateral.
+                    self.selected_program_name = ""
+                await self._select_random_program(page, form, '[data-cy="productsInput"]', config)
+            academic_values = await self._academic_values(form)
         await self._select_optional_bachillerato(form)
         await self._select_random_city(form)
         await self._select_preferred_contact_channel(form)
@@ -1033,12 +1054,46 @@ class UtelInconcertRunner:
         await self._set_country_if_possible(form, config.country)
         await self._fill_first_available(form, ['[data-cy="telephoneInput"]', '#phone', 'input[type="tel"]', 'input[name="phone"]'], config.lead.phone)
         await self._check_privacy(form)
-        if academic_values != await self._academic_values(form):
+        if academic_values and academic_values != await self._academic_values(form):
             raise UtelQaError(
                 "utel_fill",
                 "El sitio reinicio la modalidad, el nivel o el programa durante el llenado. No se enviara el formulario.",
                 '[data-cy="formModalityInput"], [data-cy="educationLevelInput"], [data-cy="productsInput"]',
             )
+
+    async def _recover_missing_program_selection(self, form: Any, config: UtelQaConfig) -> None:
+        """Selecciona el programa solo cuando UTEL no lo dejó preseleccionado."""
+
+        selector = '[data-cy="productsInput"]'
+        field = form.locator(selector).first
+        if not await field.count():
+            # Algunos formularios no exponen el campo porque la PDP ya fija el
+            # producto internamente. Conservamos el comportamiento existente.
+            self.selected_program_name = config.program_name
+            return
+
+        current_value = (await field.input_value()).strip()
+        if current_value:
+            self.selected_program_name = config.program_name
+            return
+
+        # _set_dynamic_field busca primero el texto completo y luego la versión
+        # sin prefijo académico: “Maestría en Ingeniería…” -> “Ingeniería…”.
+        await self._set_dynamic_field(form, selector, config.program_name)
+        selected_value = (await field.input_value()).strip()
+        if not selected_value:
+            raise UtelQaError(
+                "utel_fill",
+                f"UTEL no preseleccionó ni permitió seleccionar el programa '{config.program_name}'.",
+                selector,
+            )
+
+        self.selected_program_name = config.program_name
+        self.program_selection_notice = (
+            "Incidencia corregida: UTEL abrió el campo Programa de interés sin "
+            f"preselección; el Bot seleccionó automáticamente '{config.program_name}'."
+        )
+        self.logger.warning(self.program_selection_notice)
 
     def _should_rotate_philippines_master(self, config: UtelQaConfig) -> bool:
         """Rota los másteres del lateral filipino cuando Excel no fija programa."""
@@ -1494,6 +1549,12 @@ class UtelInconcertRunner:
             body = ""
         diagnostic = self._sanitize_submit_diagnostic(body)
         suffix = f" Detalle: {diagnostic}" if diagnostic else ""
+        if status >= 500:
+            raise UnconfirmedSubmission(
+                "utel_submit",
+                f"UTEL devolvió HTTP {status or 'desconocido'} en POST /api/forms. "
+                f"Se verificará en CRM porque el lead podría haberse enviado.{suffix}",
+            )
         raise RejectedSubmission(
             "utel_submit",
             f"UTEL rechazó POST /api/forms con HTTP {status or 'desconocido'}.{suffix}",
@@ -1703,7 +1764,11 @@ class UtelInconcertRunner:
     async def _search_lead(self, page: Any, email: str, expected_name: str) -> None:
         # El listado no muestra Email. Filtramos por email y validamos la fila
         # mediante el nombre sintético único generado para cada ejecución.
-        indexing_deadline = perf_counter() + 240
+        # InConcert puede tardar en indexar el envío. No retenemos el flujo
+        # cuatro minutos: al agotarse este tiempo se consulta el Balanceador
+        # como respaldo desde run(), sin reenviar el formulario.
+        indexing_wait_seconds = max(15, int(self.settings.inconcert_index_wait_seconds))
+        indexing_deadline = perf_counter() + indexing_wait_seconds
         attempt = 0
         email_candidates = []
         for value in (email, email.casefold()):
@@ -1758,17 +1823,13 @@ class UtelInconcertRunner:
     async def _search_lead_balancer(self, page: Any, email: str, expected_name: str) -> None:
         """Busca el lead en el Balanceador y conserva la URL de su detalle."""
 
-        base_url = self.settings.lead_balancer_url.rstrip("/") + "/"
-        parsed = urlparse(base_url)
+        configured_url = self.settings.lead_balancer_url.rstrip("/") + "/"
+        parsed = urlparse(configured_url)
         if parsed.scheme not in {"http", "https"} or parsed.netloc != "lead-balancer.scalahed.com":
             raise UtelQaError("lead_balancer_search", "La URL del Balanceador no es valida o no pertenece al dominio autorizado.")
-        username = self._secret_value(self.settings.lead_balancer_username)
-        password = self._secret_value(self.settings.lead_balancer_password)
-        if not username or not password:
-            raise UtelQaError(
-                "lead_balancer_search",
-                "Faltan las credenciales del Balanceador. Configura LEAD_BALANCER_USERNAME y LEAD_BALANCER_PASSWORD en .env.",
-            )
+        # La búsqueda siempre comienza en el listado oficial, aunque .env
+        # contenga por error la URL de login u otra ruta del mismo dominio.
+        base_url = f"{parsed.scheme}://{parsed.netloc}/leads/"
         response = await page.goto(base_url, wait_until="domcontentloaded", timeout=60000)
         challenge_detected = (
             (response is not None and response.status in {401, 403})
@@ -1793,18 +1854,60 @@ class UtelInconcertRunner:
                 "El Balanceador bloqueo esta sesion del navegador antes del login. "
                 "Completa la verificacion visible de Cloudflare; la sesion quedara guardada en el perfil Chrome QA.",
             )
-        if "/login" in page.url or await self._locator_count(page.locator("input[type='password']:visible"), timeout_ms=1200):
-            username_input = page.locator("input[name='email']:visible, input[name='username']:visible, input[type='text']:visible").first
+        login_required = (
+            "/login" in page.url
+            or await self._locator_count(
+                page.locator("input[type='password']:visible"), timeout_ms=1200
+            )
+        )
+        if login_required:
+            # El perfil chrome-qa conserva cookies entre ejecuciones. Usuario y
+            # contraseña solo son necesarios cuando la sesión realmente venció.
+            username = self._secret_value(self.settings.lead_balancer_username)
+            password = self._secret_value(self.settings.lead_balancer_password)
+            if not username or not password:
+                raise UtelQaError(
+                    "lead_balancer_search",
+                    "La sesion guardada del Balanceador vencio. Abre scripts/open_chrome_qa.ps1, inicia sesion y cierra Chrome antes de reintentar.",
+                )
+            username_input = page.locator(
+                "input[name='email']:visible, input[name='username']:visible, "
+                "input[type='text']:visible"
+            ).first
             password_input = page.locator("input[type='password']:visible").first
+            if not await self._locator_count(username_input, timeout_ms=1200):
+                username_input = page.get_by_placeholder(
+                    re.compile(r"correo|email|usuario|username|user", re.I)
+                ).first
+            if not await self._locator_count(username_input, timeout_ms=1200):
+                username_input = page.get_by_label(
+                    re.compile(r"correo|email|usuario|username|user", re.I)
+                ).first
+            if not await self._locator_count(username_input, timeout_ms=1200):
+                # Último fallback: primer campo visible del bloque de login.
+                # Algunos despliegues cambian el nombre del input a "login".
+                username_input = page.locator("input:visible").first
+            if not await self._locator_count(password_input, timeout_ms=1200):
+                password_input = page.locator("input[type='password']:not([type='hidden'])").first
+            if not await self._locator_count(username_input, timeout_ms=1200):
+                raise UtelQaError("lead_balancer_search", "No se encontro el campo usuario en el Balanceador.")
             await username_input.fill(username)
             await password_input.fill(password)
             submit = page.locator("button[type='submit']:visible, input[type='submit']:visible").first
             await submit.click()
             await page.wait_for_url(re.compile(r"/leads/?(?:[?#].*)?$"), timeout=60000)
 
-        email_input = page.locator("label:has-text('Email')").locator("xpath=following::input[1]").first
+        email_input = page.get_by_label(re.compile(r"^Email$", re.I)).first
         if not await self._locator_count(email_input, timeout_ms=1500):
-            email_input = page.locator("input[name='email']:visible, input[type='email']:visible").first
+            email_input = page.locator(
+                "label:has-text('Email')"
+            ).locator("xpath=following::input[1]").first
+        if not await self._locator_count(email_input, timeout_ms=1500):
+            email_input = page.locator(
+                "input[placeholder*='Correo electronico' i]:visible, "
+                "input[placeholder*='Correo electrónico' i]:visible, "
+                "input[name='email']:visible, input[type='email']:visible"
+            ).first
         if not await self._locator_count(email_input, timeout_ms=1500):
             raise UtelQaError("lead_balancer_search", "No se encontro el campo Email en el Balanceador.")
         await email_input.fill(email)
@@ -1812,41 +1915,81 @@ class UtelInconcertRunner:
         await search_button.click()
 
         deadline = perf_counter() + 90
+        next_refresh = perf_counter() + 15
         matching_row = None
-        while perf_counter() < deadline:
+        # El Balanceador puede tardar varios segundos en renderizar la tabla.
+        # Se observa el DOM antes de repetir la consulta para no reiniciar la
+        # carga con clics continuos sobre Buscar. También se ignoran espacios
+        # visuales que DataTables pudiera insertar dentro del correo.
+        compact_email = re.sub(r"\s+", "", email).casefold()
+        while True:
             rows = page.locator("table tbody tr:visible")
             for index in range(await rows.count()):
                 row = rows.nth(index)
-                if email.casefold() in (await row.inner_text()).casefold():
+                compact_row_text = re.sub(r"\s+", "", await row.inner_text()).casefold()
+                if compact_email in compact_row_text:
                     matching_row = row
                     break
             if matching_row is not None:
                 break
-            await asyncio.sleep(5)
-            await search_button.click()
+
+            now = perf_counter()
+            if now >= deadline:
+                break
+            if now >= next_refresh:
+                await search_button.click()
+                next_refresh = perf_counter() + 15
+                continue
+            await asyncio.sleep(min(0.5, deadline - now, next_refresh - now))
         if matching_row is None:
             raise LeadNotFoundError(
                 "lead_balancer_search",
                 f"No se encontro el lead por email ({email}) en el Balanceador despues de esperar su indexacion.",
             )
 
-        detail_link = matching_row.locator("a[href*='/leads/detail/']:visible").first
-        if await self._locator_count(detail_link, timeout_ms=1500):
-            href = await detail_link.get_attribute("href")
-            if href:
-                await page.goto(urljoin(base_url, href), wait_until="domcontentloaded", timeout=60000)
+        # El botón verde de Acciones es un enlace, pero la ruta puede cambiar
+        # entre /leads/detail/<id> y otras variantes. Se toma la primera acción
+        # de la última celda en vez de exigir una ruta específica.
+        detail_action = matching_row.locator(
+            "td:last-child a[href]:visible, td:last-child button:visible, "
+            "a.btn-success[href]:visible, button.btn-success:visible"
+        ).first
+        detail_page = page
+        if await self._locator_count(detail_action, timeout_ms=1500):
+            href = await detail_action.get_attribute("href")
+            target = (await detail_action.get_attribute("target") or "").casefold()
+            if href and urlparse(urljoin(base_url, href)).netloc != parsed.netloc:
+                raise UtelQaError(
+                    "lead_balancer_search",
+                    "La accion del lead apunta fuera del dominio autorizado del Balanceador.",
+                )
+            if target == "_blank":
+                async with page.context.expect_page() as popup_info:
+                    await detail_action.click()
+                detail_page = await popup_info.value
+                await detail_page.wait_for_load_state("domcontentloaded", timeout=60000)
             else:
-                await detail_link.click()
+                await detail_action.click()
         else:
             detail_button = matching_row.get_by_title(re.compile(r"Ver detalle", re.I)).first
             if not await self._locator_count(detail_button, timeout_ms=1500):
-                detail_button = matching_row.locator("button:visible").last
+                detail_button = matching_row.locator("a[href]:visible, button:visible").last
             await detail_button.click()
-        await page.wait_for_url(re.compile(r"/leads/detail/\d+"), timeout=60000)
-        body = await page.locator("body").inner_text()
-        if email.casefold() not in body.casefold():
+
+        # La URL de detalle no tiene un formato único; basta con comprobar que
+        # salimos del listado /leads/ y permanecemos en el dominio autorizado.
+        def is_detail_url(value: str) -> bool:
+            current = urlparse(value)
+            return current.netloc == parsed.netloc and current.path.rstrip("/") != "/leads"
+
+        await detail_page.wait_for_url(
+            is_detail_url,
+            timeout=60000,
+        )
+        body = await detail_page.locator("body").inner_text()
+        if compact_email not in re.sub(r"\s+", "", body).casefold():
             raise UtelQaError("lead_balancer_search", f"El detalle abierto en Balanceador no coincide con el email {email}.")
-        self.lead_url = page.url
+        self.lead_url = detail_page.url
 
     async def _apply_contact_search(self, page: Any, filter_name: str, value: str) -> None:
         search_input = await self._resolve_inconcert_search_input(page)

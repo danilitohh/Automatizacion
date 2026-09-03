@@ -138,6 +138,7 @@ class UtelQaConfig(BaseModel):
     navigation_sublevel: str = Field(default="", max_length=160)
     defer_crm_verification: bool = False
     verification_only: bool = False
+    skip_preselected_fields: bool = False
     lead: UtelLead
 
     @field_validator("program_name")
@@ -174,6 +175,7 @@ class UtelQaRunResponse(BaseModel):
     lead_name: str = ""
     lead_phone: str = ""
     selected_program_name: str = ""
+    program_selection_notice: str = ""
     lead_url: str | None = None
     environment: str
     dry_run: bool

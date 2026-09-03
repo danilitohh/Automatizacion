@@ -85,6 +85,32 @@ def test_report_writes_lead_into_blank_inconcert_balanceador_column():
     assert sheet["E2"].hyperlink.target == link
 
 
+def test_report_keeps_notice_when_program_was_not_preselected():
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Programa", "URL"])
+    sheet.append(["Maestría en Ingeniería de Datos e Infraestructura", "https://utel.test"])
+    data = BytesIO()
+    workbook.save(data)
+    notice = "Incidencia corregida: UTEL abrió el campo Programa de interés sin preselección."
+    result = {
+        "row": {"sheet": "Sheet", "row_number": 2},
+        "result": {
+            "status": "PASS",
+            "dry_run": False,
+            "lead_url": "https://lead-balancer.scalahed.com/leads/detail/3141175",
+            "lead_email": "qa@example.test",
+            "summary": "Lead localizado en el Balanceador.",
+            "program_selection_notice": notice,
+            "stages": [],
+        },
+    }
+
+    sheet = BotReportService().build(data.getvalue(), {}, [result]).active
+    headers = {cell.value: cell.column for cell in sheet[1] if cell.value}
+    assert notice in sheet.cell(2, headers["DETALLE BOT"]).value
+
+
 def test_report_keeps_link_when_manage_email_validation_times_out():
     workbook = Workbook()
     sheet = workbook.active

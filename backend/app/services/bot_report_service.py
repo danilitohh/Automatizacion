@@ -104,6 +104,11 @@ class BotReportService:
                     # Conserva tanto la causa CRM como el aviso observado en
                     # UTEL; esta combinación explica por qué no se reenvió.
                     detail = f"{detail} | {submission_detail}" if detail else submission_detail
+                program_notice = str(result.get("program_selection_notice") or "").strip()
+                if program_notice and program_notice not in detail:
+                    # El envío pudo continuar, pero se deja evidencia de que la
+                    # PDP no trajo el programa preseleccionado como debía.
+                    detail = f"{detail} | {program_notice}" if detail else program_notice
                 if status == "LEAD LOCALIZADO - VALIDACION PENDIENTE":
                     detail = f"Lead localizado y enlace guardado. Faltó validar visualmente el email en InConcert: {detail}"
                 sheet.cell(row, detail_col).value = detail[:32767]
