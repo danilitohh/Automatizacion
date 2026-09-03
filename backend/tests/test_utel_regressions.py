@@ -13,6 +13,7 @@ from backend.app.automations.utel_inconcert.runner import (
     UtelQaError,
     UtelRunCancelled,
 )
+from backend.app.api.routes import _is_support_rejection
 from backend.app.config.settings import Settings
 from backend.app.schemas.bot import UtelLead, UtelQaConfig
 from backend.app.services.test_lead_service import TestLeadService
@@ -114,6 +115,24 @@ def test_unexpected_post_click_error_is_reconciled_instead_of_retried():
     assert "sin reenviar" in str(caught.value)
     assert runner._submission_attempted is True
     submit.evaluate.assert_awaited_once_with("(element) => element.click()")
+
+
+def test_support_rejection_is_the_only_post_click_error_eligible_for_retry():
+    rejected = {
+        "status": "FAIL",
+        "lead_url": None,
+        "utel_submission_message": "UTEL mostró: Error al enviar. Contacta a soporte",
+        "stages": [],
+    }
+    unconfirmed = {
+        **rejected,
+        "utel_submission_message": "Envío no confirmado; se verificará en CRM.",
+    }
+    already_created = {**rejected, "lead_url": "https://crm.test/leads/1"}
+
+    assert _is_support_rejection(rejected)
+    assert not _is_support_rejection(unconfirmed)
+    assert not _is_support_rejection(already_created)
 
 
 def test_cooperative_stop_during_validation_prevents_the_click():

@@ -3,6 +3,7 @@
 import json
 import asyncio
 import os
+import re
 from datetime import datetime
 from uuid import uuid4
 from typing import Any
@@ -170,6 +171,20 @@ def _merge_utel_and_crm_results(
             "Verificación CRM pendiente; no se reenvió el formulario para evitar duplicados."
             f"{notice_suffix}"
         )
+    # Conserva en el Excel el historial de teléfonos usados durante los
+    # reintentos, incluso cuando la verificación CRM reconstruye el resultado.
+    if submission.get("retry_history"):
+        merged["retry_attempts"] = submission.get("retry_attempts", 0)
+        merged["retry_history"] = list(submission["retry_history"])
+        if not crm_confirmed:
+            merged["summary"] = (
+                f"{merged.get('summary', '')} Se agotaron los reintentos automáticos; "
+                "realiza este caso manualmente."
+            ).strip()
+            merged["utel_submission_message"] = (
+                f"{merged.get('utel_submission_message', '')} "
+                "Se agotaron los reintentos automáticos; realiza este caso manualmente."
+            ).strip()
     return merged
 
 
@@ -200,6 +215,32 @@ def _utel_batch_counts(results: list[dict[str, Any]]) -> dict[str, int]:
         else:
             pending += 1
     return {"success": success, "failed": failed, "pending": pending}
+
+
+def _is_support_rejection(result: dict[str, Any]) -> bool:
+    """Identifica solo el rechazo explícito de UTEL que admite reintento."""
+
+    # Si CRM ya entregó un enlace, no se debe volver a enviar aunque UTEL haya
+    # mostrado un aviso ambiguo después del clic.
+    if result.get("lead_url"):
+        return False
+    texts = [
+        str(result.get("utel_submission_message") or ""),
+        str(result.get("summary") or ""),
+        *[
+            str(stage.get("message") or "")
+            for stage in result.get("stages", [])
+            if isinstance(stage, dict)
+        ],
+    ]
+    combined = " ".join(texts)
+    return bool(
+        re.search(
+            r"error\s+al\s+enviar|contacta\s+a\s+soporte|rejected\s+post",
+            combined,
+            re.IGNORECASE,
+        )
+    )
 
 
 @router.get("/runtime")
@@ -419,8 +460,55 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 result_index = len(results) - 1
                 _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
                 job["download_url"] = f"/api/bots/utel-inconcert/batch/{job_id}/download"
-            result = await UtelInconcertRunner(settings).run(config)
-            serializable_result = {**result, "stages": [stage.model_dump() for stage in result["stages"]]}
+            retry_notes: list[str] = []
+            attempts_used = 0
+            for retry_number in range(3):
+                attempts_used += 1
+                result = await UtelInconcertRunner(settings).run(config)
+                serializable_result = {
+                    **result,
+                    "stages": [stage.model_dump() for stage in result["stages"]],
+                }
+                if not _is_support_rejection(serializable_result):
+                    break
+                if retry_number == 2:
+                    retry_notes.append("Se agotaron los 3 intentos automáticos.")
+                    break
+                try:
+                    retry_lead = lead_service.reserve(
+                        config.country,
+                        require_authorized_phone=(
+                            not batch_dry_run
+                            and not settings.utel_allow_synthetic_real_phones
+                        ),
+                    )
+                except ValueError as error:
+                    retry_notes.append(str(error))
+                    break
+                retry_notes.append(
+                    f"Rechazo de UTEL; se probó un teléfono distinto (intento {retry_number + 2}/3)."
+                )
+                config = config.model_copy(
+                    update={"lead": config.lead.model_copy(update=retry_lead)}
+                )
+                job.update({
+                    "current_lead_name": config.lead.name,
+                    "current_lead_email": config.lead.email,
+                    "current_lead_phone": config.lead.phone,
+                    "last_error": "Reintentando rechazo explícito de UTEL con otro teléfono.",
+                })
+            if retry_notes:
+                serializable_result["retry_attempts"] = attempts_used - 1
+                serializable_result["retry_history"] = retry_notes
+                if _is_support_rejection(serializable_result):
+                    serializable_result["summary"] = (
+                        f"{serializable_result.get('summary', '')} "
+                        f"UTEL rechazó el formulario después de {attempts_used} intentos; requiere ejecución manual."
+                    ).strip()
+                    serializable_result["utel_submission_message"] = (
+                        f"{serializable_result.get('utel_submission_message', '')} "
+                        "Se agotaron los 3 intentos automáticos; realiza este caso manualmente."
+                    ).strip()
             if result_index is None:
                 results.append({"row": row, "result": serializable_result})
                 result_index = len(results) - 1
@@ -822,26 +910,68 @@ async def _run_utel_inconcert_job(application, job_id: str, config: UtelQaConfig
     settings = application.state.settings
     try:
         logger.info("Iniciando flujo UTEL/InConcert: %s (%s)", config.name, job_id)
-        result = await UtelInconcertRunner(settings).run(
-            config,
-            should_stop=lambda: bool(
-                application.state.utel_inconcert_jobs.get(job_id, {}).get(
-                    "cancel_requested"
+        retry_notes: list[str] = []
+        attempts_used = 0
+        for retry_number in range(3):
+            attempts_used += 1
+            result = await UtelInconcertRunner(settings).run(
+                config,
+                should_stop=lambda: bool(
+                    application.state.utel_inconcert_jobs.get(job_id, {}).get(
+                        "cancel_requested"
+                    )
+                ),
+            )
+            serializable_result = {
+                **result,
+                "stages": [stage.model_dump() for stage in result["stages"]],
+            }
+            if not _is_support_rejection(serializable_result):
+                break
+            if retry_number == 2:
+                retry_notes.append("Se agotaron los 3 intentos automáticos.")
+                break
+            try:
+                retry_service = TestLeadService(
+                    settings.database_path,
+                    settings.authorized_test_phones()
+                    if not settings.utel_allow_synthetic_real_phones
+                    else {},
+                    allow_synthetic_real_phones=settings.utel_allow_synthetic_real_phones,
                 )
-            ),
-        )
-        serializable_result = {
-            **result,
-            "stages": [stage.model_dump() for stage in result["stages"]],
-        }
+                retry_lead = retry_service.reserve(
+                    config.country,
+                    require_authorized_phone=not settings.utel_allow_synthetic_real_phones,
+                )
+            except ValueError as error:
+                retry_notes.append(str(error))
+                break
+            retry_notes.append(
+                f"Rechazo de UTEL; se probó un teléfono distinto (intento {retry_number + 2}/3)."
+            )
+            config = config.model_copy(
+                update={"lead": config.lead.model_copy(update=retry_lead)}
+            )
+        if retry_notes:
+            serializable_result["retry_attempts"] = attempts_used - 1
+            serializable_result["retry_history"] = retry_notes
+            if _is_support_rejection(serializable_result):
+                serializable_result["summary"] = (
+                    f"{serializable_result.get('summary', '')} "
+                    f"UTEL rechazó el formulario después de {attempts_used} intentos; requiere ejecución manual."
+                ).strip()
+                serializable_result["utel_submission_message"] = (
+                    f"{serializable_result.get('utel_submission_message', '')} "
+                    "Se agotaron los 3 intentos automáticos; realiza este caso manualmente."
+                ).strip()
         cancel_requested = bool(
             application.state.utel_inconcert_jobs.get(job_id, {}).get("cancel_requested")
         )
-        final_summary = result["summary"]
+        final_summary = serializable_result["summary"]
         if cancel_requested:
             final_summary = (
                 "La detención se solicitó durante la operación. La fila activa "
-                f"se completó de forma segura para no perder ni duplicar el envío. {result['summary']}"
+                f"se completó de forma segura para no perder ni duplicar el envío. {serializable_result['summary']}"
             )
         ExecutionRepository(settings.database_path).create_execution(
             {
