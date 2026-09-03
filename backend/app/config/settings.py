@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     # Pausa entre filas cuando se ejecutan lotes UTEL-InConcert para
     # reducir bloqueos por tasa de solicitudes repetidas.
-    batch_delay_seconds: int = 60
+    batch_delay_seconds: int = 10
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",

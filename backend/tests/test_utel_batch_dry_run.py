@@ -302,6 +302,7 @@ def test_real_batch_requires_enough_authorized_phones_before_first_click(
             inconcert_username="test",
             inconcert_password="test",
             utel_test_phones_json="{}",
+            utel_allow_synthetic_real_phones=False,
         )
     )
 
@@ -390,6 +391,7 @@ def test_batch_merge_preserves_post_submit_warning_when_crm_finds_lead(tmp_path,
             inconcert_username="test",
             inconcert_password="test",
             utel_test_phones_json='{"Mexico":["+525512345678"]}',
+            utel_allow_synthetic_real_phones=False,
         )
     )
 
