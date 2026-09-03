@@ -377,15 +377,23 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             row_country = (
                 row["country"]
                 if row.get("workflow_mode") == "form_validation"
-                else row["country"] or raw_config.get("country", "Ecuador")
+                else row.get("country") or raw_config.get("country") or "Ecuador"
             )
             row_country = service.effective_country(row_country, row["level"], row["utel_url"])
             navigation = (
                 service.deploy_navigation_plan(row["level"], row_country)
                 if row.get("workflow_mode") == "form_validation"
                 else {
-                    "modality": row.get("modality") or raw_config.get("modality", "En linea"),
-                    "level": row["level"] or raw_config.get("level", "Licenciatura"),
+                    "modality": (
+                        row.get("modality")
+                        or raw_config.get("modality")
+                        or "En linea"
+                    ),
+                    "level": (
+                        row.get("level")
+                        or raw_config.get("level")
+                        or "Licenciatura"
+                    ),
                     "navigation_modality": "",
                     "navigation_level": "",
                     "navigation_sublevel": "",
@@ -417,7 +425,11 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "navigation_level": navigation["navigation_level"],
                 "navigation_sublevel": navigation["navigation_sublevel"],
                 "country": row_country,
-                "form_type": row["form_type"] or raw_config.get("form_type", "lateral"),
+                "form_type": (
+                    row.get("form_type")
+                    or raw_config.get("form_type")
+                    or "lateral"
+                ),
                 "lead_origin_url": lead_origin_url,
                 # El país de esta fila manda: nunca heredar el CRM de otra fila.
                 "inconcert_url": (

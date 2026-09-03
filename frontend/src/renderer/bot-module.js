@@ -143,17 +143,19 @@ function organizeBotForm() {
   moveFields(["bot-name", "bot-country", "bot-spreadsheet"], source);
   moveFields(["bot-spreadsheet-row", "bot-utel-url"], advanced);
   moveFields([
-    "bot-form-type",
-    "bot-program-strategy",
-    "bot-program-name",
-    "bot-success-pattern",
-    "bot-error-pattern",
-    "bot-inconcert-url",
-    "bot-browser",
-    "bot-dry-run",
-    "bot-headless",
-    "bot-keep-browser-open",
-    "bot-environment",
+  "bot-modality",
+  "bot-level",
+  "bot-form-type",
+  "bot-program-strategy",
+  "bot-program-name",
+  "bot-success-pattern",
+  "bot-error-pattern",
+  "bot-inconcert-url",
+  "bot-browser",
+  "bot-dry-run",
+  "bot-headless",
+  "bot-keep-browser-open",
+  "bot-environment",
   ], advanced);
   const securityNote = document.querySelector(".security-note");
   if (securityNote) advanced.append(securityNote);
@@ -200,8 +202,17 @@ function readForm() {
   state.config.country = (getInputValue("#bot-country") || "").trim();
   state.config.utel_url = (getInputValue("#bot-utel-url") || "").trim();
   state.config.inconcert_url = (getInputValue("#bot-inconcert-url") || "").trim();
-  state.config.modality = (getInputValue("#bot-modality") || "").trim();
-  state.config.level = (getInputValue("#bot-level") || "").trim();
+  state.config.modality = (
+  getInputValue("#bot-modality") ||
+  state.config.modality ||
+  "En linea"
+  ).trim();
+
+  state.config.level = (
+  getInputValue("#bot-level") ||
+  state.config.level ||
+  "Licenciatura"
+  ).trim();
   state.config.form_type = getInputValue("#bot-form-type") || state.config.form_type;
   state.config.program_selection_strategy = getInputValue("#bot-program-strategy") || state.config.program_selection_strategy;
   state.config.program_name = (getInputValue("#bot-program-name") || "").trim();
