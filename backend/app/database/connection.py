@@ -40,6 +40,19 @@ def initialize_database(database_path: Path) -> None:
 
             CREATE INDEX IF NOT EXISTS idx_executions_status
                 ON executions(status);
+
+            CREATE TABLE IF NOT EXISTS test_leads (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                test_date TEXT NOT NULL,
+                sequence INTEGER NOT NULL,
+                country TEXT NOT NULL,
+                email TEXT NOT NULL UNIQUE,
+                phone TEXT NOT NULL UNIQUE,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_test_leads_date
+                ON test_leads(test_date);
             """
         )
 

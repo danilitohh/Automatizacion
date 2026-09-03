@@ -18,7 +18,8 @@ New-Item -ItemType Directory -Force -Path $profileDirectory | Out-Null
 Start-Process -FilePath $chromePath -ArgumentList @(
   "--user-data-dir=$profileDirectory",
   "--profile-directory=Default",
-  "https://utel.edu.mx/"
+  "https://utel.edu.mx/",
+  "https://lead-balancer.scalahed.com/leads/"
 )
 
-Write-Host "Chrome QA abierto. Inicia sesión y cierra esa ventana cuando termines."
+Write-Host "Chrome QA abierto. Inicia sesión en UTEL y Balanceador, completa Cloudflare si aparece y cierra esa ventana cuando termines."

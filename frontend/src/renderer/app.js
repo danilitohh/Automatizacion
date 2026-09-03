@@ -1,22 +1,29 @@
 "use strict";
 
+// Coordinador de la interfaz: navegación, dashboard e historial compartido.
 import { api } from "../services/api.js";
-import { initializeBotModule } from "./bot-module.js";
+import { initializeBotModule } from "./bot-module.js?v=telemetry-layout-2";
 import { initializePdpModule } from "./pdp-module.js";
+import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
 
+// Estado mínimo persistido para restaurar la última pantalla abierta.
+const LAST_VIEW_KEY = "qa-automation.last-view";
 const state = { activeView: "dashboard" };
+const runtimeMode = window.desktop ? "desktop" : "web";
 
 const viewMeta = {
   dashboard: { title: "Dashboard", description: "Resumen operativo" },
   forms: { title: "Validación de formularios", description: "Automatizaciones" },
   visual: { title: "Monitoreo visual", description: "Automatizaciones" },
   excel: { title: "Excel vs Web / Strapi", description: "Automatizaciones" },
-  bot: { title: "Bot de formularios", description: "Automatizaciones" },
+  bot: { title: "Bot de verificaciones", description: "Automatizaciones" },
+  "weekly-auto": { title: "Weekly Auto", description: "Automatizaciones" },
   pdp: { title: "Validación PDP vs DOCX", description: "Automatizaciones" },
   history: { title: "Historial", description: "Trazabilidad" },
   settings: { title: "Configuración", description: "Administración" },
 };
 
+// Referencias centralizadas al DOM para evitar selectores repetidos.
 function selectElements() {
   return {
     title: document.querySelector("#page-title"),
@@ -25,7 +32,31 @@ function selectElements() {
     refreshButton: document.querySelector("#refresh-button"),
     lastUpdated: document.querySelector("#last-updated"),
     toast: document.querySelector("#toast"),
+    connectionDot: document.querySelector("#connection-dot"),
+    connectionLabel: document.querySelector("#connection-label"),
+    apiDot: document.querySelector("#api-dot"),
+    apiStatus: document.querySelector("#api-status"),
+    healthPulse: document.querySelector("#health-pulse"),
+    runtimeLabel: document.querySelector("#runtime-label"),
+    userAvatar: document.querySelector(".user-avatar"),
+    loader: document.querySelector("#interface-loader"),
+    loaderKicker: document.querySelector("#loader-kicker"),
+    loaderMessage: document.querySelector("#loader-message"),
   };
+}
+
+let loaderTimer;
+function showInterfaceLoader(message = "Sincronizando telemetría", kicker = "SISTEMA", duration = 520) {
+  if (!elements.loader) return;
+  window.clearTimeout(loaderTimer);
+  elements.loaderKicker.textContent = kicker;
+  elements.loaderMessage.textContent = message;
+  elements.loader.classList.add("active");
+  elements.loader.setAttribute("aria-hidden", "false");
+  loaderTimer = window.setTimeout(() => {
+    elements.loader.classList.remove("active");
+    elements.loader.setAttribute("aria-hidden", "true");
+  }, duration);
 }
 
 const elements = selectElements();
@@ -70,6 +101,7 @@ function executionRow(execution) {
   </tr>`;
 }
 
+// Renderizado de datos procedentes de la API; todo valor dinámico se escapa antes.
 function renderHistory(executions) {
   const body = document.querySelector("#history-body");
   const fullBody = document.querySelector("#full-history-body");
@@ -104,11 +136,7 @@ function renderSummary(summary) {
 }
 
 function setConnectionStatus(online) {
-  const dot = document.querySelector("#connection-dot");
-  const label = document.querySelector("#connection-label");
-  const apiDot = document.querySelector("#api-dot");
-  const apiStatus = document.querySelector("#api-status");
-  const pulse = document.querySelector("#health-pulse");
+  const { connectionDot: dot, connectionLabel: label, apiDot, apiStatus, healthPulse: pulse } = elements;
   dot.classList.toggle("offline", !online);
   apiDot.classList.toggle("online", online);
   apiDot.classList.toggle("offline", !online);
@@ -126,6 +154,7 @@ function showToast(message, type = "info") {
 
 async function refreshDashboard() {
   elements.refreshButton.classList.add("loading");
+  showInterfaceLoader("Actualizando señales operativas", "SINCRONIZACIÓN", 650);
   try {
     const [health, summary, history] = await Promise.all([api.health(), api.dashboardSummary(), api.executions(20)]);
     renderSummary(summary);
@@ -140,28 +169,46 @@ async function refreshDashboard() {
   }
 }
 
+// Navegación interna SPA: activa un único panel y actualiza el encabezado.
 function navigate(viewName) {
   if (!viewMeta[viewName]) return;
   state.activeView = viewName;
+  localStorage.setItem(LAST_VIEW_KEY, viewName);
   elements.navigation.forEach((item) => item.classList.toggle("active", item.dataset.view === viewName));
   elements.views.forEach((view) => view.classList.toggle("active", view.dataset.viewPanel === viewName));
   elements.title.textContent = viewMeta[viewName].title;
+  showInterfaceLoader(`Cargando módulo: ${viewMeta[viewName].title}`, "NAVEGACIÓN", 430);
 }
 
 function bindEvents() {
   elements.navigation.forEach((item) => item.addEventListener("click", () => navigate(item.dataset.view)));
-  document.querySelector(".navigation")?.addEventListener("click", (event) => {
-    const item = event.target.closest("[data-view]");
-    if (item) navigate(item.dataset.view);
-  }, true);
   elements.refreshButton.addEventListener("click", refreshDashboard);
   document.querySelector("#today-label").textContent = new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
   document.querySelector("#api-url-label").textContent = api.baseUrl;
+  document.documentElement.dataset.runtime = runtimeMode;
+  if (elements.runtimeLabel) elements.runtimeLabel.textContent = runtimeMode === "desktop" ? "Aplicación desktop" : "Aplicación web";
+  if (elements.userAvatar) elements.userAvatar.title = runtimeMode === "desktop" ? "Sesión local desktop" : "Sesión web local";
 }
 
 bindEvents();
+state.activeView = localStorage.getItem(LAST_VIEW_KEY) || state.activeView;
 navigate(state.activeView);
-initializeBotModule({ showToast, runBot: api.runBot });
+initializeBotModule({
+  showToast,
+  runUtelInconcertBot: api.runUtelInconcertBot,
+  utelInconcertStatus: api.utelInconcertStatus,
+  cancelUtelInconcert: api.cancelUtelInconcert,
+  previewBotSpreadsheet: api.previewBotSpreadsheet,
+  runUtelBatch: api.runUtelBatch,
+  utelBatchStatus: api.utelBatchStatus,
+  cancelUtelBatch: api.cancelUtelBatch,
+});
+initializeWeeklyAutoModule({
+  showToast,
+  runWeeklyAuto: api.runWeeklyAuto,
+  weeklyAutoStatus: api.weeklyAutoStatus,
+  cancelWeeklyAuto: api.cancelWeeklyAuto,
+});
 initializePdpModule({ showToast, validatePdp: api.validatePdp, validatePdpSemantic: api.validatePdpSemantic });
 refreshDashboard();
 window.setInterval(refreshDashboard, 30000);

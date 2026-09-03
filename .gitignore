@@ -6,6 +6,7 @@ venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.codex-tmp-*/
 .coverage
 
 # Los archivos de ejecución pueden contener información sensible.
@@ -16,6 +17,8 @@ storage/reports/*
 storage/screenshots/*
 storage/visual_comparisons/*
 storage/browser_profiles/*
+storage/diagnostics/
+backend/storage/
 !storage/logs/.gitkeep
 !storage/reports/.gitkeep
 !storage/screenshots/.gitkeep

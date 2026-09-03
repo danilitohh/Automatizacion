@@ -1,22 +1,22 @@
-# QA Automation Desktop
+# UTEL QA Automation Web + Desktop
 
-Aplicación desktop para centralizar automatizaciones de QA. Esta primera entrega implementa la **Fase 1**: shell de Electron, dashboard, backend FastAPI local, SQLite, logs diarios, configuración y comunicación segura entre procesos.
+Aplicación web y desktop para centralizar automatizaciones de QA. La interfaz puede abrirse directamente desde un navegador o desde Electron; ambos modos comparten el mismo backend FastAPI, SQLite, logs y automatizaciones.
 
-Las automatizaciones reales de formularios, monitoreo visual y Excel/Strapi se incorporarán en las fases siguientes. También se añadió el módulo **Bot de formularios**, que permite definir scripts paso a paso y ejecutarlos con Playwright en segundo plano.
+Las automatizaciones reales de formularios, monitoreo visual y Excel/Strapi se incorporarán en las fases siguientes. También se añadió el módulo **Bot de verificaciones**, que permite construir flujos y ejecutarlos con Playwright.
 
 El módulo **PDP vs documentos** compara las páginas de producto con un Excel de URLs y un DOCX de referencia. Revisa título, descripción, asignaturas y preguntas frecuentes, y guarda el reporte en `storage/reports/pdp/`.
 
 ## Arquitectura
 
 ```text
-Electron (frontend)
-    ↓ HTTP local
+Navegador web o Electron
+    ↓ HTTP
 FastAPI (backend)
     ↓
 SQLite + logs organizados
 ```
 
-Electron arranca FastAPI automáticamente cuando se inicia la aplicación. El renderer no tiene acceso a Node ni a secretos. Las credenciales futuras se leerán únicamente desde `.env` en el backend.
+Electron arranca FastAPI automáticamente cuando se inicia la aplicación desktop. En modo web, FastAPI también sirve la interfaz. El navegador nunca recibe las credenciales, que se leen únicamente desde `.env` en el backend.
 
 ## Requisitos
 
@@ -43,13 +43,21 @@ Para usar Google Chrome con una sesión persistente de QA, abre el perfil aislad
 powershell -ExecutionPolicy Bypass -File .\scripts\open_chrome_qa.ps1
 ```
 
-Las ejecuciones usan Chromium en modo headless por defecto. Si necesitas una sesión persistente, selecciona **Google Chrome - Perfil QA**; las cookies se guardan en `storage/browser_profiles/chrome-qa`, que está excluida de Git.
+Inicia sesión en las plataformas necesarias y cierra esa ventana. Luego selecciona **Google Chrome - Perfil QA** en el Bot de verificaciones y ejecuta el flujo. Las cookies se guardan en `storage/browser_profiles/chrome-qa`, que está excluida de Git.
 
 No completes todavía las variables de CRM o Strapi con credenciales reales; esos módulos pertenecen a fases posteriores.
 
 ## Ejecución
 
-### Opción recomendada: Electron + FastAPI
+### Opción web
+
+```powershell
+npm run web
+```
+
+Después abre `http://127.0.0.1:8000`. Esta primera fase web se ejecuta en la misma computadora para conservar el acceso a Chromium, los archivos locales, Ollama y las sesiones de QA. Electron continúa disponible mientras se completa la migración.
+
+### Opción desktop: Electron + FastAPI
 
 ```powershell
 npm run dev
@@ -75,6 +83,9 @@ La documentación interactiva queda disponible en `http://127.0.0.1:8000/docs`.
 | GET | `/api/dashboard/summary` | Métricas del día y última ejecución. |
 | GET | `/api/executions?limit=20` | Historial reciente. |
 | POST | `/api/bots/run` | Ejecuta un flujo web con Playwright y guarda sus evidencias. |
+| POST | `/api/bots/recorder/start` | Abre el navegador visible para grabar interacciones. |
+| GET | `/api/bots/recorder/{id}/events` | Consulta clicks y campos capturados. |
+| POST | `/api/bots/recorder/{id}/stop` | Cierra la grabación y devuelve los pasos. |
 
 ## Validar PDP vs DOCX
 
@@ -115,10 +126,10 @@ Los tests usan archivos SQLite temporales y no modifican la base de datos local.
 
 ```text
 frontend/                 Interfaz Electron y renderer.
-frontend/src/renderer/bot-module.js Constructor manual y controles del Bot de formularios.
+frontend/src/renderer/bot-module.js Constructor y controles del Bot de verificaciones.
 backend/app/automations/generic_bot/runner.py Ejecutor de pasos web con Playwright.
 storage/browser_profiles/chrome-qa Perfil persistente usado por Google Chrome para QA.
-backend/app/automations/generic_bot/runner.py Ejecutor headless de scripts manuales con Playwright.
+backend/app/automations/generic_bot/recorder.py Grabador visual de clicks y campos.
 backend/app/api/          Rutas HTTP.
 backend/app/config/       Variables y rutas centralizadas.
 backend/app/database/     Conexión y consultas SQLite.
@@ -156,16 +167,46 @@ Cada automatización tendrá su propio módulo dentro de `backend/app/automation
 - **La ventana no abre:** ejecuta `npm install` y comprueba la versión de Node.
 - **No aparecen logs:** verifica que el proceso tenga permisos de escritura en `storage/`.
 
+## Bot UTEL + InConcert
+
+El modulo **Bot de verificaciones** ejecuta ahora un flujo especializado de QA:
+
+UTEL -> modalidad/nivel/programa -> formulario BLC -> envio del lead -> InConcert -> Contactos -> busqueda por email -> Gestionar -> Actividad -> Conversion.
+
+En envíos reales, el bot valida primero el acceso a cada CRM regional, los campos y el país; después escucha la respuesta de `POST /api/forms` y espera hasta 65 segundos por portales lentos. Desde el instante del clic, cualquier toast de error o ausencia de confirmación queda **pendiente de conciliación**: el formulario no se vuelve a enviar y el resultado final se decide buscando el mismo email en InConcert y, como respaldo, en el Balanceador. El Excel conserva un checkpoint preventivo, el aviso de UTEL, la evidencia y el enlace del lead confirmado. El botón de reintento automático solo incluye fallos confirmados antes del clic; al detener un lote, termina y concilia la fila activa antes de cerrarse.
+
+Los envíos reales usan por defecto un banco privado de números activos y expresamente autorizados por país. Configura `UTEL_TEST_PHONES_JSON` en `.env`; el backend valida país y formato, elimina el código internacional porque el formulario ya lo agrega y reserva un número distinto por fila. Si falta un país, el número pertenece a otra región o el banco no alcanza, el proceso se detiene antes del primer envío. Para formularios de prueba que acepten teléfonos inventados, activa explícitamente `UTEL_ALLOW_SYNTHETIC_REAL_PHONES=true`: genera números sintéticos con plan nacional válido, sin usar números de terceros, pero no garantiza que la línea exista o esté activa. Si UTEL devuelve explícitamente “Error al enviar / Contacta a soporte”, el bot prueba hasta tres teléfonos distintos; si los tres son rechazados, deja la fila marcada para ejecución manual. Los estados “Envío no confirmado” siguen conciliándose en CRM sin reenviar.
+
+Para las filas de **Doctorado** cuyo formulario está en **tarjeta**, los países USA, Bolivia, Chile, Paraguay, República Dominicana, Guatemala, Panamá, El Salvador y Argentina usan un catálogo validado de enlaces PDP directos. El bot rota los programas disponibles por país y abre directamente la página seleccionada, evitando el clic desde el listado que puede activar el bloqueo de acceso. Los demás niveles, países y ubicaciones de formulario conservan su navegación anterior.
+
+Para usarlo:
+
+1. Configura en `.env` las credenciales `INCONCERT_USERNAME` e `INCONCERT_PASSWORD`. Tambien se aceptan `CRM_USERNAME` y `CRM_PASSWORD`.
+2. Abre **Bot de verificaciones** en la app.
+3. Completa pais, URL de UTEL, URL de InConcert, modalidad, nivel, tipo de formulario y datos del lead de prueba.
+4. Usa **Programa opcional** solo si quieres seleccionar un programa concreto; si queda vacio, el bot intenta elegir el primer programa visible.
+5. Pulsa **Validar** y luego **Ejecutar flujo**.
+
+FastAPI crea la ejecucion en segundo plano con `POST /api/bots/utel-inconcert/run`, y la interfaz consulta el estado con `GET /api/bots/utel-inconcert/runs/{job_id}`. El flujo guarda screenshots en `storage/screenshots/utel_inconcert/` al abrir UTEL, antes y despues del envio, despues del login, al encontrar el lead, al abrir Gestionar, al encontrar Conversion y cuando ocurre un error. El modo debug visible desactiva headless y deja el navegador abierto al final para revision manual.
+
 ## Próxima fase
 
-El Bot de formularios permite definir manualmente cada acción, selector y valor. El ejecutor corre en segundo plano, registra cada resultado y guarda evidencias, sin abrir un navegador para grabar la interacción.
+Antes de avanzar hay que verificar esta base con los tests y la prueba manual. El Bot de verificaciones ya tiene el primer ejecutor; el siguiente trabajo será añadir acciones como hover, teclas, selección de opciones, descarga de archivos y manejo de sesiones, sin asumir selectores, CRM o URLs reales.
 
-## Crear un script manual
+## Grabar pasos visualmente
 
-1. Escribe el nombre y la URL inicial.
-2. Elige una acción, completa su selector/objetivo y su valor cuando aplique.
-3. Pulsa **Agregar paso** y repite el proceso en el orden exacto de ejecución.
-4. Reordena o elimina pasos, valida el script y guárdalo.
-5. Pulsa **Ejecutar en segundo plano**. Playwright ejecutará el flujo sin mostrar el navegador y conservará las capturas de evidencia.
+1. Selecciona **Google Chrome - Perfil QA** y escribe la URL inicial.
+2. Pulsa **Grabar pasos**.
+3. Interactúa con la ventana de Chrome que se abre; los elementos se resaltan al pasar el cursor.
+4. Haz click en botones o enlaces y selecciona los campos de formulario que el bot deberá rellenar. Los pasos aparecerán automáticamente en la aplicación.
+5. Pulsa **Detener grabación** para convertir la interacción en pasos editables.
+6. En cada paso **Rellenar campo**, escribe dentro de la caja **Valor a enviar** el dato que el bot deberá introducir.
+7. Revisa el flujo, guarda la configuración y pulsa **Ejecutar bot**.
 
-Usa selectores `css=`, `label=`, `text=`, `testid=` o `role=button[name=Enviar]`. Evita guardar tokens o datos sensibles en la configuración.
+### Ejecución en segundo plano
+
+El Bot ejecuta los pasos con Playwright en modo headless por defecto. Al pulsar **Ejecutar bot**, FastAPI crea una ejecución en segundo plano y devuelve el control inmediatamente; la interfaz consulta su estado mediante `GET /api/bots/runs/{job_id}`. Puedes cambiar de módulo o continuar trabajando mientras el flujo navega, rellena campos, valida resultados y guarda sus evidencias.
+
+La opción **Abrir navegador para revisión manual** desactiva el modo headless únicamente cuando necesites observar la sesión.
+
+El grabador no conserva el texto que escribes en el navegador: guarda únicamente el localizador del campo. El valor se define después dentro de Electron, y los campos de contraseña no se capturan. También registra el scroll como una posición vertical y reemplaza los movimientos consecutivos por un único paso. Evita guardar tokens o datos sensibles en la configuración.

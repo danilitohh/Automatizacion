@@ -1,17 +1,24 @@
 """Punto de entrada de FastAPI para la plataforma de QA."""
 
+import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from .automations.generic_bot.recorder import RecorderManager
+from .automations.utel_inconcert.runner import UtelInconcertRunner
 from .api.routes import router
 from .config.settings import Settings, get_settings
 from .database.connection import initialize_database
 from .services.logging_service import configure_logging, get_logger
+
+
+FRONTEND_DIRECTORY = Path(__file__).resolve().parents[2] / "frontend"
 
 
 @asynccontextmanager
@@ -27,6 +34,13 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        bot_tasks = list(application.state.bot_tasks.values())
+        for task in bot_tasks:
+            if not task.done():
+                task.cancel()
+        if bot_tasks:
+            await asyncio.gather(*bot_tasks, return_exceptions=True)
+        await UtelInconcertRunner._close_open_session()
         await application.state.recorder_manager.close_all()
 
 
@@ -36,11 +50,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application = FastAPI(
         title="QA Automation API",
         version="0.1.0",
-        description="Backend local para automatizaciones de QA.",
+        description="Backend para la aplicación web y desktop de automatizaciones de QA.",
         lifespan=lifespan,
     )
-    # Electron carga el frontend desde file://, cuyo origen se presenta como
-    # "null". Solo se permiten orígenes locales porque esta API no es pública.
+    # Electron carga desde file:// (origen "null"). La versión web se sirve
+    # desde este mismo proceso y, por tanto, usa el mismo origen sin CORS.
     application.add_middleware(
         CORSMiddleware,
         allow_origins=["null", "http://localhost:3000", "http://127.0.0.1:3000"],
@@ -69,7 +83,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application.state.settings = settings or get_settings()
     application.state.recorder_manager = RecorderManager()
+    application.state.bot_jobs = {}
+    application.state.utel_inconcert_jobs = {}
+    application.state.utel_batch_jobs = {}
+    application.state.weekly_auto_jobs = {}
+    application.state.bot_tasks = {}
     application.include_router(router)
+    # Debe registrarse al final para que /api y /docs tengan prioridad.
+    application.mount("/", StaticFiles(directory=FRONTEND_DIRECTORY, html=True), name="web-frontend")
     return application
 
 
