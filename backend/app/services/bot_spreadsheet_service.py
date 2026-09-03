@@ -3,12 +3,16 @@
 import io
 import re
 import unicodedata
+from pathlib import Path
 from typing import Any
 
 from openpyxl import load_workbook
 
+from .program_rotation_service import ProgramRotationService
+
 
 class BotSpreadsheetService:
+    DEFAULT_CATALOG_PATH = Path(__file__).resolve().parents[3] / "backend" / "data" / "utel_programas1.xlsx"
     # Agrega nuevos paises aqui cuando se incorporen nuevos balanceadores.
     INCONCERT_BY_COUNTRY = {
         "mexico": "https://mas-utel.inconcertcc.com/login?redirect=%2Fmas%2Fhome",
@@ -29,6 +33,118 @@ class BotSpreadsheetService:
         "republica dominicana": "https://mas-utel-dom.inconcertcc.com/login?redirect=%2Fmas%2Fhome",
         "filipinas": "https://mas-utel-singapur.infunnel.inconcert.cloud/",
     }
+
+    def __init__(self, catalog_path: Path | str | None = None):
+        self.catalog_path = Path(catalog_path) if catalog_path else self.DEFAULT_CATALOG_PATH
+
+    def catalog_programs(self, country: str, level: str, modality: str = "") -> list[dict[str, str]]:
+        """Devuelve programas oficiales que coinciden con país, nivel y modalidad."""
+
+        if not self.catalog_path.is_file():
+            return []
+        country_key = self._catalog_key(country)
+        level_key = self._catalog_level_key(level)
+        modality_key = self._catalog_modality_key(modality)
+        workbook = load_workbook(self.catalog_path, read_only=True, data_only=True)
+        matches: list[dict[str, str]] = []
+        for worksheet in workbook.worksheets:
+            values = list(worksheet.iter_rows(values_only=True))
+            header_index = next(
+                (i for i, row in enumerate(values[:20]) if self._catalog_header_row(row)),
+                None,
+            )
+            if header_index is None:
+                continue
+            headers = [self._normalize(self._text(v)) for v in values[header_index]]
+            indexes = {
+                "country": self._catalog_index(headers, ("pais", "country")),
+                "modality": self._catalog_index(headers, ("modalidad", "modality")),
+                "level": self._catalog_index(headers, ("nivel", "level")),
+                "program": self._catalog_index(headers, ("programa", "program")),
+                "url": self._catalog_index(headers, ("url del programa", "program url")),
+            }
+            if indexes["program"] is None or indexes["url"] is None:
+                continue
+            for row in values[header_index + 1 :]:
+                row_country = self._cell(row, indexes["country"])
+                row_level = self._cell(row, indexes["level"])
+                row_modality = self._cell(row, indexes["modality"])
+                program = self._cell(row, indexes["program"])
+                url = self._cell(row, indexes["url"])
+                if not program or not url:
+                    continue
+                if self._catalog_key(row_country) != country_key:
+                    continue
+                if not self._catalog_level_matches(level_key, self._catalog_level_key(row_level)):
+                    continue
+                if modality_key and not self._catalog_modality_matches(modality_key, self._catalog_modality_key(row_modality)):
+                    continue
+                matches.append({"text": program, "url": url})
+        # El libro puede contener registros repetidos entre secciones; la URL
+        # y el nombre forman una identidad estable para la rotación.
+        return list({(item["text"], item["url"]): item for item in matches}.values())
+
+    def choose_catalog_program(self, country: str, level: str, modality: str, database_path: Path) -> dict[str, str] | None:
+        """Selecciona el siguiente programa oficial sin depender del menú web."""
+
+        candidates = self.catalog_programs(country, level, modality)
+        if not candidates:
+            return None
+        return ProgramRotationService(database_path).choose(
+            ["catalog", country, level, modality], candidates
+        )
+
+    @classmethod
+    def _catalog_header_row(cls, row: tuple[Any, ...]) -> bool:
+        normalized = {cls._normalize(cls._text(value)) for value in row}
+        return bool({"programa", "program"} & normalized) and bool(
+            {"url del programa", "program url"} & normalized
+        )
+
+    @staticmethod
+    def _catalog_index(headers: list[str], aliases: tuple[str, ...]) -> int | None:
+        return next((i for i, header in enumerate(headers) if header in aliases), None)
+
+    @classmethod
+    def _catalog_key(cls, value: str) -> str:
+        key = cls._normalize(value)
+        return {"mexico": "mexico", "méxico": "mexico", "peru": "peru", "perú": "peru", "panama": "panama", "panamá": "panama", "philippines": "philippines", "filipinas": "philippines"}.get(key, key)
+
+    @classmethod
+    def _catalog_level_key(cls, value: str) -> str:
+        key = cls._normalize(value)
+        if "master" in key or "magister" in key or "maestr" in key:
+            return "master"
+        if "licenc" in key or "bachelor" in key or "carrera" in key:
+            return "bachelor"
+        if "doctor" in key:
+            return "doctor"
+        if "diplom" in key:
+            return "diplomado"
+        if "bootcamp" in key:
+            return "bootcamp"
+        if "bachiller" in key:
+            return "bachillerato"
+        return key
+
+    @classmethod
+    def _catalog_modality_key(cls, value: str) -> str:
+        key = cls._normalize(value)
+        if "ejecut" in key:
+            return "ejecutiva"
+        if "hibr" in key:
+            return "hibrida"
+        if "linea" in key or "online" in key or "virtual" in key:
+            return "online"
+        return key
+
+    @staticmethod
+    def _catalog_level_matches(expected: str, actual: str) -> bool:
+        return expected == actual or not expected
+
+    @staticmethod
+    def _catalog_modality_matches(expected: str, actual: str) -> bool:
+        return expected == actual or not actual
 
     @classmethod
     def effective_country(cls, country: str, level: str, url: str) -> str:
@@ -58,6 +174,11 @@ class BotSpreadsheetService:
             "url inconcert",
             "inconcert url",
             "balanceador",
+        ),
+        "lead_origin_url": (
+            "url origen lead",
+            "url origen del lead",
+            "origen lead",
         ),
         "form_type": ("location", "formulario", "form type", "ubicacion", "ubicación"),
         "program_name": ("programa", "program", "carrera", "producto"),
@@ -104,6 +225,7 @@ class BotSpreadsheetService:
         )
         rows = []
         for worksheet in workbook.worksheets:
+            last_country = ""
             values = list(worksheet.iter_rows(values_only=True))
             header_index = self._header_index(values)
             if header_index is None:
@@ -121,15 +243,21 @@ class BotSpreadsheetService:
                 url = self._cell(row_values, indexes["utel_url"])
                 if not (program or level) or not url:
                     continue
+                current_country = self._cell(row_values, indexes.get("country"))
+                if current_country:
+                    last_country = current_country
+                else:
+                    current_country = last_country
                 rows.append({
                     "sheet": worksheet.title,
                     "row_number": row_number,
                     "program_name": program,
                     "level": level,
                     "modality": self._cell(row_values, indexes.get("modality")),
-                    "country": self._cell(row_values, indexes.get("country")),
+                    "country": current_country,
                     "form_type": self._normalize_form_type(self._cell(row_values, indexes.get("form_type"))),
                     "inconcert_url": self._cell(row_values, indexes.get("inconcert_url")),
+                    "lead_origin_url": self._cell(row_values, indexes.get("lead_origin_url")),
                     "utel_url": url,
                     "workflow_mode": workflow_mode,
                     "test_case": level or program,

@@ -12,7 +12,7 @@ class BotReportService:
         service = BotSpreadsheetService()
         requested = mapping.get("lead_url") or "URL LEAD"
         inputs = {service._normalize(mapping.get(key, "")) for key in
-                  ("country", "level", "program_name", "modality", "utel_url", "inconcert_url", "form_type")}
+                  ("country", "level", "program_name", "modality", "utel_url", "inconcert_url", "lead_origin_url", "form_type")}
         reserved = {service._normalize(label) for label in ("RESULTADO FORMULARIO", "DETALLE BOT", "EMAIL LEAD PRUEBA", "PROGRAMA SELECCIONADO BOT")}
         if service._normalize(requested) in (inputs - {service._normalize(mapping.get("inconcert_url", ""))}) | reserved:
             requested = "URL LEAD"

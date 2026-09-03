@@ -50,7 +50,7 @@ def test_supports_level_location_locale_and_inconcert_columns():
     assert rows == [{
         "sheet": "Sheet", "row_number": 2, "program_name": "", "modality": "",
         "level": "Maestr\u00eda", "country": "M\u00e9xico", "form_type": "footer",
-        "inconcert_url": "https://crm.test", "utel_url": "https://utel.test/mexico",
+        "inconcert_url": "https://crm.test", "lead_origin_url": "", "utel_url": "https://utel.test/mexico",
         "workflow_mode": "form_validation", "test_case": "Maestr\u00eda",
     }]
 
@@ -66,3 +66,25 @@ def test_builds_navigation_plans_for_deploy_levels():
     assert service.deploy_navigation_plan("Filipinas Master", "Global")["navigation_level"] == "Master"
     assert service.deploy_navigation_plan("Filipinas Master", "Global")["level"] == "Master's Degree"
     assert service.deploy_navigation_plan("India Bachelor", "Global")["level"] == "Bachelor's Degree"
+
+
+def test_supports_lead_origin_and_official_catalog_urls():
+    workbook = Workbook()
+    workbook.active.append(["Nivel", "URL", "Location", "Locale", "Url Origen Lead"])
+    workbook.active.append([
+        "Bachelor", "https://utel.edu.mx/indonesia", "Footer", "Indonesia",
+        "https://lead-balancer.scalahed.com",
+    ])
+    content = BytesIO()
+    workbook.save(content)
+
+    rows = BotSpreadsheetService().rows_for_mapping(
+        content.getvalue(),
+        {
+            "level": "Nivel", "utel_url": "URL", "form_type": "Location",
+            "country": "Locale", "lead_origin_url": "Url Origen Lead",
+        },
+    )
+    assert rows[0]["lead_origin_url"] == "https://lead-balancer.scalahed.com"
+    catalog = BotSpreadsheetService().catalog_programs("Indonesia", "Bachelor", "Online")
+    assert catalog[0]["url"].startswith("https://utel.edu.mx/indonesia/")

@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     api_url: str = "http://127.0.0.1:8000"
     database_path: Path = PROJECT_ROOT / "storage" / "qa_automation.db"
     storage_dir: Path = PROJECT_ROOT / "storage"
+    # Catálogo oficial de programas con URL directa por país y nivel.
+    program_catalog_path: Path = PROJECT_ROOT / "backend" / "data" / "utel_programas1.xlsx"
     log_level: str = "INFO"
 
     # Estas variables se reservan para las fases que integrarán servicios externos.
@@ -72,6 +74,8 @@ class Settings(BaseSettings):
             self.storage_dir = PROJECT_ROOT / self.storage_dir
         if not self.database_path.is_absolute():
             self.database_path = PROJECT_ROOT / self.database_path
+        if not self.program_catalog_path.is_absolute():
+            self.program_catalog_path = PROJECT_ROOT / self.program_catalog_path
 
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         for folder_name in (

@@ -119,6 +119,8 @@ class UtelQaConfig(BaseModel):
     country: str = Field(min_length=1, max_length=80)
     utel_url: str = Field(min_length=1, max_length=2000)
     inconcert_url: str = Field(default="", max_length=2000)
+    # URL explícita de origen del lead: InConcert o Balanceador.
+    lead_origin_url: str = Field(default="", max_length=2000)
     modality: str = Field(min_length=1, max_length=100)
     level: str = Field(min_length=1, max_length=120)
     form_type: Literal["lateral", "tarjeta", "footer"] = "lateral"

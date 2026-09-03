@@ -243,6 +243,13 @@ def _is_support_rejection(result: dict[str, Any]) -> bool:
     )
 
 
+def _is_balanceador_url(url: str) -> bool:
+    """Clasifica una URL de origen lead sin depender del nombre de la columna."""
+
+    value = str(url or "").casefold()
+    return "balance" in value or "lead-balancer" in value
+
+
 @router.get("/runtime")
 def backend_runtime() -> dict:
     """Permite a Electron reconocer su proceso, sin exponer secretos."""
@@ -274,7 +281,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
     logger.info("Lote %s con pausa anti-bloqueo entre filas: %ss", job_id, inter_row_delay)
     try:
         batch_dry_run = _batch_dry_run(raw_config)
-        service = BotSpreadsheetService()
+        service = BotSpreadsheetService(settings.program_catalog_path)
         rows = service.rows_for_mapping(content, mapping)
         selected_rows = {
             (str(item.get("sheet")), int(item.get("row_number")))
@@ -335,10 +342,24 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     "navigation_sublevel": "",
                 }
             )
+            catalog_program = None
+            # El catálogo oficial se activa para Leads Deploy (identificado por
+            # su columna Url Origen Lead) y no altera Excels genéricos antiguos.
+            use_official_catalog = bool(
+                row.get("lead_origin_url")
+                or "leads deploy" in filename.casefold()
+            )
+            if not row["program_name"] and use_official_catalog:
+                catalog_program = service.choose_catalog_program(
+                    row_country,
+                    row["level"],
+                    navigation["modality"],
+                    settings.database_path,
+                )
             row_config.update({
-                "utel_url": row["utel_url"],
-                "program_name": row["program_name"],
-                "program_selection_strategy": "exact_match" if row["program_name"] else "first",
+                "utel_url": catalog_program["url"] if catalog_program else row["utel_url"],
+                "program_name": catalog_program["text"] if catalog_program else row["program_name"],
+                "program_selection_strategy": "exact_match" if (row["program_name"] or catalog_program) else "first",
                 "modality": navigation["modality"],
                 "level": navigation["level"],
                 "navigation_modality": navigation["navigation_modality"],
@@ -346,8 +367,13 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "navigation_sublevel": navigation["navigation_sublevel"],
                 "country": row_country,
                 "form_type": row["form_type"] or raw_config.get("form_type", "lateral"),
+                "lead_origin_url": row.get("lead_origin_url", ""),
                 # El país de esta fila manda: nunca heredar el CRM de otra fila.
-                "inconcert_url": service.default_inconcert_url(row_country) or row["inconcert_url"],
+                "inconcert_url": (
+                    row.get("lead_origin_url")
+                    or service.default_inconcert_url(row_country)
+                    or row["inconcert_url"]
+                ),
                 "workflow_mode": row.get("workflow_mode", "product_release"),
                 "name": f"{raw_config.get('name', 'QA UTEL')} - {row.get('test_case') or row['program_name'] or row['level']}",
                 "defer_crm_verification": False,
@@ -380,6 +406,10 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             for row, preflight_config in prepared_rows:
                 if job.get("cancel_requested"):
                     break
+                if _is_balanceador_url(preflight_config.lead_origin_url):
+                    # El Balanceador se valida al consultar el lead; no se
+                    # intenta abrir InConcert cuando el Excel ya indicó el origen.
+                    continue
                 if preflight_config.inconcert_url in checked_crm_urls:
                     continue
                 job.update({

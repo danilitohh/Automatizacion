@@ -760,10 +760,11 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       program_name: findHeader("program_name", "Programa"),
       modality: findHeader("modality", "Modalidad"),
       level: findHeader("level", "Nivel"),
-      country: headers.find((header) => normalizeCountry(header) === "locale") || findHeader("country", "Country"),
+      country: findHeader("country", "Country") || headers.find((header) => normalizeCountry(header) === "locale"),
       utel_url: findHeader("utel_url", "URL"),
       form_type: findHeader("form_type", "Location"),
       inconcert_url: findHeader("inconcert_url", "inconcert/balanceador") || findHeader("inconcert_url", "Url inconcert/balanceador"),
+      lead_origin_url: findHeader("lead_origin_url", "Url Origen Lead"),
       lead_url: findHeader("lead_url", "URL LEAD") || "URL LEAD",
     };
     const isDeployValidation = !selectedMapping.program_name
@@ -779,6 +780,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       <label><span>URL *</span><select id="bot-map-url">${optionList}</select></label>
       <label><span>Formulario</span><select id="bot-map-form">${optionList}</select></label>
       <label><span>InConcert</span><select id="bot-map-inconcert">${optionList}</select></label>
+      <label><span>Origen lead</span><select id="bot-map-origin">${optionList}</select></label>
       <label><span>Salida URL LEAD</span><select id="bot-map-lead">${optionList}<option value="URL LEAD">Crear columna URL LEAD</option></select></label>
     </div><small>Se detectaron ${headers.length} columnas. Puedes cambiar la selección manualmente.</small>`;
     document.querySelector("#bot-map-program").value = selectedMapping.program_name;
@@ -788,6 +790,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     document.querySelector("#bot-map-url").value = selectedMapping.utel_url;
     document.querySelector("#bot-map-form").value = selectedMapping.form_type;
     document.querySelector("#bot-map-inconcert").value = selectedMapping.inconcert_url;
+    document.querySelector("#bot-map-origin").value = selectedMapping.lead_origin_url;
     document.querySelector("#bot-map-lead").value = selectedMapping.lead_url || "URL LEAD";
     if (isDeployValidation) {
       ["bot-map-program", "bot-map-modality", "bot-map-lead"].forEach((id) => {
@@ -809,10 +812,10 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       Object.entries(visibility).forEach(([id, hidden]) => document.querySelector(`#${id}`)?.closest("label, .field")?.classList.toggle("bot-internal-field", hidden));
     };
     updateAutomaticFields();
-    ["program", "modality", "level", "country", "url", "form", "inconcert", "lead"].forEach((key) => document.querySelector(`#bot-map-${key}`).addEventListener("change", () => {
+    ["program", "modality", "level", "country", "url", "form", "inconcert", "origin", "lead"].forEach((key) => document.querySelector(`#bot-map-${key}`).addEventListener("change", () => {
       const selectedRow = selectedMapping.selected_row_number;
       const selectedSheet = selectedMapping.selected_sheet;
-      selectedMapping = { program_name: document.querySelector("#bot-map-program").value, modality: document.querySelector("#bot-map-modality").value, level: document.querySelector("#bot-map-level").value, country: document.querySelector("#bot-map-country").value, utel_url: document.querySelector("#bot-map-url").value, form_type: document.querySelector("#bot-map-form").value, inconcert_url: document.querySelector("#bot-map-inconcert").value, lead_url: document.querySelector("#bot-map-lead").value, workflow_mode: isDeployValidation ? "form_validation" : "product_release" };
+      selectedMapping = { program_name: document.querySelector("#bot-map-program").value, modality: document.querySelector("#bot-map-modality").value, level: document.querySelector("#bot-map-level").value, country: document.querySelector("#bot-map-country").value, utel_url: document.querySelector("#bot-map-url").value, form_type: document.querySelector("#bot-map-form").value, inconcert_url: document.querySelector("#bot-map-inconcert").value, lead_origin_url: document.querySelector("#bot-map-origin").value, lead_url: document.querySelector("#bot-map-lead").value, workflow_mode: isDeployValidation ? "form_validation" : "product_release" };
       if (selectedRow !== undefined) selectedMapping.selected_row_number = selectedRow;
       if (selectedSheet !== undefined) selectedMapping.selected_sheet = selectedSheet;
       updateAutomaticFields();

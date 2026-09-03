@@ -188,6 +188,23 @@ class UtelInconcertRunner:
                     if config.verification_only:
                         self.status_flags["utel_submission"] = "skipped"
                         self.status_flags["utel_submission_message"] = "Envio ya realizado en la fase UTEL."
+                        if self._lead_origin_is_balanceador(config):
+                            balancer_page = await context.new_page()
+                            page = balancer_page
+                            balancer_page.set_default_timeout(30000)
+                            await self._run_stage(
+                                1,
+                                "lead_balancer_search",
+                                "Lead localizado en Balanceador",
+                                balancer_page,
+                                lambda: self._search_lead_balancer(
+                                    balancer_page, config.lead.email, config.lead.name
+                                ),
+                            )
+                            self.status_flags["lead_source"] = "balanceador"
+                            self.status_flags["lead_found"] = "success"
+                            self.status_flags["conversion_found"] = "skipped"
+                            return self._build_result(config, started_at, timer)
                         inconcert_page = await context.new_page()
                         page = inconcert_page
                         inconcert_page.set_default_timeout(30000)
@@ -274,6 +291,42 @@ class UtelInconcertRunner:
                     # InConcert se prepara antes del envio. Si el CRM esta caido,
                     # lento o las credenciales no funcionan, el formulario UTEL
                     # no se envia y evitamos crear leads que no podamos validar.
+                    if self._lead_origin_is_balanceador(config):
+                        page = utel_page
+                        post_submit_signal = None
+                        try:
+                            await self._run_stage(
+                                5,
+                                "utel_submit",
+                                "Formulario enviado; se verificará en Balanceador",
+                                utel_page,
+                                lambda: self._submit_utel_form(utel_page, form, should_stop),
+                                "03_formulario_enviado",
+                            )
+                            self._submission_attempted = True
+                        except PostSubmitSignal as error:
+                            post_submit_signal = error
+                            self._submission_attempted = True
+                        self.status_flags["utel_submission"] = "pending" if post_submit_signal else "success"
+                        self.status_flags["utel_submission_message"] = str(post_submit_signal) if post_submit_signal else "Formulario enviado y confirmado correctamente."
+                        balancer_page = await context.new_page()
+                        page = balancer_page
+                        balancer_page.set_default_timeout(30000)
+                        await self._run_stage(
+                            6,
+                            "lead_balancer_search",
+                            "Lead localizado en Balanceador",
+                            balancer_page,
+                            lambda: self._search_lead_balancer(
+                                balancer_page, config.lead.email, config.lead.name
+                            ),
+                            "05_lead_balanceador",
+                        )
+                        self.status_flags["lead_source"] = "balanceador"
+                        self.status_flags["lead_found"] = "success"
+                        self.status_flags["conversion_found"] = "skipped"
+                        self._mark_submission_verified(post_submit_signal)
+                        return self._build_result(config, started_at, timer)
                     inconcert_page = await context.new_page()
                     page = inconcert_page
                     inconcert_page.set_default_timeout(30000)
@@ -294,6 +347,26 @@ class UtelInconcertRunner:
                         self.logger.warning("%s Se verificara en CRM sin reenviar.", error)
                     self.status_flags["utel_submission"] = "pending" if post_submit_signal else "success"
                     self.status_flags["utel_submission_message"] = str(post_submit_signal) if post_submit_signal else "Formulario enviado y confirmado correctamente."
+
+                    if self._lead_origin_is_balanceador(config):
+                        balancer_page = await context.new_page()
+                        page = balancer_page
+                        balancer_page.set_default_timeout(30000)
+                        await self._run_stage(
+                            9,
+                            "lead_balancer_search",
+                            "Lead localizado en Balanceador",
+                            balancer_page,
+                            lambda: self._search_lead_balancer(
+                                balancer_page, config.lead.email, config.lead.name
+                            ),
+                            "05_lead_balanceador",
+                        )
+                        self.status_flags["lead_source"] = "balanceador"
+                        self.status_flags["lead_found"] = "success"
+                        self.status_flags["conversion_found"] = "skipped"
+                        self._mark_submission_verified(post_submit_signal)
+                        return self._build_result(config, started_at, timer)
 
                     page = inconcert_page
                     try:
@@ -1485,6 +1558,13 @@ class UtelInconcertRunner:
             "inconcert_open",
             "InConcert no respondio despues de 3 intentos. El formulario UTEL no fue enviado.",
         ) from last_error
+
+    @staticmethod
+    def _lead_origin_is_balanceador(config: UtelQaConfig) -> bool:
+        """Indica si el Excel ordena verificar directamente en Balanceador."""
+
+        origin = (config.lead_origin_url or "").casefold()
+        return "balance" in origin or "lead-balancer" in origin
 
     @staticmethod
     def _is_crm_route(url: str) -> bool:
