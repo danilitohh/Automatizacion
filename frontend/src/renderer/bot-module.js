@@ -326,8 +326,14 @@ export function buildErrorLog(job) {
   const failures = [];
   (job.results || []).forEach((item) => {
     const result = item.result || {};
+    // Un PASS puede conservar etapas fallidas como evidencia de un bloqueo ya
+    // recuperado. El log exclusivo solo debe enumerar resultados definitivos.
+    if (result.status !== "FAIL") return;
+    // Mientras una fila está activa existe un checkpoint preventivo marcado
+    // como FAIL; no es un error hasta que el runner entrega su estado final.
+    if (result.utel_submission === "pending" && result.utel_submission_attempted == null) return;
     const failedStages = (result.stages || []).filter((stage) => stage.status === "FAIL");
-    if (result.status === "FAIL" && !failedStages.length) {
+    if (!failedStages.length) {
       failedStages.push({ stage: "ejecucion", message: result.summary || "La ejecución falló sin detalle de etapa." });
     }
     failedStages.forEach((stage) => failures.push({ item, result, stage }));

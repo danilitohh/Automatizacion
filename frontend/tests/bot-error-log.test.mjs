@@ -10,7 +10,7 @@ test("el log contiene solo errores con la fila y el mensaje completo", () => {
   const message = `Timeout\n${"detalle ".repeat(200)}`;
   const log = buildErrorLog({ results: [
     { row: { row_number: 2 }, result: { stages: [{ status: "PASS", message: "NO INCLUIR" }] } },
-    { row: { row_number: 5, level: "Licenciatura Ejecutiva" }, result: { dry_run: true, stages: [{ status: "FAIL", stage: "utel_fill", message, selector: "#program", screenshot: "error.png" }] } },
+    { row: { row_number: 5, level: "Licenciatura Ejecutiva" }, result: { status: "FAIL", dry_run: true, stages: [{ status: "FAIL", stage: "utel_fill", message, selector: "#program", screenshot: "error.png" }] } },
   ] });
   assert.ok(log.includes("Fila: 5"));
   assert.ok(log.includes(message));
@@ -23,6 +23,34 @@ test("el log contiene solo errores con la fila y el mensaje completo", () => {
 test("los errores del lote también se pueden compartir", () => {
   assert.ok(buildErrorLog({ status: "FAIL", summary: "Error al leer Excel" }).includes("Error al leer Excel"));
   assert.equal(buildErrorLog({ results: [] }), "");
+});
+
+test("el log omite bloqueos recuperados y checkpoints todavía activos", () => {
+  const log = buildErrorLog({
+    status: "RUNNING",
+    failed: 0,
+    results: [
+      {
+        row: { row_number: 2, level: "Maestría" },
+        result: {
+          status: "PASS",
+          stages: [{ status: "FAIL", stage: "lead_balancer_search", message: "Cloudflare" }],
+        },
+      },
+      {
+        row: { row_number: 3, level: "Doctorado" },
+        result: {
+          status: "FAIL",
+          utel_submission: "pending",
+          utel_submission_attempted: null,
+          summary: "Ejecución iniciada y estado final aún desconocido.",
+          stages: [],
+        },
+      },
+    ],
+  });
+
+  assert.equal(log, "");
 });
 
 test("solo se reintentan fallos ocurridos antes del clic", () => {

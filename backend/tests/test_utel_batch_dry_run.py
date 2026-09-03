@@ -31,7 +31,9 @@ def test_batch_preserves_safe_mode_and_marks_excel(tmp_path, monkeypatch, crm_pr
         seen.append(config)
         return {"status": "PASS", "dry_run": config.dry_run, "stages": [], "summary": "Prueba local",
                 "lead_url": None if config.dry_run else "https://crm.test/mas/contact/people/view/123",
-                "utel_submission_attempted": not config.dry_run}
+                "utel_submission_attempted": not config.dry_run,
+                "utel_submission": "skipped" if config.dry_run else "success",
+                "lead_found": "skipped" if config.dry_run else "success"}
 
     monkeypatch.setattr(UtelInconcertRunner, "run", fake_run)
     workbook = Workbook()
@@ -64,11 +66,11 @@ def test_batch_preserves_safe_mode_and_marks_excel(tmp_path, monkeypatch, crm_pr
         job = client.get(f'/api/bots/utel-inconcert/batch/{job_id}').json()
         assert job["status"] == "PASS", job
         assert job["completed"] == job["total"] == 1
-        assert len(seen) == (2 if dry_run is False else 1)
+        assert len(seen) == 1
         assert seen[0].dry_run is (dry_run is not False)
         if dry_run is False:
-            assert seen[0].defer_crm_verification is True
-            assert seen[1].verification_only is True
+            assert seen[0].defer_crm_verification is False
+            assert seen[0].verification_only is False
             crm_preflight.assert_awaited_once()
         else:
             crm_preflight.assert_not_awaited()
@@ -329,8 +331,8 @@ def test_real_batch_requires_enough_authorized_phones_before_first_click(
     run.assert_not_awaited()
 
 
-def test_batch_merge_preserves_post_submit_warning_when_crm_finds_lead(tmp_path, monkeypatch):
-    """La conciliacion exitosa conserva el aviso UTEL y nunca ejecuta una segunda fase de envio."""
+def test_sequential_batch_preserves_post_submit_warning_when_crm_finds_lead(tmp_path, monkeypatch):
+    """Cada ejecución envía y consulta CRM antes de devolver su resultado."""
 
     calls = []
     lead_url = "https://crm.test/mas/contact/people/view/456"
@@ -338,37 +340,22 @@ def test_batch_merge_preserves_post_submit_warning_when_crm_finds_lead(tmp_path,
 
     async def fake_run(self, config):
         calls.append(config)
-        if not config.verification_only:
-            return {
-                "status": "PASS",
-                "dry_run": False,
-                "summary": "Envio pendiente de conciliacion CRM.",
-                "selected_program_name": "Licenciatura",
-                "lead_email": config.lead.email,
-                "lead_url": None,
-                "utel_submission_attempted": True,
-                "utel_submission": "pending",
-                "utel_submission_message": original_warning,
-                "lead_found": "pending",
-                "stages": [],
-                "screenshots": ["utel-warning.png"],
-            }
         return {
             "status": "PASS",
             "dry_run": False,
             "summary": "Lead localizado en CRM.",
-            "selected_program_name": "",
+            "selected_program_name": "Licenciatura",
             "lead_email": config.lead.email,
             "lead_url": lead_url,
-            "utel_submission_attempted": False,
-            "utel_submission": "skipped",
-            "utel_submission_message": "Envio ya realizado en la fase UTEL.",
+            "utel_submission_attempted": True,
+            "utel_submission": "success",
+            "utel_submission_message": original_warning,
             "inconcert_login": "success",
             "lead_found": "success",
             "lead_source": "inconcert",
             "conversion_found": "skipped",
             "stages": [],
-            "screenshots": ["crm-lead.png"],
+            "screenshots": ["utel-warning.png", "crm-lead.png"],
         }
 
     monkeypatch.setattr(UtelInconcertRunner, "run", fake_run)
@@ -405,10 +392,9 @@ def test_batch_merge_preserves_post_submit_warning_when_crm_finds_lead(tmp_path,
         job = client.get(f'/api/bots/utel-inconcert/batch/{response.json()["job_id"]}').json()
         report = client.get(job["download_url"])
 
-    assert len(calls) == 2
-    assert calls[0].defer_crm_verification is True
+    assert len(calls) == 1
+    assert calls[0].defer_crm_verification is False
     assert calls[0].verification_only is False
-    assert calls[1].verification_only is True
     final = job["results"][0]["result"]
     assert final["status"] == "PASS"
     assert final["lead_url"] == lead_url
@@ -435,27 +421,14 @@ def test_batch_is_failed_when_crm_does_not_find_clicked_submission(tmp_path, mon
 
     async def fake_run(self, config):
         calls.append(config)
-        if not config.verification_only:
-            return {
-                "status": "PASS",
-                "dry_run": False,
-                "summary": "Formulario enviado; pendiente de CRM.",
-                "lead_url": None,
-                "utel_submission_attempted": True,
-                "utel_submission": "success",
-                "utel_submission_message": original_notice,
-                "lead_found": "pending",
-                "stages": [],
-                "screenshots": ["utel-success.png"],
-            }
         return {
             "status": "FAIL",
             "dry_run": False,
             "summary": "Lead no encontrado en CRM.",
             "lead_url": None,
-            "utel_submission_attempted": False,
-            "utel_submission": "skipped",
-            "utel_submission_message": "Envio ya realizado en la fase UTEL.",
+            "utel_submission_attempted": True,
+            "utel_submission": "failed",
+            "utel_submission_message": original_notice,
             "inconcert_login": "success",
             "lead_found": "failed",
             "conversion_found": "skipped",
@@ -496,8 +469,8 @@ def test_batch_is_failed_when_crm_does_not_find_clicked_submission(tmp_path, mon
         job = client.get(f'/api/bots/utel-inconcert/batch/{response.json()["job_id"]}').json()
         report = client.get(job["download_url"])
 
-    assert len(calls) == 2
-    assert calls[1].verification_only is True
+    assert len(calls) == 1
+    assert calls[0].verification_only is False
     final = job["results"][0]["result"]
     assert job["status"] == "FAIL"
     assert job["success"] == 0
@@ -506,8 +479,7 @@ def test_batch_is_failed_when_crm_does_not_find_clicked_submission(tmp_path, mon
     assert final["lead_found"] == "failed"
     assert final["lead_url"] is None
     assert original_notice in final["utel_submission_message"]
-    assert "no se reenv" in final["utel_submission_message"].casefold()
-    assert final["screenshots"] == ["utel-success.png", "crm-missing.png"]
+    assert final["screenshots"] == ["crm-missing.png"]
 
     sheet = load_workbook(io.BytesIO(report.content)).active
     headers = {cell.value: cell.column for cell in sheet[1] if cell.value}
@@ -582,14 +554,13 @@ def test_batch_cancel_finishes_current_row_and_reconciles_before_stopping(
             started.set()
             await release.wait()
             return {
-                # Demuestra que se encola por clic, no por el estado visual.
-                "status": "FAIL",
+                "status": "PASS",
                 "dry_run": False,
-                "summary": "Respuesta visual no interpretable.",
-                "lead_url": None,
-                "lead_found": "pending",
-                "utel_submission": "pending",
-                "utel_submission_message": "Aviso posterior al clic.",
+                "summary": "Lead enviado y localizado.",
+                "lead_url": "https://crm.test/mas/contact/people/view/789",
+                "lead_found": "success",
+                "utel_submission": "success",
+                "utel_submission_message": "Formulario enviado.",
                 "utel_submission_attempted": True,
                 "stages": [],
                 "screenshots": [],
@@ -620,8 +591,74 @@ def test_batch_cancel_finishes_current_row_and_reconciles_before_stopping(
     assert status_when_requested == "RUNNING"
     assert job["status"] == "CANCELLED"
     assert job["completed"] == 1
-    assert len(calls) == 2
+    assert len(calls) == 1
     assert calls[0].utel_url == "https://first.test"
-    assert calls[1].verification_only is True
     assert job["results"][0]["result"]["lead_url"].endswith("/789")
     assert "conciliados" in job["summary"]
+
+
+def test_cloudflare_during_crm_is_retried_at_end_without_resubmitting(tmp_path, monkeypatch):
+    """Un bloqueo en Balanceador repite la consulta, nunca el formulario."""
+
+    calls = []
+
+    async def fake_run(self, config):
+        calls.append(config)
+        if not config.verification_only:
+            return {
+                "status": "FAIL", "dry_run": False,
+                "summary": "Cloudflare bloqueo esta sesion del Balanceador.", "lead_url": None,
+                "utel_submission_attempted": True,
+                "utel_submission": "pending", "lead_found": "pending",
+                "stages": [], "screenshots": ["cloudflare.png"],
+            }
+        return {
+            "status": "PASS", "dry_run": False,
+            "summary": "Lead localizado después del bloqueo.",
+            "lead_url": "https://crm.test/leads/123",
+            "utel_submission_attempted": False,
+            "utel_submission": "skipped", "lead_found": "success",
+            "stages": [], "screenshots": ["lead.png"],
+        }
+
+    monkeypatch.setattr(UtelInconcertRunner, "run", fake_run)
+    workbook = Workbook()
+    workbook.active.append(["Nivel", "URL", "Location", "Locale", "Url Origen Lead"])
+    workbook.active.append([
+        "Licenciatura", "https://example.test", "footer", "Mexico",
+        "https://lead-balancer.scalahed.com/leads/",
+    ])
+    content = io.BytesIO()
+    workbook.save(content)
+    mapping = {
+        "level": "Nivel", "utel_url": "URL",
+        "form_type": "Location", "country": "Locale",
+        "lead_origin_url": "Url Origen Lead",
+    }
+    app = create_app(Settings(
+        database_path=tmp_path / "test.db",
+        storage_dir=tmp_path / "storage",
+        batch_delay_seconds=0,
+        inconcert_username="test",
+        inconcert_password="test",
+        utel_test_phones_json='{"Mexico":["+525512345678"]}',
+    ))
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/bots/utel-inconcert/batch-run",
+            data={"config": json.dumps({"lead": {}, "dry_run": False}), "mapping": json.dumps(mapping)},
+            files={"file": ("test.xlsx", content.getvalue())},
+        )
+        job = client.get(f'/api/bots/utel-inconcert/batch/{response.json()["job_id"]}').json()
+
+    assert len(calls) == 2
+    assert calls[0].verification_only is False
+    assert calls[1].verification_only is True
+    assert calls[0].browser == "chrome"
+    assert calls[0].headless is False
+    final = job["results"][0]["result"]
+    assert final["status"] == "PASS"
+    assert final["lead_url"].endswith("/123")
+    assert final["temporary_block_retry_attempted"] is True
+    assert final["screenshots"] == ["cloudflare.png", "lead.png"]

@@ -1012,9 +1012,12 @@ class UtelInconcertRunner:
         await self._set_dynamic_field(form, '[data-cy="formModalityInput"]', config.modality)
         await self._set_dynamic_field(form, '[data-cy="educationLevelInput"]', config.level)
         rotate_philippines_master = self._should_rotate_philippines_master(config)
-        selected_program = config.program_name or ("" if rotate_philippines_master else self.selected_program_name)
-        if selected_program:
-            await self._set_dynamic_field(form, '[data-cy="productsInput"]', selected_program)
+        if config.program_name:
+            # Una URL directa de programa ya entrega productsInput seleccionado
+            # por UTEL. No se vuelve a elegir ni se compara contra las opciones
+            # del desplegable: los productos recién publicados pueden existir
+            # en la PDP antes de aparecer en el catálogo general del formulario.
+            self.selected_program_name = config.program_name
         else:
             if rotate_philippines_master:
                 # El H1 del listado puede contener "Master's Degree", pero no
@@ -1522,14 +1525,30 @@ class UtelInconcertRunner:
         """Detiene errores HTML inequívocos antes de que exista riesgo de duplicado."""
 
         controls = form.locator("input, select, textarea")
-        invalid = await controls.evaluate_all(
-            """elements => elements
-                .filter(element => !element.disabled && element.willValidate && !element.checkValidity())
-                .map(element => ({
-                    field: element.dataset.cy || element.name || element.id || element.type || element.tagName,
-                    message: element.validationMessage || 'valor inválido'
-                }))"""
-        )
+        invalid = None
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                invalid = await controls.evaluate_all(
+                    """elements => elements
+                        .filter(element => !element.disabled && element.willValidate && !element.checkValidity())
+                        .map(element => ({
+                            field: element.dataset.cy || element.name || element.id || element.type || element.tagName,
+                            message: element.validationMessage || 'valor inválido'
+                        }))"""
+                )
+                break
+            except Exception as error:
+                # Algunas PDP reconstruyen el formulario después de cambiar
+                # nivel o país. El locator vuelve a resolver el DOM al reintentar.
+                last_error = error
+                if attempt < 2:
+                    await asyncio.sleep(0.75)
+        if invalid is None:
+            raise UtelQaError(
+                "utel_submit",
+                "UTEL reconstruyó el formulario y no permitió validarlo después de 3 intentos.",
+            ) from last_error
         if not invalid:
             return
         details = "; ".join(
@@ -1751,11 +1770,28 @@ class UtelInconcertRunner:
                 "Faltan las credenciales del Balanceador. Configura LEAD_BALANCER_USERNAME y LEAD_BALANCER_PASSWORD en .env.",
             )
         response = await page.goto(base_url, wait_until="domcontentloaded", timeout=60000)
-        if response is not None and response.status in {401, 403}:
+        challenge_detected = (
+            (response is not None and response.status in {401, 403})
+            or "__cf_chl" in page.url
+        )
+        challenge_resolved = not challenge_detected
+        if challenge_detected:
+            # En Chrome visible, Cloudflare puede completar su comprobación y
+            # guardar la autorización en el perfil QA. Se espera una sola vez
+            # antes de clasificar el acceso como bloqueo temporal.
+            deadline = perf_counter() + 45
+            while perf_counter() < deadline:
+                if "__cf_chl" not in page.url and (
+                    "/login" in page.url or "/leads" in page.url
+                ):
+                    challenge_resolved = True
+                    break
+                await asyncio.sleep(1)
+        if not challenge_resolved:
             raise UtelQaError(
                 "lead_balancer_search",
                 "El Balanceador bloqueo esta sesion del navegador antes del login. "
-                "Usa Chrome visible, completa manualmente cualquier verificacion de Cloudflare y vuelve a intentar.",
+                "Completa la verificacion visible de Cloudflare; la sesion quedara guardada en el perfil Chrome QA.",
             )
         if "/login" in page.url or await self._locator_count(page.locator("input[type='password']:visible"), timeout_ms=1200):
             username_input = page.locator("input[name='email']:visible, input[name='username']:visible, input[type='text']:visible").first

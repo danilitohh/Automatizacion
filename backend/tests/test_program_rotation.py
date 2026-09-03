@@ -140,3 +140,31 @@ def test_philippines_master_ignores_generic_page_heading_and_uses_form_rotation(
     ]
     assert product_assignments == []
     assert runner.selected_program_name == "Master in Education"
+
+
+def test_direct_program_keeps_products_input_preselected_by_utel(tmp_path):
+    """Una PDP directa no debe revalidar el programa contra el desplegable."""
+
+    runner = UtelInconcertRunner(Settings(database_path=tmp_path / "rotation.db"))
+    runner._set_dynamic_field = AsyncMock()
+    runner._academic_values = AsyncMock(return_value=[])
+    runner._select_optional_bachillerato = AsyncMock()
+    runner._select_random_city = AsyncMock()
+    runner._select_preferred_contact_channel = AsyncMock()
+    runner._fill_first_available = AsyncMock()
+    runner._set_country_if_possible = AsyncMock()
+    runner._check_privacy = AsyncMock()
+    runner._select_random_program = AsyncMock()
+    config = _philippines_master_config().model_copy(
+        update={"program_name": "Maestría en Arquitectura de Software"}
+    )
+
+    asyncio.run(runner._fill_utel_form(Mock(), Mock(), config))
+
+    product_assignments = [
+        call for call in runner._set_dynamic_field.await_args_list
+        if call.args[1] == '[data-cy="productsInput"]'
+    ]
+    assert product_assignments == []
+    runner._select_random_program.assert_not_awaited()
+    assert runner.selected_program_name == "Maestría en Arquitectura de Software"

@@ -243,6 +243,29 @@ def _is_support_rejection(result: dict[str, Any]) -> bool:
     )
 
 
+def _is_temporary_access_block(result: dict[str, Any]) -> bool:
+    """Reconoce bloqueos temporales que admiten un solo reintento al final."""
+
+    texts = [
+        str(result.get("summary") or ""),
+        str(result.get("utel_submission_message") or ""),
+        *[
+            str(stage.get("message") or "")
+            for stage in result.get("stages", [])
+            if isinstance(stage, dict)
+        ],
+    ]
+    return bool(
+        re.search(
+            r"cloudflare|sorry,?\s+you\s+have\s+been\s+blocked|"
+            r"you\s+are\s+unable\s+to\s+access|bloqueo\s+esta\s+sesion|"
+            r"bloque[oó]\s+el\s+acceso\s+de\s+esta\s+sesion",
+            " ".join(texts),
+            re.IGNORECASE,
+        )
+    )
+
+
 def _is_balanceador_url(url: str) -> bool:
     """Clasifica una URL de origen lead sin depender del nombre de la columna."""
 
@@ -356,6 +379,8 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     navigation["modality"],
                     settings.database_path,
                 )
+            lead_origin_url = row.get("lead_origin_url", "")
+            uses_balanceador = _is_balanceador_url(lead_origin_url)
             row_config.update({
                 "utel_url": catalog_program["url"] if catalog_program else row["utel_url"],
                 "program_name": catalog_program["text"] if catalog_program else row["program_name"],
@@ -367,7 +392,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "navigation_sublevel": navigation["navigation_sublevel"],
                 "country": row_country,
                 "form_type": row["form_type"] or raw_config.get("form_type", "lateral"),
-                "lead_origin_url": row.get("lead_origin_url", ""),
+                "lead_origin_url": lead_origin_url,
                 # El país de esta fila manda: nunca heredar el CRM de otra fila.
                 "inconcert_url": (
                     row.get("lead_origin_url")
@@ -378,6 +403,11 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "name": f"{raw_config.get('name', 'QA UTEL')} - {row.get('test_case') or row['program_name'] or row['level']}",
                 "defer_crm_verification": False,
                 "verification_only": False,
+                # Cloudflare reconoce mejor el perfil persistente de Chrome que
+                # un Chromium aislado nuevo. Balanceador se abre visible para
+                # permitir completar un desafío legítimo si vuelve a solicitarlo.
+                "browser": "chrome" if (uses_balanceador and not batch_dry_run) else row_config.get("browser", "chromium"),
+                "headless": False if (uses_balanceador and not batch_dry_run) else row_config.get("headless", True),
             })
             prepared_rows.append((row, UtelQaConfig.model_validate(row_config)))
 
@@ -430,6 +460,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             )
         )
         verification_queue = []
+        temporary_block_queue = []
         job["phase"] = "UTEL: enviando formularios"
         for index, ((row, prepared_config), lead) in enumerate(
             zip(prepared_rows, reserved_leads, strict=True),
@@ -443,8 +474,10 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 update={"lead": prepared_config.lead.model_copy(update=lead)}
             )
             if not config.dry_run:
+                # Flujo secuencial por fila: el runner envía el formulario y
+                # consulta inmediatamente el CRM indicado antes de continuar.
                 config = config.model_copy(
-                    update={"defer_crm_verification": True, "verification_only": False}
+                    update={"defer_crm_verification": False, "verification_only": False}
                 )
             job.update({
                 "current_program": row.get("test_case") or row["program_name"] or row["level"],
@@ -548,13 +581,19 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             # ya obtenidos si el backend se reinicia o el lote se detiene.
             _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
             job["download_url"] = f"/api/bots/utel-inconcert/batch/{job_id}/download"
-            # Todo clic confirmado por el runner se concilia, incluso si un
-            # error inesperado posterior dejó el resultado visual en FAIL.
             if (
                 not config.dry_run
                 and serializable_result.get("utel_submission_attempted") is True
+                and _is_temporary_access_block(serializable_result)
             ):
+                # El runner ya buscó el lead inmediatamente. Solo se aplaza una
+                # segunda consulta cuando esa búsqueda fue bloqueada; jamás se
+                # vuelve a enviar el formulario.
                 verification_queue.append((result_index, config))
+            elif _is_temporary_access_block(serializable_result):
+                # El bloqueo ocurrió antes del clic: es seguro volver a ejecutar
+                # la fila una vez, pero solo después de terminar las demás.
+                temporary_block_queue.append((result_index, config))
             failed_stage = next((stage for stage in serializable_result["stages"] if stage["status"] == "FAIL"), None)
             counts = _utel_batch_counts(results)
             job.update({
@@ -570,10 +609,45 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             if index < len(rows) and inter_row_delay > 0:
                 await asyncio.sleep(inter_row_delay)
 
+        if temporary_block_queue and not job.get("cancel_requested"):
+            job["phase"] = "UTEL: reintentando bloqueos temporales"
+            if inter_row_delay > 0:
+                await asyncio.sleep(inter_row_delay)
+            for retry_index, (result_index, blocked_config) in enumerate(
+                temporary_block_queue,
+                1,
+            ):
+                row = results[result_index]["row"]
+                job.update({
+                    "current_program": row.get("test_case") or row["program_name"] or row["level"],
+                    "current_row": row["row_number"],
+                    "current_lead_name": blocked_config.lead.name,
+                    "current_lead_email": blocked_config.lead.email,
+                    "current_lead_phone": blocked_config.lead.phone,
+                    "last_error": "Reintentando una fila bloqueada temporalmente.",
+                })
+                retry_result = await UtelInconcertRunner(settings).run(blocked_config)
+                serializable_retry = {
+                    **retry_result,
+                    "stages": [stage.model_dump() for stage in retry_result["stages"]],
+                    "temporary_block_retry_attempted": True,
+                }
+                results[result_index]["result"] = serializable_retry
+                if (
+                    not blocked_config.dry_run
+                    and serializable_retry.get("utel_submission_attempted") is True
+                ):
+                    verification_queue.append((result_index, blocked_config))
+                _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
+                counts = _utel_batch_counts(results)
+                job.update({"completed": len(results), **counts, "results": results})
+                if retry_index < len(temporary_block_queue) and inter_row_delay > 0:
+                    await asyncio.sleep(inter_row_delay)
+
         if verification_queue:
-            job["phase"] = "CRM: verificando leads por país"
+            job["phase"] = "CRM: reintentando verificaciones bloqueadas"
             logger.info(
-                "Lote %s con pausa entre verificaciones CRM: %ss",
+                "Lote %s con pausa antes de reintentar verificaciones bloqueadas: %ss",
                 job_id,
                 inter_row_delay,
             )
@@ -599,6 +673,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     submission,
                     serializable_verification,
                 )
+                results[result_index]["result"]["temporary_block_retry_attempted"] = True
                 # Sustituye el checkpoint con el enlace CRM confirmado.
                 _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
                 counts = _utel_batch_counts(results)

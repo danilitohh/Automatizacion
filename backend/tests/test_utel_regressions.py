@@ -13,7 +13,7 @@ from backend.app.automations.utel_inconcert.runner import (
     UtelQaError,
     UtelRunCancelled,
 )
-from backend.app.api.routes import _is_support_rejection
+from backend.app.api.routes import _is_support_rejection, _is_temporary_access_block
 from backend.app.config.settings import Settings
 from backend.app.schemas.bot import UtelLead, UtelQaConfig
 from backend.app.services.test_lead_service import TestLeadService
@@ -133,6 +133,37 @@ def test_support_rejection_is_the_only_post_click_error_eligible_for_retry():
     assert _is_support_rejection(rejected)
     assert not _is_support_rejection(unconfirmed)
     assert not _is_support_rejection(already_created)
+
+
+def test_only_temporary_access_blocks_are_queued_for_end_retry():
+    cloudflare = {
+        "status": "FAIL",
+        "summary": "No se pudo completar la verificación.",
+        "stages": [{
+            "status": "FAIL",
+            "message": "El Balanceador bloqueo esta sesion del navegador antes del login. Cloudflare.",
+        }],
+    }
+    missing_program = {
+        "status": "FAIL",
+        "summary": "El formulario no tiene una opción equivalente al programa.",
+        "stages": [],
+    }
+
+    assert _is_temporary_access_block(cloudflare)
+    assert not _is_temporary_access_block(missing_program)
+
+
+def test_form_validation_retries_when_utel_rebuilds_the_dom():
+    runner = UtelInconcertRunner(Settings())
+    controls = AsyncMock()
+    controls.evaluate_all.side_effect = [RuntimeError("DOM reemplazado"), []]
+    form = Mock()
+    form.locator.return_value = controls
+
+    asyncio.run(runner._validate_utel_form_before_submit(form))
+
+    assert controls.evaluate_all.await_count == 2
 
 
 def test_cooperative_stop_during_validation_prevents_the_click():
