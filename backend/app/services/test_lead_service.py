@@ -87,8 +87,10 @@ class TestLeadService:
         self,
         database_path: Path,
         authorized_phones: dict[str, list[str]] | None = None,
+        allow_synthetic_real_phones: bool = False,
     ):
         self.database_path = database_path
+        self.allow_synthetic_real_phones = allow_synthetic_real_phones
         self.authorized_phones = {
             self._normalize(country): list(phones)
             for country, phones in (authorized_phones or {}).items()
@@ -214,7 +216,7 @@ class TestLeadService:
         for raw_phone in configured:
             validated.append(self._validate_authorized_phone(raw_phone, normalized_country, country_label))
         for phone in dict.fromkeys(validated):
-            if phone not in used:
+            if phone not in used and self._is_valid_generated_phone(phone, normalized_country):
                 return phone
         raise ValueError(
             f"No se inició ningún envío: se agotaron los teléfonos autorizados para {country_label}. Agrega números nuevos a UTEL_TEST_PHONES_JSON."
@@ -275,6 +277,23 @@ class TestLeadService:
             candidate = (candidate + 1) % capacity
         raise ValueError(
             f"Se agotaron los teléfonos generados para dry run de {country_label}."
+        )
+
+    def _is_valid_generated_phone(self, phone: str, normalized_country: str) -> bool:
+        """Comprueba el plan nacional en el modo sintético de envío real."""
+
+        if not self.allow_synthetic_real_phones:
+            return True
+        region = self.COUNTRY_REGIONS.get(normalized_country)
+        if region is None:
+            return False
+        try:
+            parsed = phonenumbers.parse(phone, region)
+        except phonenumbers.NumberParseException:
+            return False
+        return (
+            phonenumbers.is_valid_number(parsed)
+            and phonenumbers.region_code_for_number(parsed) == region
         )
 
     @staticmethod

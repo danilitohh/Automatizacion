@@ -316,9 +316,14 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
 
         lead_service = TestLeadService(
             settings.database_path,
-            settings.authorized_test_phones() if not batch_dry_run else {},
+            settings.authorized_test_phones()
+            if not batch_dry_run and not settings.utel_allow_synthetic_real_phones
+            else {},
+            allow_synthetic_real_phones=(
+                not batch_dry_run and settings.utel_allow_synthetic_real_phones
+            ),
         )
-        if not batch_dry_run:
+        if not batch_dry_run and not settings.utel_allow_synthetic_real_phones:
             # Primero se valida localmente que cada fila tenga un número real,
             # válido y disponible. No se abre CRM ni UTEL con un banco incompleto.
             lead_service.validate_authorized_capacity(
@@ -348,7 +353,9 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             if job.get("cancel_requested")
             else lead_service.reserve_many(
                 [config.country for _, config in prepared_rows],
-                require_authorized_phone=not batch_dry_run,
+                require_authorized_phone=(
+                    not batch_dry_run and not settings.utel_allow_synthetic_real_phones
+                ),
             )
         )
         verification_queue = []
@@ -1013,10 +1020,17 @@ async def run_utel_inconcert_bot(request: Request, config: UtelQaConfig) -> dict
     try:
         generated_lead = TestLeadService(
             settings.database_path,
-            settings.authorized_test_phones() if not config.dry_run else {},
+            settings.authorized_test_phones()
+            if not config.dry_run and not settings.utel_allow_synthetic_real_phones
+            else {},
+            allow_synthetic_real_phones=(
+                not config.dry_run and settings.utel_allow_synthetic_real_phones
+            ),
         ).reserve(
             config.country,
-            require_authorized_phone=not config.dry_run,
+            require_authorized_phone=(
+                not config.dry_run and not settings.utel_allow_synthetic_real_phones
+            ),
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error

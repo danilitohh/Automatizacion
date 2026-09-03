@@ -84,3 +84,15 @@ def test_authorized_capacity_validation_does_not_consume_numbers(tmp_path):
     )
 
     assert [lead["phone"] for lead in leads] == ["5512345678", "5598765432"]
+
+
+def test_synthetic_real_mode_generates_country_valid_phone(tmp_path):
+    service = TestLeadService(
+        tmp_path / "synthetic-real.db",
+        allow_synthetic_real_phones=True,
+    )
+
+    lead = service.reserve("Ecuador", require_authorized_phone=False)
+
+    assert len(lead["phone"]) == 9
+    assert lead["phone"].startswith("9")

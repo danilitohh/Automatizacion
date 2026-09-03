@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # JSON con teléfonos reales controlados por QA, agrupados por país. Se
     # mantiene como secreto para que nunca aparezca en reprs ni respuestas.
     utel_test_phones_json: SecretStr = SecretStr("{}")
+    # Permite probar formularios con teléfonos sintéticos válidos por país.
+    # Está desactivado por defecto para exigir números autorizados por QA.
+    utel_allow_synthetic_real_phones: bool = False
 
     # Servicios de IA: las claves se cargan desde .env y nunca se envían al renderer.
     ollama_api_key: SecretStr = SecretStr("")
