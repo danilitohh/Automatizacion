@@ -1,9 +1,9 @@
 import asyncio
 from unittest.mock import AsyncMock, Mock
 
-from backend.app.automations.utel_inconcert.runner import UtelInconcertRunner
+from backend.app.modules.bot_nuevos_productos.runner import UtelInconcertRunner
 from backend.app.config.settings import Settings
-from backend.app.schemas.bot import UtelLead, UtelQaConfig
+from backend.app.modules.bot_nuevos_productos.schemas import UtelLead, UtelQaConfig
 
 
 def _config(form_type: str) -> UtelQaConfig:
@@ -51,7 +51,7 @@ def test_footer_scrolls_before_returning_form(monkeypatch):
     page = Mock()
     page.locator.return_value.first = form
     page.locator.return_value.inner_text = AsyncMock(return_value="Formulario UTEL")
-    monkeypatch.setattr("backend.app.automations.utel_inconcert.runner.asyncio.sleep", AsyncMock())
+    monkeypatch.setattr("backend.app.modules.bot_nuevos_productos.runner.asyncio.sleep", AsyncMock())
     result = asyncio.run(runner._find_utel_form(page, _config("footer")))
     assert result is form
     form.scroll_into_view_if_needed.assert_awaited_once()
@@ -67,7 +67,7 @@ def test_tarjeta_does_not_scroll_before_returning_form(monkeypatch):
     body.inner_text.return_value = "Página UTEL"
     page = Mock()
     page.locator.side_effect = lambda selector: body if selector == "body" else Mock(first=form)
-    monkeypatch.setattr("backend.app.automations.utel_inconcert.runner.asyncio.sleep", AsyncMock())
+    monkeypatch.setattr("backend.app.modules.bot_nuevos_productos.runner.asyncio.sleep", AsyncMock())
 
     result = asyncio.run(runner._find_utel_form(page, _config("tarjeta")))
 
@@ -87,7 +87,7 @@ def test_delayed_tarjeta_is_requeried_instead_of_reported_missing(monkeypatch):
     page = Mock()
     page.locator.side_effect = lambda selector: body if selector == "body" else container
     page.reload = AsyncMock()
-    monkeypatch.setattr("backend.app.automations.utel_inconcert.runner.asyncio.sleep", AsyncMock())
+    monkeypatch.setattr("backend.app.modules.bot_nuevos_productos.runner.asyncio.sleep", AsyncMock())
 
     result = asyncio.run(runner._find_utel_form(page, _config("tarjeta")))
 
@@ -121,7 +121,7 @@ def test_tarjeta_reloads_once_before_failing(monkeypatch):
 
     page.locator.side_effect = locator
     page.reload = AsyncMock(side_effect=reload)
-    monkeypatch.setattr("backend.app.automations.utel_inconcert.runner.asyncio.sleep", AsyncMock())
+    monkeypatch.setattr("backend.app.modules.bot_nuevos_productos.runner.asyncio.sleep", AsyncMock())
 
     result = asyncio.run(runner._find_utel_form(page, _config("tarjeta")))
 

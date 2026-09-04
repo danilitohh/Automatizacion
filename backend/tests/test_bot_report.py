@@ -3,7 +3,7 @@ from io import BytesIO
 import pytest
 from openpyxl import Workbook, load_workbook
 
-from backend.app.services.bot_report_service import BotReportService
+from backend.app.modules.bot_nuevos_productos.report_service import BotReportService
 
 
 @pytest.mark.parametrize("dry_run,failed", [(False, False), (True, False), (False, True)])

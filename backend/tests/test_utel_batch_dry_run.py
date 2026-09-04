@@ -8,8 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 from openpyxl import Workbook, load_workbook
 
-from backend.app.api.routes import _run_utel_batch_job, cancel_utel_batch
-from backend.app.automations.utel_inconcert.runner import UtelInconcertRunner, UtelQaError
+from backend.app.modules.bot_nuevos_productos.router import _run_utel_batch_job, cancel_utel_batch
+from backend.app.modules.bot_nuevos_productos.runner import UtelInconcertRunner, UtelQaError
 from backend.app.config.settings import Settings
 from backend.app.main import create_app
 

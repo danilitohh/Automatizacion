@@ -1,4 +1,4 @@
-from backend.app.automations.utel_inconcert.runner import UtelInconcertRunner
+from backend.app.modules.bot_nuevos_productos.runner import UtelInconcertRunner
 from backend.app.config.settings import Settings
 
 

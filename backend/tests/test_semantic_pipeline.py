@@ -4,10 +4,10 @@ from io import BytesIO
 
 from docx import Document
 
-from backend.app.automations.pdp_validation.comparison_engine import ComparisonEngine
-from backend.app.automations.pdp_validation.document_parser import DocumentParser
-from backend.app.automations.pdp_validation.models import SemanticDocument, SemanticNode
-from backend.app.automations.pdp_validation.normalizer import normalized_text
+from backend.app.modules.pdp_validation.comparison_engine import ComparisonEngine
+from backend.app.modules.pdp_validation.document_parser import DocumentParser
+from backend.app.modules.pdp_validation.models import SemanticDocument, SemanticNode
+from backend.app.modules.pdp_validation.normalizer import normalized_text
 
 
 def test_document_parser_detects_structure_and_tables():

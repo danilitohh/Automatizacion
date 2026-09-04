@@ -2,7 +2,7 @@
 
 import asyncio
 
-from backend.app.automations.pdp_validation.semantic_ai import SemanticAIOrchestrator
+from backend.app.modules.pdp_validation.semantic_ai import SemanticAIOrchestrator
 from backend.app.services.ai_service import AICompletion, AIProviderError
 
 

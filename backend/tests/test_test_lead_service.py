@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from backend.app.services.test_lead_service import TestLeadService
+from backend.app.modules.bot_nuevos_productos.test_lead_service import TestLeadService
 
 
 def test_reserves_unique_country_aware_test_leads(tmp_path):

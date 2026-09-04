@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from backend.app.automations.utel_inconcert.runner import (
+from backend.app.modules.bot_nuevos_productos.runner import (
     PostSubmitSignal,
     RejectedSubmission,
     UnconfirmedSubmission,
@@ -13,11 +13,11 @@ from backend.app.automations.utel_inconcert.runner import (
     UtelQaError,
     UtelRunCancelled,
 )
-from backend.app.api.routes import _is_support_rejection, _is_temporary_access_block
+from backend.app.modules.bot_nuevos_productos.router import _is_support_rejection, _is_temporary_access_block
 from backend.app.config.settings import Settings
-from backend.app.schemas.bot import UtelLead, UtelQaConfig
-from backend.app.services.test_lead_service import TestLeadService
-from backend.app.services.bot_spreadsheet_service import BotSpreadsheetService
+from backend.app.modules.bot_nuevos_productos.schemas import UtelLead, UtelQaConfig
+from backend.app.modules.bot_nuevos_productos.test_lead_service import TestLeadService
+from backend.app.modules.bot_nuevos_productos.spreadsheet_service import BotSpreadsheetService
 
 
 def test_global_country_requires_explicit_philippines_context():

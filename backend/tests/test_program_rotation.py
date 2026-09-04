@@ -2,10 +2,10 @@ from concurrent.futures import ThreadPoolExecutor
 import asyncio
 from unittest.mock import AsyncMock, Mock
 
-from backend.app.services.program_rotation_service import ProgramRotationService
-from backend.app.automations.utel_inconcert.runner import UtelInconcertRunner
+from backend.app.modules.bot_nuevos_productos.program_rotation_service import ProgramRotationService
+from backend.app.modules.bot_nuevos_productos.runner import UtelInconcertRunner
 from backend.app.config.settings import Settings
-from backend.app.schemas.bot import UtelQaConfig, UtelLead
+from backend.app.modules.bot_nuevos_productos.schemas import UtelQaConfig, UtelLead
 
 
 def options(*names):

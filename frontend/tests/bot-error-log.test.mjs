@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 // El renderer usa módulos ESM aunque Electron main es CommonJS.
-const source = await readFile(new URL("../src/renderer/bot-module.js", import.meta.url), "utf8");
+const source = await readFile(new URL("../src/modules/bot_nuevos_productos/module.js", import.meta.url), "utf8");
 const { buildErrorLog, isSafeUtelRetry } = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
 
 test("el log contiene solo errores con la fila y el mensaje completo", () => {

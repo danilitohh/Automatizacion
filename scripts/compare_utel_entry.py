@@ -14,9 +14,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
-from app.automations.utel_inconcert.runner import UtelInconcertRunner, UtelQaError
+from app.modules.bot_nuevos_productos.runner import UtelInconcertRunner, UtelQaError
 from app.config.settings import Settings
-from app.schemas.bot import UtelQaConfig
+from app.modules.bot_nuevos_productos.schemas import UtelQaConfig
 
 PROGRAM = "Doctorado en Administración Estratégica Empresarial"
 SLUG = "doctorado-en-administracion-estrategica-empresarial"
