@@ -2,8 +2,7 @@
 
 // Coordinador de la interfaz: navegación, dashboard e historial compartido.
 import { api } from "../services/api.js";
-import { initializeBotModule } from "./bot-module.js?v=new-products-auto-download-2";
-import { initializeLeadsDeployModule } from "./leads-deploy-module.js?v=leads-deploy-isolated-4";
+import { initializeBotModule } from "./bot-module.js?v=telemetry-layout-2";
 import { initializePdpModule } from "./pdp-module.js";
 import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
 
@@ -17,8 +16,7 @@ const viewMeta = {
   forms: { title: "Validación de formularios", description: "Automatizaciones" },
   visual: { title: "Monitoreo visual", description: "Automatizaciones" },
   excel: { title: "Excel vs Web / Strapi", description: "Automatizaciones" },
-  bot: { title: "Bot de nuevos productos", description: "Automatizaciones" },
-  "leads-deploy": { title: "Bot Leads Deploy", description: "Automatizaciones" },
+  bot: { title: "Bot de verificaciones", description: "Automatizaciones" },
   "weekly-auto": { title: "Weekly Auto", description: "Automatizaciones" },
   pdp: { title: "Validación PDP vs DOCX", description: "Automatizaciones" },
   history: { title: "Historial", description: "Trazabilidad" },
@@ -196,16 +194,6 @@ bindEvents();
 state.activeView = localStorage.getItem(LAST_VIEW_KEY) || state.activeView;
 navigate(state.activeView);
 initializeBotModule({
-  showToast,
-  runUtelInconcertBot: api.runUtelInconcertBot,
-  utelInconcertStatus: api.utelInconcertStatus,
-  cancelUtelInconcert: api.cancelUtelInconcert,
-  previewBotSpreadsheet: api.previewBotSpreadsheet,
-  runUtelBatch: api.runUtelBatch,
-  utelBatchStatus: api.utelBatchStatus,
-  cancelUtelBatch: api.cancelUtelBatch,
-});
-initializeLeadsDeployModule({
   showToast,
   runUtelInconcertBot: api.runUtelInconcertBot,
   utelInconcertStatus: api.utelInconcertStatus,

@@ -4,7 +4,7 @@ import json
 import asyncio
 import os
 import re
-from datetime import datetime
+from datetime import date, datetime
 from uuid import uuid4
 from typing import Any
 
@@ -15,6 +15,7 @@ from ..automations.generic_bot.runner import BotRunner
 from ..automations.utel_inconcert.runner import UtelInconcertRunner, UtelRunCancelled
 from ..automations.weekly_auto.runner import WeeklyAutoRunner
 from ..database.repository import ExecutionRepository
+from ..database.connection import get_connection
 from ..schemas.bot import (
     BotConfig,
     BotJobResponse,
@@ -255,6 +256,58 @@ def _is_support_rejection(result: dict[str, Any]) -> bool:
     )
 
 
+def _is_post_submit_crm_retry_candidate(result: dict[str, Any]) -> bool:
+    """Permite una segunda consulta CRM cuando UTEL ya fue enviado."""
+
+    if result.get("utel_submission_attempted") is not True:
+        return False
+
+    failed_stage = next(
+        (
+            stage
+            for stage in result.get("stages", [])
+            if isinstance(stage, dict) and stage.get("status") == "FAIL"
+        ),
+        None,
+    )
+    if not failed_stage:
+        return False
+
+    stage_name = str(failed_stage.get("stage") or "")
+    return (
+        stage_name.startswith("inconcert_")
+        or stage_name.startswith("lead_balancer_")
+    )
+
+
+def _is_safe_visible_retry_candidate(result: dict[str, Any]) -> bool:
+    """Reintenta una vez en navegador visible solo cuando todavía no hubo envío."""
+
+    if result.get("utel_submission_attempted") is not False:
+        return False
+
+    failed_stage = next(
+        (
+            stage
+            for stage in result.get("stages", [])
+            if isinstance(stage, dict) and stage.get("status") == "FAIL"
+        ),
+        None,
+    )
+    if not failed_stage:
+        return False
+
+    stage_name = str(failed_stage.get("stage") or "")
+    return stage_name in {
+        "utel_access",
+        "utel_open",
+        "utel_navigation",
+        "utel_form",
+        "utel_fill",
+        "utel_submit",
+    }
+
+
 def _is_temporary_access_block(result: dict[str, Any]) -> bool:
     """Reconoce bloqueos temporales que admiten un solo reintento al final."""
 
@@ -271,7 +324,9 @@ def _is_temporary_access_block(result: dict[str, Any]) -> bool:
         re.search(
             r"cloudflare|sorry,?\s+you\s+have\s+been\s+blocked|"
             r"you\s+are\s+unable\s+to\s+access|bloqueo\s+esta\s+sesion|"
-            r"bloque[oó]\s+el\s+acceso\s+de\s+esta\s+sesion",
+            r"bloque[oó]\s+el\s+acceso\s+de\s+esta\s+sesion|"
+            r"no\s+se\s+encontr[oó]\s+el\s+campo\s+usuario\s+en\s+el\s+balanceador|"
+            r"pantalla\s+de\s+login.*campos.*no.*cargar",
             " ".join(texts),
             re.IGNORECASE,
         )
@@ -283,6 +338,348 @@ def _is_balanceador_url(url: str) -> bool:
 
     value = str(url or "").casefold()
     return "balance" in value or "lead-balancer" in value
+
+
+US_QA_AREA_CODES = (
+    "202", "212", "213", "305", "312", "347", "415", "424", "469", "512",
+    "617", "646", "702", "703", "713", "718", "786", "917", "929", "954",
+    "972",
+)
+
+
+def _extract_ai_phone_candidate(value: str) -> str:
+    """Extrae un único teléfono nacional de una respuesta de Ollama."""
+
+    matches = re.findall(r"(?<!\d)(\d{7,15})(?!\d)", str(value or ""))
+    if len(matches) != 1:
+        raise ValueError("Ollama no devolvió un único teléfono nacional.")
+    return matches[0]
+
+
+def _country_phone_rule(
+    lead_service: TestLeadService,
+    country: str,
+) -> tuple[str, int] | None:
+    """Devuelve prefijo nacional esperado y cantidad de dígitos del país."""
+
+    normalized = lead_service._normalize(country)
+    return lead_service.PHONE_FORMATS.get(normalized)
+
+
+def _phone_matches_country_rule(
+    lead_service: TestLeadService,
+    country: str,
+    phone: str,
+) -> bool:
+    """Comprueba estructura local antes de permitir que el número llegue a UTEL."""
+
+    rule = _country_phone_rule(lead_service, country)
+    if rule is None:
+        return False
+
+    prefix, total_digits = rule
+    return (
+        phone.isdigit()
+        and len(phone) == total_digits
+        and phone.startswith(prefix)
+    )
+
+
+def _is_safe_us_synthetic_phone(phone: str) -> bool:
+    """Acepta solo números QA NPA-555-0100..0199 de códigos permitidos."""
+
+    if not re.fullmatch(r"\d{10}", phone):
+        return False
+    if phone[:3] not in US_QA_AREA_CODES:
+        return False
+    if phone[3:6] != "555":
+        return False
+    return 100 <= int(phone[-4:]) <= 199
+
+
+def _reserve_specific_test_phone(
+    settings: Any,
+    lead_service: TestLeadService,
+    country_label: str,
+    phone: str,
+) -> dict[str, Any] | None:
+    """Reserva un número concreto si sigue libre al abrir la transacción."""
+
+    today = date.today().isoformat()
+
+    with get_connection(settings.database_path) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+
+        exists = connection.execute(
+            "SELECT 1 FROM test_leads WHERE phone = ? LIMIT 1",
+            (phone,),
+        ).fetchone()
+        if exists:
+            connection.rollback()
+            return None
+
+        next_sequence = connection.execute(
+            "SELECT COALESCE(MAX(sequence), 0) + 1 "
+            "FROM test_leads WHERE test_date = ?",
+            (today,),
+        ).fetchone()[0]
+        phone_sequence = connection.execute(
+            "SELECT COALESCE(MAX(id), 0) + 1 FROM test_leads"
+        ).fetchone()[0]
+
+        email = f"Testing{today}N{next_sequence}@testingUtel.com"
+        name = f"Danilo Prueba {lead_service._alphabetic_sequence(phone_sequence)}"
+
+        connection.execute(
+            "INSERT INTO test_leads "
+            "(test_date, sequence, country, email, phone, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                today,
+                next_sequence,
+                country_label,
+                email,
+                phone,
+                datetime.now().isoformat(timespec="seconds"),
+            ),
+        )
+
+    return {
+        "name": name,
+        "email": email,
+        "phone": phone,
+        "country": country_label,
+        "sequence": next_sequence,
+    }
+
+
+def _fallback_us_test_lead(
+    settings: Any,
+    lead_service: TestLeadService,
+    country_label: str,
+    normalized_country: str,
+) -> dict[str, Any]:
+    """Pool local amplio de respaldo para Estados Unidos."""
+
+    with get_connection(settings.database_path) as connection:
+        used = {
+            str(row[0])
+            for row in connection.execute("SELECT phone FROM test_leads")
+        }
+        seed = int(
+            connection.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM test_leads")
+            .fetchone()[0]
+        )
+
+    capacity = len(US_QA_AREA_CODES) * 100
+    start = (seed * 7919) % capacity
+
+    for offset in range(capacity):
+        position = (start + offset) % capacity
+        area_code = US_QA_AREA_CODES[position // 100]
+        line_number = 100 + (position % 100)
+        phone = f"{area_code}555{line_number:04d}"
+
+        if phone in used:
+            continue
+
+        if (
+            lead_service.allow_synthetic_real_phones
+            and not lead_service._is_valid_generated_phone(phone, normalized_country)
+        ):
+            continue
+
+        reserved = _reserve_specific_test_phone(
+            settings,
+            lead_service,
+            country_label,
+            phone,
+        )
+        if reserved is not None:
+            logger.info(
+                "Se usó fallback local QA para %s después de no obtener un número nuevo de Ollama.",
+                country_label,
+            )
+            return reserved
+
+    raise ValueError(
+        f"No quedan teléfonos sintéticos QA disponibles para {country_label}."
+    )
+
+
+def _ollama_phone_prompt(
+    lead_service: TestLeadService,
+    country_label: str,
+    used: set[str],
+    attempt: int,
+) -> str:
+    """Construye una instrucción específica para el país de la fila."""
+
+    normalized_country = lead_service._normalize(country_label)
+    prefix, total_digits = lead_service.PHONE_FORMATS[normalized_country]
+    us_aliases = {"usa", "united states", "estados unidos", "global"}
+
+    recent_used = [
+        phone
+        for phone in sorted(used)
+        if phone.isdigit() and len(phone) == total_digits
+    ][-60:]
+    forbidden = ", ".join(recent_used) if recent_used else "ninguno"
+    nonce = uuid4().hex[:12]
+
+    if normalized_country in us_aliases:
+        area_codes = ", ".join(US_QA_AREA_CODES)
+        return (
+            "Genera exactamente UN teléfono sintético de Estados Unidos para QA. "
+            "Responde únicamente con 10 dígitos, sin espacios, texto ni JSON. "
+            "Formato obligatorio: NPA55501XX. "
+            f"NPA debe ser uno de estos códigos: {area_codes}. "
+            "XX debe estar entre 00 y 99. "
+            f"No uses ninguno de estos números ya reservados: {forbidden}. "
+            f"Identificador único de solicitud: {nonce}. "
+            f"Intento {attempt}. Devuelve un número diferente."
+        )
+
+    return (
+        f"Genera exactamente UN teléfono nacional sintético para pruebas QA de {country_label}. "
+        "Responde únicamente con los dígitos nacionales, sin código internacional, "
+        "sin signo +, espacios, texto ni JSON. "
+        f"Debe tener exactamente {total_digits} dígitos y comenzar con {prefix}. "
+        f"No uses ninguno de estos números ya reservados: {forbidden}. "
+        f"Identificador único de solicitud: {nonce}. "
+        f"Intento {attempt}. Devuelve un número diferente."
+    )
+
+
+async def _reserve_lead_for_case(
+    settings: Any,
+    lead_service: TestLeadService,
+    country: str,
+    *,
+    require_authorized_phone: bool,
+) -> dict[str, Any]:
+    """Genera y reserva el lead justo antes de ejecutar cada fila.
+
+    - Envío real normal: usa únicamente el banco autorizado del país.
+    - Dry run: Ollama puede proponer un número por caso para cualquier país
+      configurado; Python valida estructura y duplicados.
+    - Envío sintético real explícito: además exige validación libphonenumber.
+    - Si Ollama no está disponible, se conserva el generador local como respaldo.
+    """
+
+    if require_authorized_phone:
+        return lead_service.reserve(country, require_authorized_phone=True)
+
+    normalized_country = lead_service._normalize(country)
+    country_label = country.strip()
+    rule = lead_service.PHONE_FORMATS.get(normalized_country)
+
+    if rule is None:
+        return lead_service.reserve(country, require_authorized_phone=False)
+
+    ai_service = AIService(settings)
+    us_aliases = {"usa", "united states", "estados unidos", "global"}
+
+    for attempt in range(1, 7):
+        with get_connection(settings.database_path) as connection:
+            used = {
+                str(row[0])
+                for row in connection.execute("SELECT phone FROM test_leads")
+            }
+
+        prompt = _ollama_phone_prompt(
+            lead_service,
+            country_label,
+            used,
+            attempt,
+        )
+
+        try:
+            completion = await ai_service.generate(
+                "ollama",
+                prompt,
+                system_instruction=(
+                    "Eres un generador estricto de datos sintéticos para pruebas QA. "
+                    "Nunca agregues explicaciones. Respeta exactamente la longitud, "
+                    "el prefijo y la lista de números prohibidos."
+                ),
+                model=settings.ollama_local_model,
+                local=True,
+            )
+            phone = _extract_ai_phone_candidate(completion.text)
+        except Exception as error:
+            logger.warning(
+                "Ollama no pudo generar teléfono para %s en intento %s: %s",
+                country_label,
+                attempt,
+                error,
+            )
+            continue
+
+        if normalized_country in us_aliases:
+            structurally_valid = _is_safe_us_synthetic_phone(phone)
+        else:
+            structurally_valid = _phone_matches_country_rule(
+                lead_service,
+                country_label,
+                phone,
+            )
+
+        if not structurally_valid:
+            logger.warning(
+                "Ollama propuso un teléfono fuera de la regla de %s: %s",
+                country_label,
+                phone,
+            )
+            continue
+
+        if phone in used:
+            logger.info(
+                "Ollama repitió %s para %s; se solicitará otro.",
+                phone,
+                country_label,
+            )
+            continue
+
+        if (
+            lead_service.allow_synthetic_real_phones
+            and not lead_service._is_valid_generated_phone(
+                phone,
+                normalized_country,
+            )
+        ):
+            logger.warning(
+                "Ollama propuso un teléfono que no supera libphonenumber para %s: %s",
+                country_label,
+                phone,
+            )
+            continue
+
+        reserved = _reserve_specific_test_phone(
+            settings,
+            lead_service,
+            country_label,
+            phone,
+        )
+        if reserved is None:
+            continue
+
+        logger.info(
+            "Ollama generó y reservó %s para un caso de %s.",
+            phone,
+            country_label,
+        )
+        return reserved
+
+    if normalized_country in us_aliases:
+        return _fallback_us_test_lead(
+            settings,
+            lead_service,
+            country_label,
+            normalized_country,
+        )
+
+    return lead_service.reserve(country, require_authorized_phone=False)
 
 
 @router.get("/runtime")
@@ -488,27 +885,77 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 await UtelInconcertRunner(settings).preflight_inconcert(preflight_config)
                 checked_crm_urls.add(preflight_config.inconcert_url)
 
-        reserved_leads = (
-            []
-            if job.get("cancel_requested")
-            else lead_service.reserve_many(
-                [config.country for _, config in prepared_rows],
-                require_authorized_phone=(
-                    not batch_dry_run and not settings.utel_allow_synthetic_real_phones
-                ),
-            )
-        )
         verification_queue = []
         temporary_block_queue = []
         job["phase"] = "UTEL: enviando formularios"
-        for index, ((row, prepared_config), lead) in enumerate(
-            zip(prepared_rows, reserved_leads, strict=True),
-            1,
-        ):
+        for index, (row, prepared_config) in enumerate(prepared_rows, 1):
             # La detención es cooperativa: no inicia otra fila, pero jamás
             # interrumpe una fila que pudiera estar justo después del clic.
             if job.get("cancel_requested"):
                 break
+
+            job.update({
+                "phase": f"Generando datos de prueba para fila {row['row_number']}",
+                "current_program": row.get("test_case") or row["program_name"] or row["level"],
+                "current_row": row["row_number"],
+                "last_error": "",
+            })
+
+            try:
+                lead = await _reserve_lead_for_case(
+                    settings,
+                    lead_service,
+                    prepared_config.country,
+                    require_authorized_phone=(
+                        not batch_dry_run
+                        and not settings.utel_allow_synthetic_real_phones
+                    ),
+                )
+            except ValueError as error:
+                failed_result = {
+                    "status": "FAIL",
+                    "summary": str(error),
+                    "dry_run": batch_dry_run,
+                    "country": prepared_config.country,
+                    "level": prepared_config.level,
+                    "modality": prepared_config.modality,
+                    "form_type": prepared_config.form_type,
+                    "lead_name": "",
+                    "lead_email": "",
+                    "lead_phone": "",
+                    "lead_url": None,
+                    "selected_program_name": prepared_config.program_name,
+                    "utel_submission_attempted": False,
+                    "utel_submission": "failed",
+                    "utel_submission_message": str(error),
+                    "inconcert_login": "skipped",
+                    "lead_found": "skipped",
+                    "conversion_found": "skipped",
+                    "stages": [{
+                        "step_number": 0,
+                        "stage": "startup",
+                        "status": "FAIL",
+                        "message": str(error),
+                        "selector": None,
+                        "url": None,
+                        "screenshot": None,
+                    }],
+                    "screenshots": [],
+                }
+                results.append({"row": row, "result": failed_result})
+                _save_utel_batch_report(
+                    settings, job_id, filename, content, mapping, results
+                )
+                counts = _utel_batch_counts(results)
+                job.update({
+                    "completed": len(results),
+                    **counts,
+                    "last_error": str(error),
+                    "results": results,
+                    "download_url": f"/api/bots/utel-inconcert/batch/{job_id}/download",
+                })
+                continue
+
             config = prepared_config.model_copy(
                 update={"lead": prepared_config.lead.model_copy(update=lead)}
             )
@@ -577,7 +1024,9 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     retry_notes.append("Se agotaron los 3 intentos automáticos.")
                     break
                 try:
-                    retry_lead = lead_service.reserve(
+                    retry_lead = await _reserve_lead_for_case(
+                        settings,
+                        lead_service,
                         config.country,
                         require_authorized_phone=(
                             not batch_dry_run
@@ -622,16 +1071,20 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             job["download_url"] = f"/api/bots/utel-inconcert/batch/{job_id}/download"
             if (
                 not config.dry_run
-                and serializable_result.get("utel_submission_attempted") is True
-                and _is_temporary_access_block(serializable_result)
+                and _is_post_submit_crm_retry_candidate(serializable_result)
             ):
-                # El runner ya buscó el lead inmediatamente. Solo se aplaza una
-                # segunda consulta cuando esa búsqueda fue bloqueada; jamás se
-                # vuelve a enviar el formulario.
+                # Después de POST /api/forms cualquier fallo de InConcert o
+                # Balanceador puede reintentarse como verification_only. Nunca
+                # se vuelve a ejecutar UTEL ni se genera otro lead.
                 verification_queue.append((result_index, config))
-            elif _is_temporary_access_block(serializable_result):
-                # El bloqueo ocurrió antes del clic: es seguro volver a ejecutar
-                # la fila una vez, pero solo después de terminar las demás.
+            elif (
+                _is_temporary_access_block(serializable_result)
+                or _is_safe_visible_retry_candidate(serializable_result)
+            ):
+                # Cualquier fallo ocurrido antes del clic puede reintentarse una
+                # vez de forma segura. El segundo intento usa Chrome visible para
+                # reducir diferencias de renderizado, timing y bloqueos anti-bot,
+                # sin importar el país de la fila.
                 temporary_block_queue.append((result_index, config))
             failed_stage = next((stage for stage in serializable_result["stages"] if stage["status"] == "FAIL"), None)
             counts = _utel_batch_counts(results)
@@ -669,7 +1122,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     job["phase"] = f"UTEL: procesando tanda {completed_batch + 1}"
 
         if temporary_block_queue and not job.get("cancel_requested"):
-            job["phase"] = "UTEL: reintentando bloqueos temporales"
+            job["phase"] = "UTEL: reintentando casos seguros en navegador visible"
             for result_index, blocked_config in temporary_block_queue:
                 row = results[result_index]["row"]
                 job.update({
@@ -678,9 +1131,16 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     "current_lead_name": blocked_config.lead.name,
                     "current_lead_email": blocked_config.lead.email,
                     "current_lead_phone": blocked_config.lead.phone,
-                    "last_error": "Reintentando una fila bloqueada temporalmente.",
+                    "last_error": "Reintentando fila previa al envío en Chrome visible.",
                 })
-                retry_result = await UtelInconcertRunner(settings).run(blocked_config)
+                # Un bloqueo UTEL antes del clic es seguro para reintentar.
+                # Se deja enfriar la sesión y se usa el perfil persistente de
+                # Chrome para reducir bloqueos repetidos del sitio.
+                await asyncio.sleep(20)
+                retry_config = blocked_config.model_copy(
+                    update={"browser": "chrome", "headless": False}
+                )
+                retry_result = await UtelInconcertRunner(settings).run(retry_config)
                 serializable_retry = {
                     **retry_result,
                     "stages": [stage.model_dump() for stage in retry_result["stages"]],
@@ -689,9 +1149,9 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 results[result_index]["result"] = serializable_retry
                 if (
                     not blocked_config.dry_run
-                    and serializable_retry.get("utel_submission_attempted") is True
+                    and _is_post_submit_crm_retry_candidate(serializable_retry)
                 ):
-                    verification_queue.append((result_index, blocked_config))
+                    verification_queue.append((result_index, retry_config))
                 _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
                 counts = _utel_batch_counts(results)
                 job.update({"completed": len(results), **counts, "results": results})
@@ -716,6 +1176,11 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     "current_lead_phone": verify_config.lead.phone,
                     "last_error": "",
                 })
+                # Esta fase es verification_only: puede cambiar de navegador
+                # sin riesgo de volver a enviar UTEL.
+                verify_config = verify_config.model_copy(
+                    update={"browser": "chrome", "headless": False}
+                )
                 verification = await UtelInconcertRunner(settings).run(verify_config)
                 serializable_verification = {**verification, "stages": [stage.model_dump() for stage in verification["stages"]]}
                 submission = results[result_index]["result"]
@@ -757,9 +1222,35 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "todos los envíos ya iniciados fueron conciliados sin reenviar."
             )
     except asyncio.CancelledError:
+        # Detención inmediata solicitada desde la interfaz. El checkpoint previo
+        # conserva el correo de la fila activa para evitar un reenvío accidental.
         _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
-        job.update({"status": "CANCELLED", "finished_at": datetime.now().isoformat(timespec="seconds"), "summary": "Lote cancelado durante la ejecución."})
-        raise
+        counts = _utel_batch_counts(results)
+        possibly_submitted = any(
+            not item.get("result", {}).get("dry_run", False)
+            and item.get("result", {}).get("utel_submission_attempted") is not False
+            for item in results
+        )
+        summary = (
+            "Ejecución detenida. La fila activa pudo quedar entre el clic y la "
+            "confirmación; verifica el correo registrado en CRM antes de reintentar."
+            if possibly_submitted
+            else "Ejecución detenida antes de confirmar un envío UTEL."
+        )
+        job.update({
+            "status": "CANCELLED",
+            "phase": "Ejecución detenida",
+            "finished_at": datetime.now().isoformat(timespec="seconds"),
+            "summary": summary,
+            "download_url": (
+                f"/api/bots/utel-inconcert/batch/{job_id}/download"
+                if results
+                else None
+            ),
+            "results": results,
+            **counts,
+        })
+        return
     except Exception as error:  # noqa: BLE001
         logger.exception("No se pudo completar el lote UTEL/InConcert %s", job_id)
         _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
@@ -833,13 +1324,15 @@ async def cancel_utel_batch(request: Request, job_id: str) -> dict:
     task = request.app.state.bot_tasks.get(job_id)
     if job is None or task is None or task.done():
         raise HTTPException(status_code=404, detail="El lote ya terminó o no existe.")
-    # No se cancela la coroutine mientras una fila puede estar después del clic.
-    # El worker termina la fila actual, concilia lo ya enviado y luego se detiene.
+
     job.update({
         "cancel_requested": True,
-        "phase": "Detención solicitada: cerrando la fila actual de forma segura",
-        "summary": "Detención solicitada; no se iniciarán filas nuevas.",
+        "phase": "Deteniendo ejecución y cerrando navegador",
+        "summary": "Detención inmediata solicitada por el usuario.",
     })
+    task.cancel()
+    # Cede el control para que el worker registre CANCELLED antes del siguiente poll.
+    await asyncio.sleep(0)
     return job
 
 
@@ -1173,8 +1666,25 @@ async def _run_utel_inconcert_job(application, job_id: str, config: UtelQaConfig
         logger.info("Flujo UTEL/InConcert detenido antes del envío: %s (%s)", config.name, job_id)
         return
     except asyncio.CancelledError:
-        logger.info("Flujo UTEL/InConcert cancelado durante el cierre: %s (%s)", config.name, job_id)
-        raise
+        now = datetime.now().isoformat(timespec="seconds")
+        current = application.state.utel_inconcert_jobs.get(job_id, {})
+        application.state.utel_inconcert_jobs[job_id] = {
+            "job_id": job_id,
+            "name": config.name,
+            "status": "CANCELLED",
+            "started_at": current.get("started_at", now),
+            "finished_at": now,
+            "duration_seconds": None,
+            "summary": (
+                "Ejecución detenida por el usuario. Si el clic de envío alcanzó "
+                "a generar POST /api/forms, verifica el correo en CRM antes de "
+                "volver a ejecutar."
+            ),
+            "result": None,
+            "cancel_requested": True,
+        }
+        logger.info("Flujo UTEL/InConcert detenido por el usuario: %s (%s)", config.name, job_id)
+        return
     except Exception as error:  # noqa: BLE001 - el estado se devuelve a la interfaz
         logger.exception("No se pudo completar el flujo UTEL/InConcert %s", config.name)
         now = datetime.now().isoformat(timespec="seconds")
@@ -1375,15 +1885,13 @@ async def cancel_utel_run(request: Request, job_id: str) -> dict:
     task = request.app.state.bot_tasks.get(job_id)
     if job is None or task is None or task.done():
         raise HTTPException(status_code=404, detail="La ejecución ya terminó o no existe.")
-    # Una cancelación forzada podría ocurrir después del clic y borrar el único
-    # registro del envío. Se deja terminar la operación atómica y su consulta CRM.
+
     job.update({
         "cancel_requested": True,
-        "summary": (
-            "Detención solicitada. La operación activa terminará su comprobación "
-            "sin reenviar para conservar un resultado seguro."
-        ),
+        "summary": "Deteniendo ejecución y cerrando navegador.",
     })
+    task.cancel()
+    await asyncio.sleep(0)
     return job
 
 

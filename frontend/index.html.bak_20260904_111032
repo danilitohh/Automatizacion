@@ -48,12 +48,7 @@
           </button>
           <button class="nav-item" data-view="bot">
             <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 5v8l-8 5-8-5V8z"/><path d="m8 12 2.5 2.5L16 9"/></svg></span>
-            <span>Bot de nuevos productos</span>
-            <span class="nav-phase">NUEVO</span>
-          </button>
-          <button class="nav-item" data-view="leads-deploy">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 5v8l-8 5-8-5V8z"/><path d="M8 9h8M8 12h8M8 15h5"/></svg></span>
-            <span>Bot Leads Deploy</span>
+            <span>Bot de verificaciones</span>
             <span class="nav-phase">NUEVO</span>
           </button>
           <button class="nav-item" data-view="weekly-auto">
@@ -218,7 +213,7 @@
         </section>
 
         <section class="view" id="view-bot" data-view-panel="bot">
-          <div class="section-intro"><p class="eyebrow accent">Nuevo módulo</p><h2>Bot de nuevos productos</h2><p class="muted">Construye un flujo de acciones y validaciones que después ejecutará Playwright.</p></div>
+          <div class="section-intro"><p class="eyebrow accent">Nuevo módulo</p><h2>Bot de verificaciones</h2><p class="muted">Construye un flujo de acciones y validaciones que después ejecutará Playwright.</p></div>
           <div class="bot-layout">
             <article class="panel bot-config-panel">
               <div class="panel-header"><div><p class="eyebrow">Configuración</p><h3>Datos del bot</h3></div><span class="status-badge pending">BORRADOR</span></div>
@@ -252,8 +247,6 @@
             </article>
           </div>
         </section>
-
-        <section class="view" id="view-leads-deploy" data-view-panel="leads-deploy"></section>
 
         <section class="view" id="view-weekly-auto" data-view-panel="weekly-auto">
           <div class="section-intro"><p class="eyebrow accent">Nuevo módulo</p><h2>Weekly Auto</h2><p class="muted">Ejecuta un ciclo de apertura y captura de URLs en lote con pausa anti-bloqueo.</p></div>
@@ -344,6 +337,6 @@
       <div class="loader-copy"><span id="loader-kicker">SISTEMA</span><strong id="loader-message">Sincronizando telemetría</strong><small>Canal seguro · procesamiento local</small></div>
       <div class="loader-progress"><span></span></div>
     </div>
-    <script type="module" src="./src/renderer/app.js?v=leads-deploy-isolated-4"></script>
+    <script type="module" src="./src/renderer/app.js?v=telemetry-layout-2"></script>
   </body>
 </html>

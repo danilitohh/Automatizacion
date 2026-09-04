@@ -344,6 +344,6 @@
       <div class="loader-copy"><span id="loader-kicker">SISTEMA</span><strong id="loader-message">Sincronizando telemetría</strong><small>Canal seguro · procesamiento local</small></div>
       <div class="loader-progress"><span></span></div>
     </div>
-    <script type="module" src="./src/renderer/app.js?v=leads-deploy-isolated-4"></script>
+    <script type="module" src="./src/renderer/app.js?v=leads-deploy-ui-2"></script>
   </body>
 </html>

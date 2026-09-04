@@ -1,16 +1,16 @@
 "use strict";
 
 // Controlador visual del Bot: formulario, pasos, validación y ejecución.
-const STORAGE_KEY = "qa-automation.utel-inconcert-config";
-const ACTIVE_SINGLE_JOB_KEY = "qa-automation.utel-inconcert-active-job";
-const LAST_SINGLE_JOB_KEY = "qa-automation.utel-inconcert-last-job";
-const ACTIVE_BATCH_JOB_KEY = "qa-automation.utel-inconcert-active-batch";
-const LAST_BATCH_JOB_KEY = "qa-automation.utel-inconcert-last-batch";
-const AUTO_DOWNLOADED_BATCH_KEY = "qa-automation.utel-inconcert-auto-downloaded-batch";
+const STORAGE_KEY = "qa-automation.leads-deploy-config";
+const ACTIVE_SINGLE_JOB_KEY = "qa-automation.leads-deploy-active-job";
+const LAST_SINGLE_JOB_KEY = "qa-automation.leads-deploy-last-job";
+const ACTIVE_BATCH_JOB_KEY = "qa-automation.leads-deploy-active-batch";
+const LAST_BATCH_JOB_KEY = "qa-automation.leads-deploy-last-batch";
+const AUTO_DOWNLOADED_BATCH_KEY = "qa-automation.leads-deploy-auto-downloaded-batch";
 
 const state = {
   config: {
-    name: "Bot de nuevos productos",
+    name: "Bot Leads Deploy",
     environment: "sandbox",
     dry_run: true,
     country: "ecuador",
@@ -58,17 +58,17 @@ const stageLabels = {
 };
 
 function renderModuleShell() {
-  const view = document.querySelector("#view-bot");
+  const view = document.querySelector("#view-leads-deploy");
   view.innerHTML = `
-    <div class="bot-breadcrumb"><span>Espacio de trabajo</span><b>/</b><strong>Bot de nuevos productos</strong></div>
-    <div class="section-intro bot-page-intro"><p class="eyebrow accent">Automatizacion UTEL</p><p class="muted">Automatiza y valida los envios de leads en UTEL + InConcert de forma rapida y confiable.</p></div>
-    <article class="bot-hero"><div class="bot-hero-icon">◇</div><div><div class="bot-hero-title"><h3>Bot de nuevos productos</h3><span class="status-badge success">ACTIVO</span></div><p>Automatiza la validacion de nuevos productos, envia el lead de prueba y guarda el enlace final en el Excel.</p></div><button class="secondary-button" id="bot-guide" type="button">Ver guia rapida</button></article>
+    <div class="bot-breadcrumb"><span>Espacio de trabajo</span><b>/</b><strong>Bot Leads Deploy</strong></div>
+    <div class="section-intro bot-page-intro"><p class="eyebrow accent">Automatizacion Leads Deploy</p><p class="muted">Automatiza y valida los envios de leads en UTEL + InConcert de forma rapida y confiable.</p></div>
+    <article class="bot-hero"><div class="bot-hero-icon">◇</div><div><div class="bot-hero-title"><h3>Bot Leads Deploy</h3><span class="status-badge success">ACTIVO</span></div><p>Ejecuta el flujo de Leads Deploy, valida cada caso y descarga automaticamente el Excel actualizado.</p></div><button class="secondary-button" id="leads-deploy-guide" type="button">Ver guia rapida</button></article>
     <div class="bot-layout">
       <article class="panel bot-config-panel">
         <div class="panel-header"><div><p class="eyebrow">Configuracion</p><h3>Define la verificacion</h3><p class="panel-subtitle">Configura los datos necesarios para ejecutar el caso.</p></div><span class="status-badge success">● PLAYWRIGHT</span></div>
         <div class="bot-fields">
-          <label class="field full"><span>Nombre de la ejecucion</span><input id="bot-name" type="text" placeholder="Bot de nuevos productos" /></label>
-          <label class="field"><span>Pais</span><select id="bot-country">
+          <label class="field full"><span>Nombre de la ejecucion</span><input id="leads-deploy-name" type="text" placeholder="Bot Leads Deploy" /></label>
+          <label class="field"><span>Pais</span><select id="leads-deploy-country">
             <option value="">Selecciona un pais</option>
             <option value="mexico">Mexico</option>
             <option value="ecuador">Ecuador</option>
@@ -87,47 +87,47 @@ function renderModuleShell() {
             <option value="filipinas">Filipinas</option>
             <option value="india">India</option>
           </select></label>
-          <label class="field"><span>Formulario</span><select id="bot-form-type"><option value="lateral">LateralBLC</option><option value="tarjeta">TarjetaBLC</option><option value="footer">FooterBLC</option></select></label>
-          <label class="field full bot-internal-field"><span>URL UTEL</span><input id="bot-utel-url" type="url" placeholder="Se carga desde el Excel segun el pais" /><small id="bot-utel-url-status">Selecciona una fila del Excel; tambien puedes escribirla manualmente.</small></label>
-          <div class="field full"><span>Importar Excel</span><div class="file-action-row"><input id="bot-spreadsheet" type="file" accept=".xlsx" /><button class="secondary-button" id="bot-analyze-spreadsheet" type="button">Analizar Excel</button></div><small id="bot-spreadsheet-status">Adjunta el archivo y pulsa Analizar Excel para revisar sus columnas.</small><div id="bot-column-mapping"></div></div>
-          <label class="field full"><span>Fila importada</span><select id="bot-spreadsheet-row"><option value="">Selecciona una fila después de analizar</option></select></label>
-          <label class="field full"><span>URL InConcert</span><input id="bot-inconcert-url" type="url" placeholder="https://..." /></label>
-          <label class="field"><span>Modalidad</span><input id="bot-modality" type="text" placeholder="En linea" /></label>
-          <label class="field bot-internal-field" hidden aria-hidden="true"><span>Nivel</span><input id="bot-level" type="hidden" value="Licenciatura" /></label>
-          <label class="field"><span>Entorno</span><select id="bot-environment"><option value="sandbox">Sandbox</option><option value="production">Producción</option></select></label>
-          <label class="toggle-field"><input id="bot-dry-run" type="checkbox" checked /><span><strong>Dry run seguro</strong><small>Rellena el formulario sin enviar leads reales</small></span></label>
-          <label class="field"><span>Estrategia de programa</span><select id="bot-program-strategy"><option value="exact_match">Coincidencia exacta</option><option value="first">Primer programa visible</option></select></label>
-          <label class="field full"><span>Nombre exacto del programa</span><input id="bot-program-name" type="text" placeholder="Obligatorio con coincidencia exacta" /></label>
-          <label class="field full"><span>Patron de confirmacion (opcional)</span><input id="bot-success-pattern" type="text" placeholder="Ej. gracias|exito" /></label>
-          <label class="field full"><span>Patron de error</span><input id="bot-error-pattern" type="text" /></label>
-          <label class="field"><span>Navegador</span><select id="bot-browser"><option value="chromium">Chromium aislado</option><option value="chrome">Google Chrome - Perfil QA</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select></label>
-          <label class="toggle-field"><input id="bot-headless" type="checkbox" checked /><span><strong>Ejecutar en segundo plano</strong><small>Sin controlar tu navegador de trabajo</small></span></label>
-          <label class="toggle-field full-toggle"><input id="bot-keep-browser-open" type="checkbox" /><span><strong>Modo debug visible</strong><small>Muestra el navegador durante la ejecucion y lo deja abierto al final</small></span></label>
+          <label class="field"><span>Formulario</span><select id="leads-deploy-form-type"><option value="lateral">LateralBLC</option><option value="tarjeta">TarjetaBLC</option><option value="footer">FooterBLC</option></select></label>
+          <label class="field full bot-internal-field"><span>URL UTEL</span><input id="leads-deploy-utel-url" type="url" placeholder="Se carga desde el Excel segun el pais" /><small id="leads-deploy-utel-url-status">Selecciona una fila del Excel; tambien puedes escribirla manualmente.</small></label>
+          <div class="field full"><span>Importar Excel</span><div class="file-action-row"><input id="leads-deploy-spreadsheet" type="file" accept=".xlsx" /><button class="secondary-button" id="leads-deploy-analyze-spreadsheet" type="button">Analizar Excel</button></div><small id="leads-deploy-spreadsheet-status">Adjunta el archivo y pulsa Analizar Excel para revisar sus columnas.</small><div id="leads-deploy-column-mapping"></div></div>
+          <label class="field full"><span>Fila importada</span><select id="leads-deploy-spreadsheet-row"><option value="">Selecciona una fila después de analizar</option></select></label>
+          <label class="field full"><span>URL InConcert</span><input id="leads-deploy-inconcert-url" type="url" placeholder="https://..." /></label>
+          <label class="field"><span>Modalidad</span><input id="leads-deploy-modality" type="text" placeholder="En linea" /></label>
+          <label class="field bot-internal-field" hidden aria-hidden="true"><span>Nivel</span><input id="leads-deploy-level" type="hidden" value="Licenciatura" /></label>
+          <label class="field"><span>Entorno</span><select id="leads-deploy-environment"><option value="sandbox">Sandbox</option><option value="production">Producción</option></select></label>
+          <label class="toggle-field"><input id="leads-deploy-dry-run" type="checkbox" checked /><span><strong>Dry run seguro</strong><small>Rellena el formulario sin enviar leads reales</small></span></label>
+          <label class="field"><span>Estrategia de programa</span><select id="leads-deploy-program-strategy"><option value="exact_match">Coincidencia exacta</option><option value="first">Primer programa visible</option></select></label>
+          <label class="field full"><span>Nombre exacto del programa</span><input id="leads-deploy-program-name" type="text" placeholder="Obligatorio con coincidencia exacta" /></label>
+          <label class="field full"><span>Patron de confirmacion (opcional)</span><input id="leads-deploy-success-pattern" type="text" placeholder="Ej. gracias|exito" /></label>
+          <label class="field full"><span>Patron de error</span><input id="leads-deploy-error-pattern" type="text" /></label>
+          <label class="field"><span>Navegador</span><select id="leads-deploy-browser"><option value="chromium">Chromium aislado</option><option value="chrome">Google Chrome - Perfil QA</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select></label>
+          <label class="toggle-field"><input id="leads-deploy-headless" type="checkbox" checked /><span><strong>Ejecutar en segundo plano</strong><small>Sin controlar tu navegador de trabajo</small></span></label>
+          <label class="toggle-field full-toggle"><input id="leads-deploy-keep-browser-open" type="checkbox" /><span><strong>Modo debug visible</strong><small>Muestra el navegador durante la ejecucion y lo deja abierto al final</small></span></label>
         </div>
         <div class="security-note"><span>i</span><p>Las credenciales de InConcert se leen desde .env como INCONCERT_USERNAME/INCONCERT_PASSWORD o CRM_USERNAME/CRM_PASSWORD. No se guardan en la interfaz.</p></div>
         <div class="bot-step-builder bot-generated-lead-hidden" aria-hidden="true">
           <div class="builder-heading"><div><p class="eyebrow">Lead de prueba</p><h3>Datos generados automaticamente</h3><p class="panel-subtitle">Se crean al ejecutar cada caso.</p></div><span class="step-hint">Sin contrasenas</span></div>
           <div class="bot-fields step-fields">
-            <label class="field full"><span>Nombre de prueba</span><input id="bot-lead-name" type="text" readonly /></label>
-            <label class="field"><span>Email de prueba</span><input id="bot-lead-email" type="email" readonly /></label>
-            <label class="field"><span>Telefono de prueba</span><input id="bot-lead-phone" type="tel" readonly /></label>
+            <label class="field full"><span>Nombre de prueba</span><input id="leads-deploy-lead-name" type="text" readonly /></label>
+            <label class="field"><span>Email de prueba</span><input id="leads-deploy-lead-email" type="email" readonly /></label>
+            <label class="field"><span>Telefono de prueba</span><input id="leads-deploy-lead-phone" type="tel" readonly /></label>
           </div>
           <p class="muted">El nombre y email se generan automáticamente. En dry run el teléfono es sintético; los envíos reales usan el banco autorizado por país, salvo que QA active explícitamente el modo de teléfonos sintéticos válidos.</p>
         </div>
       </article>
       <section class="bot-error-log-panel bot-error-log-panel--standalone">
-        <div class="bot-error-log-heading"><div><p class="eyebrow">Diagnóstico</p><h4>Log exclusivo de errores</h4><small>Incluye fila, etapa, URL, selector, captura y mensaje técnico completo.</small></div><div><button class="secondary-button" id="bot-copy-errors" type="button" disabled>Copiar errores</button><button class="secondary-button" id="bot-download-errors" type="button" disabled>Descargar .txt</button></div></div>
-        <pre class="bot-error-terminal" id="bot-error-terminal" aria-live="polite">Sin errores registrados en esta ejecución.</pre>
+        <div class="bot-error-log-heading"><div><p class="eyebrow">Diagnóstico</p><h4>Log exclusivo de errores</h4><small>Incluye fila, etapa, URL, selector, captura y mensaje técnico completo.</small></div><div><button class="secondary-button" id="leads-deploy-copy-errors" type="button" disabled>Copiar errores</button><button class="secondary-button" id="leads-deploy-download-errors" type="button" disabled>Descargar .txt</button></div></div>
+        <pre class="bot-error-terminal" id="leads-deploy-error-terminal" aria-live="polite">Sin errores registrados en esta ejecución.</pre>
       </section>
       <article class="panel bot-flow-panel">
         <div class="panel-header"><div><p class="eyebrow">Resultado</p><h3>Seguimiento de ejecucion</h3><p class="panel-subtitle">Sigue en tiempo real el progreso del flujo.</p></div><span class="step-count">UTEL → InConcert</span></div>
-        <div class="bot-validation" id="bot-validation">Completa los campos con * y pulsa <strong>Ejecutar prueba</strong>. En Dry run no necesitas URL ni credenciales de InConcert.</div>
-        <div class="bot-run-status" id="bot-run-status">El flujo todavia no se ha ejecutado.</div>
-        <div class="bot-flow-actions"><div><button class="secondary-button" id="bot-clear" type="button">Limpiar</button></div><div><button class="secondary-button" id="bot-save" type="button">Guardar</button><button class="secondary-button" id="bot-validate" type="button">Validar</button><button class="secondary-button" id="bot-batch-run" type="button" hidden>Ejecutar todas las filas</button><button class="secondary-button" id="bot-retry-errors" type="button" hidden>Reintentar errores</button><button class="danger-button" id="bot-stop" type="button" hidden>Detener ejecución</button><button class="primary-button" id="bot-run" type="button">Ejecutar prueba <span>-></span></button></div></div>
-        <pre class="bot-terminal" id="bot-terminal" aria-live="polite">[sistema] Esperando el inicio de la ejecución...</pre>
-        <div class="pdp-summary" id="bot-summary"></div>
-        <div class="bot-steps-list" id="bot-stages-list"></div>
-        <details class="bot-preview"><summary>Ver configuracion generada</summary><pre id="bot-preview">{}</pre></details>
+        <div class="bot-validation" id="leads-deploy-validation">Completa los campos con * y pulsa <strong>Ejecutar prueba</strong>. En Dry run no necesitas URL ni credenciales de InConcert.</div>
+        <div class="bot-run-status" id="leads-deploy-run-status">El flujo todavia no se ha ejecutado.</div>
+        <div class="bot-flow-actions"><div><button class="secondary-button" id="leads-deploy-clear" type="button">Limpiar</button></div><div><button class="secondary-button" id="leads-deploy-save" type="button">Guardar</button><button class="secondary-button" id="leads-deploy-validate" type="button">Validar</button><button class="secondary-button" id="leads-deploy-batch-run" type="button" hidden>Ejecutar todas las filas</button><button class="secondary-button" id="leads-deploy-retry-errors" type="button" hidden>Reintentar errores</button><button class="danger-button" id="leads-deploy-stop" type="button" hidden>Detener ejecución</button><button class="primary-button" id="leads-deploy-run" type="button">Ejecutar prueba <span>-></span></button></div></div>
+        <pre class="bot-terminal" id="leads-deploy-terminal" aria-live="polite">[sistema] Esperando el inicio de la ejecución...</pre>
+        <div class="pdp-summary" id="leads-deploy-summary"></div>
+        <div class="bot-steps-list" id="leads-deploy-stages-list"></div>
+        <details class="bot-preview"><summary>Ver configuracion generada</summary><pre id="leads-deploy-preview">{}</pre></details>
       </article>
     </div>`;
 }
@@ -142,7 +142,7 @@ function escapeHtml(value) {
 }
 
 function organizeBotForm() {
-  const fields = document.querySelector(".bot-config-panel > .bot-fields");
+  const fields = document.querySelector("#view-leads-deploy .bot-config-panel > .bot-fields");
   if (!fields) return;
   // Algunos controles (como el selector de Excel) viven en un div porque
   // contienen un botón adicional; todos deben moverse como un solo campo.
@@ -158,27 +158,27 @@ function organizeBotForm() {
     const node = field(id);
     if (node) target.append(node);
   });
-  moveFields(["bot-name", "bot-country", "bot-spreadsheet"], source);
-  moveFields(["bot-spreadsheet-row", "bot-utel-url"], advanced);
+  moveFields(["leads-deploy-name", "leads-deploy-country", "leads-deploy-spreadsheet"], source);
+  moveFields(["leads-deploy-spreadsheet-row", "leads-deploy-utel-url"], advanced);
   moveFields([
-  "bot-modality",
-  "bot-level",
-  "bot-form-type",
-  "bot-program-strategy",
-  "bot-program-name",
-  "bot-success-pattern",
-  "bot-error-pattern",
-  "bot-inconcert-url",
-  "bot-browser",
-  "bot-dry-run",
-  "bot-headless",
-  "bot-keep-browser-open",
-  "bot-environment",
+  "leads-deploy-modality",
+  "leads-deploy-level",
+  "leads-deploy-form-type",
+  "leads-deploy-program-strategy",
+  "leads-deploy-program-name",
+  "leads-deploy-success-pattern",
+  "leads-deploy-error-pattern",
+  "leads-deploy-inconcert-url",
+  "leads-deploy-browser",
+  "leads-deploy-dry-run",
+  "leads-deploy-headless",
+  "leads-deploy-keep-browser-open",
+  "leads-deploy-environment",
   ], advanced);
-  const securityNote = document.querySelector(".security-note");
+  const securityNote = document.querySelector("#view-leads-deploy .security-note");
   if (securityNote) advanced.append(securityNote);
   fields.replaceWith(sections);
-  ["bot-country", "bot-utel-url", "bot-modality"].forEach((id) => {
+  ["leads-deploy-country", "leads-deploy-utel-url", "leads-deploy-modality"].forEach((id) => {
     const title = field(id)?.querySelector("span");
     if (title && !title.textContent.includes("*")) title.textContent += " *";
   });
@@ -251,7 +251,7 @@ function canonicalCountryValue(value) {
 }
 
 function setCountryValue(value) {
-  const country = document.querySelector("#bot-country");
+  const country = document.querySelector("#leads-deploy-country");
   if (!country) return;
   const canonical = canonicalCountryValue(value);
   country.value = [...country.options].some((option) => option.value === canonical)
@@ -260,58 +260,58 @@ function setCountryValue(value) {
 }
 
 function readForm() {
-  state.config.name = (getInputValue("#bot-name") || "").trim();
-  state.config.environment = getInputValue("#bot-environment") || state.config.environment;
-  state.config.dry_run = getInputValue("#bot-dry-run", { asBoolean: true });
-  state.config.country = canonicalCountryValue(getInputValue("#bot-country"));
-  state.config.utel_url = (getInputValue("#bot-utel-url") || "").trim();
-  state.config.inconcert_url = (getInputValue("#bot-inconcert-url") || "").trim();
+  state.config.name = (getInputValue("#leads-deploy-name") || "").trim();
+  state.config.environment = getInputValue("#leads-deploy-environment") || state.config.environment;
+  state.config.dry_run = getInputValue("#leads-deploy-dry-run", { asBoolean: true });
+  state.config.country = canonicalCountryValue(getInputValue("#leads-deploy-country"));
+  state.config.utel_url = (getInputValue("#leads-deploy-utel-url") || "").trim();
+  state.config.inconcert_url = (getInputValue("#leads-deploy-inconcert-url") || "").trim();
   state.config.modality = (
-  getInputValue("#bot-modality") ||
+  getInputValue("#leads-deploy-modality") ||
   state.config.modality ||
   "En linea"
   ).trim();
 
   state.config.level = (
-  getInputValue("#bot-level") ||
+  getInputValue("#leads-deploy-level") ||
   state.config.level ||
   "Licenciatura"
   ).trim();
-  state.config.form_type = getInputValue("#bot-form-type") || state.config.form_type;
-  state.config.program_selection_strategy = getInputValue("#bot-program-strategy") || state.config.program_selection_strategy;
-  state.config.program_name = (getInputValue("#bot-program-name") || "").trim();
-  state.config.submit_success_pattern = (getInputValue("#bot-success-pattern") || state.config.submit_success_pattern);
-  state.config.submit_error_pattern = (getInputValue("#bot-error-pattern") || state.config.submit_error_pattern);
-  state.config.browser = getInputValue("#bot-browser") || state.config.browser;
-  state.config.headless = getInputValue("#bot-headless", { asBoolean: true });
-  state.config.keep_browser_open = getInputValue("#bot-keep-browser-open", { asBoolean: true });
+  state.config.form_type = getInputValue("#leads-deploy-form-type") || state.config.form_type;
+  state.config.program_selection_strategy = getInputValue("#leads-deploy-program-strategy") || state.config.program_selection_strategy;
+  state.config.program_name = (getInputValue("#leads-deploy-program-name") || "").trim();
+  state.config.submit_success_pattern = (getInputValue("#leads-deploy-success-pattern") || state.config.submit_success_pattern);
+  state.config.submit_error_pattern = (getInputValue("#leads-deploy-error-pattern") || state.config.submit_error_pattern);
+  state.config.browser = getInputValue("#leads-deploy-browser") || state.config.browser;
+  state.config.headless = getInputValue("#leads-deploy-headless", { asBoolean: true });
+  state.config.keep_browser_open = getInputValue("#leads-deploy-keep-browser-open", { asBoolean: true });
   state.config.lead = {
-    name: (getInputValue("#bot-lead-name") || "pending").trim() || "pending",
-    email: (getInputValue("#bot-lead-email") || "").trim(),
-    phone: (getInputValue("#bot-lead-phone") || "").trim(),
+    name: (getInputValue("#leads-deploy-lead-name") || "pending").trim() || "pending",
+    email: (getInputValue("#leads-deploy-lead-email") || "").trim(),
+    phone: (getInputValue("#leads-deploy-lead-phone") || "").trim(),
   };
 }
 
 function writeForm() {
-  setInputValue("#bot-name", state.config.name);
-  setInputValue("#bot-environment", state.config.environment);
-  setInputValue("#bot-dry-run", state.config.dry_run, { asBoolean: true });
+  setInputValue("#leads-deploy-name", state.config.name);
+  setInputValue("#leads-deploy-environment", state.config.environment);
+  setInputValue("#leads-deploy-dry-run", state.config.dry_run, { asBoolean: true });
   setCountryValue(state.config.country);
-  setInputValue("#bot-utel-url", state.config.utel_url);
-  setInputValue("#bot-inconcert-url", state.config.inconcert_url);
-  setInputValue("#bot-modality", state.config.modality);
-  setInputValue("#bot-level", state.config.level);
-  setInputValue("#bot-form-type", state.config.form_type);
-  setInputValue("#bot-program-strategy", state.config.program_selection_strategy);
-  setInputValue("#bot-program-name", state.config.program_name);
-  setInputValue("#bot-success-pattern", state.config.submit_success_pattern);
-  setInputValue("#bot-error-pattern", state.config.submit_error_pattern);
-  setInputValue("#bot-browser", state.config.browser);
-  setInputValue("#bot-headless", state.config.headless, { asBoolean: true });
-  setInputValue("#bot-keep-browser-open", state.config.keep_browser_open, { asBoolean: true });
-  setInputValue("#bot-lead-name", state.config.lead.name);
-  setInputValue("#bot-lead-email", state.config.lead.email);
-  setInputValue("#bot-lead-phone", state.config.lead.phone);
+  setInputValue("#leads-deploy-utel-url", state.config.utel_url);
+  setInputValue("#leads-deploy-inconcert-url", state.config.inconcert_url);
+  setInputValue("#leads-deploy-modality", state.config.modality);
+  setInputValue("#leads-deploy-level", state.config.level);
+  setInputValue("#leads-deploy-form-type", state.config.form_type);
+  setInputValue("#leads-deploy-program-strategy", state.config.program_selection_strategy);
+  setInputValue("#leads-deploy-program-name", state.config.program_name);
+  setInputValue("#leads-deploy-success-pattern", state.config.submit_success_pattern);
+  setInputValue("#leads-deploy-error-pattern", state.config.submit_error_pattern);
+  setInputValue("#leads-deploy-browser", state.config.browser);
+  setInputValue("#leads-deploy-headless", state.config.headless, { asBoolean: true });
+  setInputValue("#leads-deploy-keep-browser-open", state.config.keep_browser_open, { asBoolean: true });
+  setInputValue("#leads-deploy-lead-name", state.config.lead.name);
+  setInputValue("#leads-deploy-lead-email", state.config.lead.email);
+  setInputValue("#leads-deploy-lead-phone", state.config.lead.phone);
 }
 
 function saveConfig(showToast) {
@@ -322,13 +322,13 @@ function saveConfig(showToast) {
 }
 
 function renderPreview() {
-  const preview = document.querySelector("#bot-preview");
+  const preview = document.querySelector("#leads-deploy-preview");
   const safeConfig = { ...state.config, lead: { ...state.config.lead } };
   preview.textContent = JSON.stringify(safeConfig, null, 2);
 }
 
 function setValidation(message, type = "") {
-  const validation = document.querySelector("#bot-validation");
+  const validation = document.querySelector("#leads-deploy-validation");
   validation.className = `bot-validation ${type}`;
   validation.textContent = message;
 }
@@ -376,7 +376,7 @@ function validateConfig(showToast) {
 }
 
 function renderRunResult(result) {
-  const status = document.querySelector("#bot-run-status");
+  const status = document.querySelector("#leads-deploy-run-status");
   const passed = result.status === "PASS";
   status.className = `bot-run-status ${passed ? "success" : "error"}`;
   status.innerHTML = `<strong>${passed ? "FLUJO COMPLETADO" : "FLUJO FALLIDO"}</strong><span>${escapeHtml(result.summary)} · ${escapeHtml(String(result.duration_seconds))} s</span>`;
@@ -385,7 +385,7 @@ function renderRunResult(result) {
 }
 
 function renderSummary(result) {
-  const summary = document.querySelector("#bot-summary");
+  const summary = document.querySelector("#leads-deploy-summary");
   const statusLabel = (value) => ({ success: "EXITOSO", failed: "ERROR", pending: "PENDIENTE", skipped: "NO ENVIADO" })[value] || value;
   summary.innerHTML = [
     ["Pais", result.country],
@@ -399,7 +399,7 @@ function renderSummary(result) {
 }
 
 function renderBatchResults(job) {
-  const summary = document.querySelector("#bot-summary");
+  const summary = document.querySelector("#leads-deploy-summary");
   const results = job.results || [];
   if (!results.length) return;
   summary.innerHTML = `<div class="batch-result-list"><strong>Detalle de filas procesadas</strong>${results.map((item) => {
@@ -411,14 +411,14 @@ function renderBatchResults(job) {
 }
 
 function renderTerminal(lines) {
-  const terminal = document.querySelector("#bot-terminal");
+  const terminal = document.querySelector("#leads-deploy-terminal");
   if (!terminal) return;
   terminal.textContent = lines.join("\n");
   terminal.scrollTop = terminal.scrollHeight;
 }
 
 function appendTerminal(lines) {
-  const terminal = document.querySelector("#bot-terminal");
+  const terminal = document.querySelector("#leads-deploy-terminal");
   if (!terminal) return;
   const previous = terminal.textContent.trimEnd();
   terminal.textContent = [previous, ...lines].filter(Boolean).join("\n");
@@ -484,14 +484,14 @@ export function buildErrorLog(job) {
 }
 
 function renderErrorLog(job) {
-  const terminal = document.querySelector("#bot-error-terminal");
+  const terminal = document.querySelector("#leads-deploy-error-terminal");
   if (!terminal) return;
   const content = buildErrorLog(job);
   terminal.textContent = content || "Sin errores registrados en esta ejecución.";
   terminal.dataset.log = content;
   terminal.scrollTop = terminal.scrollHeight;
-  document.querySelector("#bot-copy-errors").disabled = !content;
-  document.querySelector("#bot-download-errors").disabled = !content;
+  document.querySelector("#leads-deploy-copy-errors").disabled = !content;
+  document.querySelector("#leads-deploy-download-errors").disabled = !content;
 }
 
 function renderBatchTerminal(job, running = false) {
@@ -514,7 +514,7 @@ function renderBatchTerminal(job, running = false) {
 }
 
 function renderStages(stages) {
-  const list = document.querySelector("#bot-stages-list");
+  const list = document.querySelector("#leads-deploy-stages-list");
   if (!stages.length) {
     list.innerHTML = `<div class="bot-empty"><div class="empty-icon">◇</div><strong>El flujo todavia no se ha ejecutado</strong><span>Aqui aparecera el detalle de cada etapa en tiempo real.</span></div>`;
     return;
@@ -537,7 +537,7 @@ async function pollJob(showToast, statusApi, jobId) {
   try {
     const job = await statusApi(jobId);
     if (job.status === "RUNNING" || job.status === "QUEUED") {
-      const status = document.querySelector("#bot-run-status");
+      const status = document.querySelector("#leads-deploy-run-status");
       status.className = "bot-run-status running";
       status.innerHTML = `<strong>FLUJO EN SEGUNDO PLANO</strong><span>${escapeHtml(job.summary || "Playwright esta ejecutando UTEL e InConcert.")}</span><small>ID de ejecucion: ${escapeHtml(job.job_id)}</small>`;
       renderTerminal([`[${new Date().toLocaleTimeString("es-CO", { hour12: false })}] [SISTEMA] ${job.summary || "Ejecutando flujo UTEL/InConcert..."}`]);
@@ -548,17 +548,17 @@ async function pollJob(showToast, statusApi, jobId) {
     state.activeJobId = null;
     localStorage.removeItem(ACTIVE_SINGLE_JOB_KEY);
     localStorage.setItem(LAST_SINGLE_JOB_KEY, jobId);
-    document.querySelector("#bot-run").disabled = false;
-    const stopButton = document.querySelector("#bot-stop");
+    document.querySelector("#leads-deploy-run").disabled = false;
+    const stopButton = document.querySelector("#leads-deploy-stop");
     stopButton?.setAttribute("hidden", "");
     if (stopButton) {
       stopButton.disabled = false;
       stopButton.textContent = "Detener";
     }
-    document.querySelector("#bot-run").classList.remove("loading");
-    document.querySelector("#bot-run").innerHTML = "Ejecutar prueba <span>-></span>";
+    document.querySelector("#leads-deploy-run").classList.remove("loading");
+    document.querySelector("#leads-deploy-run").innerHTML = "Ejecutar prueba <span>-></span>";
     if (job.status === "CANCELLED") {
-      const status = document.querySelector("#bot-run-status");
+      const status = document.querySelector("#leads-deploy-run-status");
       status.className = "bot-run-status";
       status.innerHTML = `<strong>EJECUCIÓN DETENIDA</strong><span>${escapeHtml(job.summary || "La tarea fue cancelada.")}</span>`;
       showToast("Ejecución detenida.", "info");
@@ -582,7 +582,7 @@ async function pollJob(showToast, statusApi, jobId) {
       : (job.status === "PASS" ? "Flujo UTEL/InConcert completado." : "El flujo UTEL/InConcert termino con errores.");
     showToast(finalMessage, job.status === "PASS" || completedAfterStop ? "info" : "error");
   } catch (error) {
-    const status = document.querySelector("#bot-run-status");
+    const status = document.querySelector("#leads-deploy-run-status");
     status.className = "bot-run-status error";
     const retryHint = error.status === 404
       ? "No se encontró temporalmente el registro del job en memoria del backend. Probablemente regresará al retomar la sesión."
@@ -601,10 +601,10 @@ async function executeBot(showToast, runApi, statusApi) {
   renderTerminal([`[${new Date().toLocaleTimeString("es-CO", { hour12: false })}] [SISTEMA] Iniciando una nueva ejecucion...`]);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 
-  const runButton = document.querySelector("#bot-run");
-  const status = document.querySelector("#bot-run-status");
+  const runButton = document.querySelector("#leads-deploy-run");
+  const status = document.querySelector("#leads-deploy-run-status");
   runButton.disabled = true;
-    const stopButton = document.querySelector("#bot-stop");
+    const stopButton = document.querySelector("#leads-deploy-stop");
     stopButton?.removeAttribute("hidden");
     if (stopButton) {
       stopButton.disabled = false;
@@ -645,7 +645,7 @@ async function executeBot(showToast, runApi, statusApi) {
   }
 }
 
-export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconcertStatus, cancelUtelInconcert, previewBotSpreadsheet, runUtelBatch, utelBatchStatus, cancelUtelBatch }) {
+export function initializeLeadsDeployModule({ showToast, runUtelInconcertBot, utelInconcertStatus, cancelUtelInconcert, previewBotSpreadsheet, runUtelBatch, utelBatchStatus, cancelUtelBatch }) {
   renderModuleShell();
   organizeBotForm();
   loadConfig();
@@ -653,16 +653,16 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
   renderPreview();
   renderStages([]);
 
-  const headlessToggle = document.querySelector("#bot-headless");
-  const keepBrowserOpenToggle = document.querySelector("#bot-keep-browser-open");
-  const spreadsheetInput = document.querySelector("#bot-spreadsheet");
-  const spreadsheetRow = document.querySelector("#bot-spreadsheet-row");
-  const analyzeSpreadsheetButton = document.querySelector("#bot-analyze-spreadsheet");
-  const batchButton = document.querySelector("#bot-batch-run");
-  const retryErrorsButton = document.querySelector("#bot-retry-errors");
-  const stopButton = document.querySelector("#bot-stop");
-  const copyErrorsButton = document.querySelector("#bot-copy-errors");
-  const downloadErrorsButton = document.querySelector("#bot-download-errors");
+  const headlessToggle = document.querySelector("#leads-deploy-headless");
+  const keepBrowserOpenToggle = document.querySelector("#leads-deploy-keep-browser-open");
+  const spreadsheetInput = document.querySelector("#leads-deploy-spreadsheet");
+  const spreadsheetRow = document.querySelector("#leads-deploy-spreadsheet-row");
+  const analyzeSpreadsheetButton = document.querySelector("#leads-deploy-analyze-spreadsheet");
+  const batchButton = document.querySelector("#leads-deploy-batch-run");
+  const retryErrorsButton = document.querySelector("#leads-deploy-retry-errors");
+  const stopButton = document.querySelector("#leads-deploy-stop");
+  const copyErrorsButton = document.querySelector("#leads-deploy-copy-errors");
+  const downloadErrorsButton = document.querySelector("#leads-deploy-download-errors");
   let spreadsheetFile = null;
   let selectedMapping = {};
   let batchTimer = null;
@@ -704,7 +704,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       const checkpointLink = current.download_url && Number(current.last_checkpoint_rows || 0) > 0
         ? ` <a href="${window.desktop?.apiUrl || window.location.origin}${current.download_url}" download>Descargar Excel acumulado (${current.last_checkpoint_rows} filas)</a>`
         : "";
-      document.querySelector("#bot-run-status").innerHTML = `${escapeHtml(progressText)}${checkpointLink}`;
+      document.querySelector("#leads-deploy-run-status").innerHTML = `${escapeHtml(progressText)}${checkpointLink}`;
       renderBatchTerminal(current, running);
       renderErrorLog(current);
 
@@ -718,7 +718,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       stopButton.disabled = false;
       stopButton.textContent = "Detener";
       batchButton.disabled = false;
-      document.querySelector("#bot-run").disabled = false;
+      document.querySelector("#leads-deploy-run").disabled = false;
       lastFinishedBatch = current;
       const failedRows = (current.results || []).filter((item) => item.result?.status === "FAIL");
       // Solo los fallos ocurridos antes del clic son seguros para reintentar.
@@ -740,7 +740,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
         const pendingNotice = finalPending
           ? ` ${finalPending} fila${finalPending === 1 ? "" : "s"} pendiente${finalPending === 1 ? "" : "s"} de verificación CRM.`
           : "";
-        document.querySelector("#bot-run-status").innerHTML = `${label}: ${current.success} OK, ${current.failed} con error.${pendingNotice}${protectedNotice} <a href="${apiBase}${current.download_url}" download>Descargar Excel actualizado</a>`;
+        document.querySelector("#leads-deploy-run-status").innerHTML = `${label}: ${current.success} OK, ${current.failed} con error.${pendingNotice}${protectedNotice} <a href="${apiBase}${current.download_url}" download>Descargar Excel actualizado</a>`;
         renderBatchResults(current);
         const downloadedAutomatically = downloadBatchExcelAutomatically(current, jobId);
         if (announceCompletion) {
@@ -760,7 +760,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       }
       return current;
     } catch (error) {
-      const status = document.querySelector("#bot-run-status");
+      const status = document.querySelector("#leads-deploy-run-status");
       if (error.status === 404) {
         // El backend guarda jobs solo en memoria. Si se reinició, un ID que
         // quedó en localStorage ya no representa un lote recuperable.
@@ -772,7 +772,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
         stopButton.disabled = false;
         stopButton.textContent = "Detener";
         batchButton.disabled = false;
-        document.querySelector("#bot-run").disabled = false;
+        document.querySelector("#leads-deploy-run").disabled = false;
         status.className = "bot-run-status";
         const apiBase = window.desktop?.apiUrl || window.location.origin;
         status.innerHTML = `<strong>LOTE NO RECUPERABLE</strong><span>El backend se reinició y ya no conserva el estado en memoria.</span><a href="${apiBase}/api/bots/utel-inconcert/batch/${jobId}/download" download>Descargar Excel parcial, si ya fue generado</a><small>Los reportes guardados permanecen disponibles aunque el proceso se reinicie.</small>`;
@@ -795,7 +795,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     stopButton.disabled = false;
     stopButton.textContent = "Detener";
     batchButton.disabled = true;
-    document.querySelector("#bot-run").disabled = true;
+    document.querySelector("#leads-deploy-run").disabled = true;
     await pollBatchJob(jobId, announceCompletion);
     if (activeBatchJobId === jobId) {
       batchTimer = window.setInterval(() => void pollBatchJob(jobId), 1000);
@@ -804,7 +804,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
 
   const watchSingleJob = async (jobId, { announce = true } = {}) => {
     state.activeJobId = jobId;
-    const runButton = document.querySelector("#bot-run");
+    const runButton = document.querySelector("#leads-deploy-run");
     runButton.disabled = true;
     runButton.classList.add("loading");
     runButton.innerHTML = "<span>◌</span> Ejecutando...";
@@ -820,7 +820,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
   const restoreRememberedJob = async () => {
     const activeBatch = localStorage.getItem(ACTIVE_BATCH_JOB_KEY);
     if (activeBatch) {
-      document.querySelector("#bot-run-status").innerHTML = "<strong>RECUPERANDO LOTE</strong><span>Consultando el progreso que continuó en segundo plano.</span>";
+      document.querySelector("#leads-deploy-run-status").innerHTML = "<strong>RECUPERANDO LOTE</strong><span>Consultando el progreso que continuó en segundo plano.</span>";
       await watchBatchJob(activeBatch, { persist: false, announceCompletion: false });
       if (activeBatchJobId === activeBatch) showToast("Ejecución por lote recuperada. Continúa en segundo plano.", "info");
       return;
@@ -828,7 +828,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
 
     const activeSingle = localStorage.getItem(ACTIVE_SINGLE_JOB_KEY);
     if (activeSingle) {
-      document.querySelector("#bot-run-status").innerHTML = "<strong>RECUPERANDO EJECUCIÓN</strong><span>Consultando el progreso que continuó en segundo plano.</span>";
+      document.querySelector("#leads-deploy-run-status").innerHTML = "<strong>RECUPERANDO EJECUCIÓN</strong><span>Consultando el progreso que continuó en segundo plano.</span>";
       await watchSingleJob(activeSingle, { announce: false });
       if (state.activeJobId === activeSingle) showToast("Ejecución recuperada. Continúa en segundo plano.", "info");
       return;
@@ -844,7 +844,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     if (lastSingle) await watchSingleJob(lastSingle, { announce: false });
   };
   copyErrorsButton.addEventListener("click", async () => {
-    const content = document.querySelector("#bot-error-terminal")?.dataset.log || "";
+    const content = document.querySelector("#leads-deploy-error-terminal")?.dataset.log || "";
     if (!content) return;
     try {
       await navigator.clipboard.writeText(content);
@@ -854,7 +854,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     }
   });
   downloadErrorsButton.addEventListener("click", () => {
-    const content = document.querySelector("#bot-error-terminal")?.dataset.log || "";
+    const content = document.querySelector("#leads-deploy-error-terminal")?.dataset.log || "";
     if (!content) return;
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -867,9 +867,9 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
   });
   const normalizeCountry = (value) => String(value || "").trim().toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const setMultiCountryMode = (enabled) => {
-    const countryField = document.querySelector("#bot-country")?.closest("label, .field");
+    const countryField = document.querySelector("#leads-deploy-country")?.closest("label, .field");
     if (countryField) countryField.classList.toggle("bot-internal-field", enabled);
-    const sourceHint = document.querySelector('[data-section="source"]')?.closest("section")?.querySelector(".bot-section-heading small");
+    const sourceHint = document.querySelector('#view-leads-deploy [data-section="source"]')?.closest("section")?.querySelector(".bot-section-heading small");
     if (sourceHint) {
       sourceHint.textContent = enabled
         ? "Los países y casos se toman de cada fila del Excel"
@@ -880,21 +880,21 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     if (!row) return;
     if (index !== null) spreadsheetRow.value = String(index);
     if (row.country) setCountryValue(row.country);
-    if (row.modality) document.querySelector("#bot-modality").value = row.modality;
-    if (row.level) document.querySelector("#bot-level").value = row.level;
+    if (row.modality) document.querySelector("#leads-deploy-modality").value = row.modality;
+    if (row.level) document.querySelector("#leads-deploy-level").value = row.level;
     if (row.utel_url) {
-      document.querySelector("#bot-utel-url").value = row.utel_url;
-      document.querySelector("#bot-utel-url-status").textContent = "URL UTEL cargada desde la fila seleccionada del Excel.";
+      document.querySelector("#leads-deploy-utel-url").value = row.utel_url;
+      document.querySelector("#leads-deploy-utel-url-status").textContent = "URL UTEL cargada desde la fila seleccionada del Excel.";
     }
-    if (row.inconcert_url) document.querySelector("#bot-inconcert-url").value = row.inconcert_url;
-    if (row.program_name) document.querySelector("#bot-program-name").value = row.program_name;
+    if (row.inconcert_url) document.querySelector("#leads-deploy-inconcert-url").value = row.inconcert_url;
+    if (row.program_name) document.querySelector("#leads-deploy-program-name").value = row.program_name;
     if (row.form_type) {
       const location = row.form_type.toLowerCase();
-      document.querySelector("#bot-form-type").value = location.includes("tarjeta") ? "tarjeta" : location.includes("footer") ? "footer" : "lateral";
+      document.querySelector("#leads-deploy-form-type").value = location.includes("tarjeta") ? "tarjeta" : location.includes("footer") ? "footer" : "lateral";
     }
   };
   const renderColumnMapping = (headers, autoMapping = {}) => {
-    const container = document.querySelector("#bot-column-mapping");
+    const container = document.querySelector("#leads-deploy-column-mapping");
     const optionList = ['<option value="">Selecciona una columna</option>', ...headers.map((header) => `<option value="${escapeHtml(header)}">${escapeHtml(header)}</option>`)].join("");
     const findHeader = (key, fallback = "") => autoMapping[key] || headers.find((header) => normalizeCountry(header) === normalizeCountry(fallback)) || "";
     selectedMapping = {
@@ -914,48 +914,48 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     state.workflowMode = selectedMapping.workflow_mode;
     setMultiCountryMode(isDeployValidation);
     container.innerHTML = `<div class="mapping-title">Columnas a utilizar</div><div class="mapping-grid">
-      <label><span>Programa *</span><select id="bot-map-program">${optionList}</select></label>
-      <label><span>Modalidad</span><select id="bot-map-modality">${optionList}</select></label>
-      <label><span>Nivel (alternativa)</span><select id="bot-map-level">${optionList}</select></label>
-      <label><span>País (Locale/Country)</span><select id="bot-map-country">${optionList}</select></label>
-      <label><span>URL *</span><select id="bot-map-url">${optionList}</select></label>
-      <label><span>Formulario</span><select id="bot-map-form">${optionList}</select></label>
-      <label><span>InConcert</span><select id="bot-map-inconcert">${optionList}</select></label>
-      <label><span>Origen lead</span><select id="bot-map-origin">${optionList}</select></label>
-      <label><span>Salida URL LEAD</span><select id="bot-map-lead">${optionList}<option value="URL LEAD">Crear columna URL LEAD</option></select></label>
+      <label><span>Programa *</span><select id="leads-deploy-map-program">${optionList}</select></label>
+      <label><span>Modalidad</span><select id="leads-deploy-map-modality">${optionList}</select></label>
+      <label><span>Nivel (alternativa)</span><select id="leads-deploy-map-level">${optionList}</select></label>
+      <label><span>País (Locale/Country)</span><select id="leads-deploy-map-country">${optionList}</select></label>
+      <label><span>URL *</span><select id="leads-deploy-map-url">${optionList}</select></label>
+      <label><span>Formulario</span><select id="leads-deploy-map-form">${optionList}</select></label>
+      <label><span>InConcert</span><select id="leads-deploy-map-inconcert">${optionList}</select></label>
+      <label><span>Origen lead</span><select id="leads-deploy-map-origin">${optionList}</select></label>
+      <label><span>Salida URL LEAD</span><select id="leads-deploy-map-lead">${optionList}<option value="URL LEAD">Crear columna URL LEAD</option></select></label>
     </div><small>Se detectaron ${headers.length} columnas. Puedes cambiar la selección manualmente.</small>`;
-    document.querySelector("#bot-map-program").value = selectedMapping.program_name;
-    document.querySelector("#bot-map-modality").value = selectedMapping.modality;
-    document.querySelector("#bot-map-level").value = selectedMapping.level;
-    document.querySelector("#bot-map-country").value = selectedMapping.country;
-    document.querySelector("#bot-map-url").value = selectedMapping.utel_url;
-    document.querySelector("#bot-map-form").value = selectedMapping.form_type;
-    document.querySelector("#bot-map-inconcert").value = selectedMapping.inconcert_url;
-    document.querySelector("#bot-map-origin").value = selectedMapping.lead_origin_url;
-    document.querySelector("#bot-map-lead").value = selectedMapping.lead_url || "URL LEAD";
+    document.querySelector("#leads-deploy-map-program").value = selectedMapping.program_name;
+    document.querySelector("#leads-deploy-map-modality").value = selectedMapping.modality;
+    document.querySelector("#leads-deploy-map-level").value = selectedMapping.level;
+    document.querySelector("#leads-deploy-map-country").value = selectedMapping.country;
+    document.querySelector("#leads-deploy-map-url").value = selectedMapping.utel_url;
+    document.querySelector("#leads-deploy-map-form").value = selectedMapping.form_type;
+    document.querySelector("#leads-deploy-map-inconcert").value = selectedMapping.inconcert_url;
+    document.querySelector("#leads-deploy-map-origin").value = selectedMapping.lead_origin_url;
+    document.querySelector("#leads-deploy-map-lead").value = selectedMapping.lead_url || "URL LEAD";
     if (isDeployValidation) {
-      ["bot-map-program", "bot-map-modality", "bot-map-lead"].forEach((id) => {
+      ["leads-deploy-map-program", "leads-deploy-map-modality", "leads-deploy-map-lead"].forEach((id) => {
         document.querySelector(`#${id}`)?.closest("label")?.classList.add("bot-internal-field");
       });
-      document.querySelector("#bot-map-level")?.closest("label")?.querySelector("span")?.replaceChildren("Nivel *");
-      document.querySelector("#bot-map-inconcert")?.closest("label")?.querySelector("span")?.replaceChildren("InConcert/balanceador (opcional)");
+      document.querySelector("#leads-deploy-map-level")?.closest("label")?.querySelector("span")?.replaceChildren("Nivel *");
+      document.querySelector("#leads-deploy-map-inconcert")?.closest("label")?.querySelector("span")?.replaceChildren("InConcert/balanceador (opcional)");
       container.querySelector("small").textContent = "Flujo detectado: validacion de formularios por pais. Se reconocio la columna InConcert/balanceador; el Excel de salida incluira resultado y detalle.";
     }
     const updateAutomaticFields = () => {
       const visibility = {
-        "bot-modality": isDeployValidation || Boolean(selectedMapping.modality),
-        "bot-form-type": isDeployValidation || Boolean(selectedMapping.form_type),
-        "bot-program-strategy": true,
-        "bot-program-name": true,
-        "bot-inconcert-url": true,
+        "leads-deploy-modality": isDeployValidation || Boolean(selectedMapping.modality),
+        "leads-deploy-form-type": isDeployValidation || Boolean(selectedMapping.form_type),
+        "leads-deploy-program-strategy": true,
+        "leads-deploy-program-name": true,
+        "leads-deploy-inconcert-url": true,
       };
       Object.entries(visibility).forEach(([id, hidden]) => document.querySelector(`#${id}`)?.closest("label, .field")?.classList.toggle("bot-internal-field", hidden));
     };
     updateAutomaticFields();
-    ["program", "modality", "level", "country", "url", "form", "inconcert", "origin", "lead"].forEach((key) => document.querySelector(`#bot-map-${key}`).addEventListener("change", () => {
+    ["program", "modality", "level", "country", "url", "form", "inconcert", "origin", "lead"].forEach((key) => document.querySelector(`#leads-deploy-map-${key}`).addEventListener("change", () => {
       const selectedRow = selectedMapping.selected_row_number;
       const selectedSheet = selectedMapping.selected_sheet;
-      selectedMapping = { program_name: document.querySelector("#bot-map-program").value, modality: document.querySelector("#bot-map-modality").value, level: document.querySelector("#bot-map-level").value, country: document.querySelector("#bot-map-country").value, utel_url: document.querySelector("#bot-map-url").value, form_type: document.querySelector("#bot-map-form").value, inconcert_url: document.querySelector("#bot-map-inconcert").value, lead_origin_url: document.querySelector("#bot-map-origin").value, lead_url: document.querySelector("#bot-map-lead").value, workflow_mode: isDeployValidation ? "form_validation" : "product_release" };
+      selectedMapping = { program_name: document.querySelector("#leads-deploy-map-program").value, modality: document.querySelector("#leads-deploy-map-modality").value, level: document.querySelector("#leads-deploy-map-level").value, country: document.querySelector("#leads-deploy-map-country").value, utel_url: document.querySelector("#leads-deploy-map-url").value, form_type: document.querySelector("#leads-deploy-map-form").value, inconcert_url: document.querySelector("#leads-deploy-map-inconcert").value, lead_origin_url: document.querySelector("#leads-deploy-map-origin").value, lead_url: document.querySelector("#leads-deploy-map-lead").value, workflow_mode: isDeployValidation ? "form_validation" : "product_release" };
       if (selectedRow !== undefined) selectedMapping.selected_row_number = selectedRow;
       if (selectedSheet !== undefined) selectedMapping.selected_sheet = selectedSheet;
       updateAutomaticFields();
@@ -964,7 +964,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
   const analyzeSpreadsheetFile = async (file) => {
     if (!previewBotSpreadsheet) {
       const message = "El API de preview de Excel no está disponible.";
-      document.querySelector("#bot-spreadsheet-status").textContent = `No se pudo analizar el Excel: ${message}`;
+      document.querySelector("#leads-deploy-spreadsheet-status").textContent = `No se pudo analizar el Excel: ${message}`;
       showToast(message, "error");
       return;
     }
@@ -972,7 +972,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     spreadsheetFile = file;
     analyzeSpreadsheetButton.disabled = true;
     analyzeSpreadsheetButton.textContent = "Analizando...";
-    document.querySelector("#bot-spreadsheet-status").textContent = "Analizando hojas, columnas y filas...";
+    document.querySelector("#leads-deploy-spreadsheet-status").textContent = "Analizando hojas, columnas y filas...";
     try {
       const preview = await previewBotSpreadsheet(file);
       if (!preview || !Array.isArray(preview.sheets)) {
@@ -984,15 +984,15 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       const allHeaders = [...new Set(preview.sheets.flatMap((sheet) => sheet.headers))];
       if (firstSheet) renderColumnMapping(allHeaders, firstSheet.mapping);
       batchButton.hidden = true;
-      document.querySelector("#bot-run").textContent = selectedMapping.workflow_mode === "form_validation" ? "Ejecutar todos los casos" : "Ejecutar todos los programas";
-      const currentCountry = normalizeCountry(document.querySelector("#bot-country").value);
+      document.querySelector("#leads-deploy-run").textContent = selectedMapping.workflow_mode === "form_validation" ? "Ejecutar todos los casos" : "Ejecutar todos los programas";
+      const currentCountry = normalizeCountry(document.querySelector("#leads-deploy-country").value);
       void currentCountry;
-      document.querySelector("#bot-spreadsheet-status").textContent = `Excel analizado: ${allHeaders.length} columnas y ${importedRows.length} filas.${selectedMapping.workflow_mode === "form_validation" ? " Flujo Leads Deploy detectado." : ""}`;
+      document.querySelector("#leads-deploy-spreadsheet-status").textContent = `Excel analizado: ${allHeaders.length} columnas y ${importedRows.length} filas.${selectedMapping.workflow_mode === "form_validation" ? " Flujo Leads Deploy detectado." : ""}`;
       showToast("Excel analizado. Confirma las columnas y selecciona la fila.", "info");
     } catch (error) {
       setMultiCountryMode(false);
       const message = error?.message || "Respuesta inválida del backend.";
-      document.querySelector("#bot-spreadsheet-status").textContent = `No se pudo analizar el Excel: ${message}`;
+      document.querySelector("#leads-deploy-spreadsheet-status").textContent = `No se pudo analizar el Excel: ${message}`;
       showToast(`No se pudo analizar el Excel: ${message}`, "error");
     } finally {
       analyzeSpreadsheetButton.disabled = false;
@@ -1011,9 +1011,9 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       selectedMapping = {};
       state.workflowMode = "product_release";
       setMultiCountryMode(false);
-      document.querySelector("#bot-column-mapping").innerHTML = "";
+      document.querySelector("#leads-deploy-column-mapping").innerHTML = "";
       batchButton.hidden = true;
-      document.querySelector("#bot-spreadsheet-status").textContent = `Archivo listo: ${file.name}. Pulsa Analizar Excel para confirmar las columnas.`;
+      document.querySelector("#leads-deploy-spreadsheet-status").textContent = `Archivo listo: ${file.name}. Pulsa Analizar Excel para confirmar las columnas.`;
       return;
     }
     delete spreadsheetInput.dataset.requestAnalyze;
@@ -1022,7 +1022,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       importedRows = preview.sheets.flatMap((sheet) => sheet.rows.map((row) => ({ ...row, sheet: sheet.name })));
       spreadsheetRow.innerHTML = '<option value="">Selecciona una fila</option>' + importedRows.map((row, index) => `<option value="${index}">${escapeHtml(row.sheet)} · fila ${row.row_number} · ${escapeHtml(row.program_name || row.level || row.utel_url || "sin nombre")}</option>`).join("");
       const fileSize = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB`;
-      document.querySelector("#bot-spreadsheet-status").textContent = `✓ ${file.name} · ${fileSize} · Archivo cargado`;
+      document.querySelector("#leads-deploy-spreadsheet-status").textContent = `✓ ${file.name} · ${fileSize} · Archivo cargado`;
       const firstSheet = preview.sheets[0];
       const allHeaders = [...new Set(preview.sheets.flatMap((sheet) => sheet.headers))];
       if (firstSheet) renderColumnMapping(allHeaders, firstSheet.mapping);
@@ -1044,7 +1044,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     }
     analyzeSpreadsheetButton.disabled = true;
     analyzeSpreadsheetButton.textContent = "Analizando...";
-    document.querySelector("#bot-spreadsheet-status").textContent = "Analizando hojas, columnas y filas...";
+    document.querySelector("#leads-deploy-spreadsheet-status").textContent = "Analizando hojas, columnas y filas...";
     void analyzeSpreadsheetFile(spreadsheetInput.files[0]);
   });
   const executeBatch = async (mappingOverride = null, retryCount = 0) => {
@@ -1055,7 +1055,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       showToast("Selecciona Programa o Nivel, además de la columna URL.", "error");
       return;
     }
-    const runButton = document.querySelector("#bot-run");
+    const runButton = document.querySelector("#leads-deploy-run");
     renderTerminal([`[${new Date().toLocaleTimeString("es-CO", { hour12: false })}] [SISTEMA] Iniciando una nueva ejecucion por lote...`]);
     renderErrorLog({ results: [] });
     batchButton.disabled = true;
@@ -1069,7 +1069,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       await watchBatchJob(job.job_id);
     } catch (error) {
       batchButton.disabled = false;
-      document.querySelector("#bot-run").disabled = false;
+      document.querySelector("#leads-deploy-run").disabled = false;
       setValidation(error.message, "error");
       showToast(error.message, "error");
     }
@@ -1102,7 +1102,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
         throw new Error("No hay una ejecución activa para detener.");
       }
       requestAccepted = true;
-      document.querySelector("#bot-run-status").textContent = "Deteniendo ejecución y cerrando el navegador...";
+      document.querySelector("#leads-deploy-run-status").textContent = "Deteniendo ejecución y cerrando el navegador...";
       appendTerminal([`[${new Date().toLocaleTimeString("es-CO", { hour12: false })}] [DETENCIÓN] Cancelando la tarea activa.`]);
       showToast("Detención solicitada. Esperando el cierre de la tarea.", "info");
     } catch (error) {
@@ -1123,20 +1123,20 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       delete selectedMapping.selected_row_number;
       delete selectedMapping.selected_sheet;
     }
-    const runButton = document.querySelector("#bot-run");
+    const runButton = document.querySelector("#leads-deploy-run");
     const label = row ? "Ejecutar fila seleccionada" : (selectedMapping.workflow_mode === "form_validation" ? "Ejecutar todos los casos" : "Ejecutar todos los programas");
     runButton.textContent = label;
     batchButton.textContent = row ? "Ejecutar fila seleccionada" : "Ejecutar todas las filas";
     applyImportedRow(row, Number.isNaN(Number(spreadsheetRow.value)) ? null : Number(spreadsheetRow.value));
     if (!row) return;
     if (row.country) setCountryValue(row.country);
-    if (row.level) document.querySelector("#bot-level").value = row.level;
-    if (row.utel_url) document.querySelector("#bot-utel-url").value = row.utel_url;
-    if (row.inconcert_url) document.querySelector("#bot-inconcert-url").value = row.inconcert_url;
-    if (row.program_name) document.querySelector("#bot-program-name").value = row.program_name;
+    if (row.level) document.querySelector("#leads-deploy-level").value = row.level;
+    if (row.utel_url) document.querySelector("#leads-deploy-utel-url").value = row.utel_url;
+    if (row.inconcert_url) document.querySelector("#leads-deploy-inconcert-url").value = row.inconcert_url;
+    if (row.program_name) document.querySelector("#leads-deploy-program-name").value = row.program_name;
     if (row.form_type) {
       const location = row.form_type.toLowerCase();
-      document.querySelector("#bot-form-type").value = location.includes("tarjeta") ? "tarjeta" : location.includes("footer") ? "footer" : "lateral";
+      document.querySelector("#leads-deploy-form-type").value = location.includes("tarjeta") ? "tarjeta" : location.includes("footer") ? "footer" : "lateral";
     }
   });
   // El país no selecciona filas automáticamente: una fila elegida es explícita;
@@ -1149,9 +1149,9 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     if (headlessToggle.checked) keepBrowserOpenToggle.checked = false;
   });
 
-  document.querySelector("#bot-save").addEventListener("click", () => saveConfig(showToast));
-  document.querySelector("#bot-validate").addEventListener("click", () => validateConfig(showToast));
-  document.querySelector("#bot-run").addEventListener("click", () => {
+  document.querySelector("#leads-deploy-save").addEventListener("click", () => saveConfig(showToast));
+  document.querySelector("#leads-deploy-validate").addEventListener("click", () => validateConfig(showToast));
+  document.querySelector("#leads-deploy-run").addEventListener("click", () => {
     if (spreadsheetFile) {
       if (!importedRows.length) {
         showToast("Analiza primero el Excel para ejecutar sus programas.", "error");
@@ -1162,13 +1162,13 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     }
     executeBot(showToast, runUtelInconcertBot, utelInconcertStatus);
   });
-  document.querySelector("#bot-guide").addEventListener("click", () => showToast("1. Selecciona el pais. 2. Carga el Excel y elige una fila. 3. Confirma modalidad y nivel. 4. Ejecuta la prueba. Usa Dry run para validar sin enviar.", "info"));
-  document.querySelector("#bot-clear").addEventListener("click", () => {
+  document.querySelector("#leads-deploy-guide").addEventListener("click", () => showToast("1. Selecciona el pais. 2. Carga el Excel y elige una fila. 3. Confirma modalidad y nivel. 4. Ejecuta la prueba. Usa Dry run para validar sin enviar.", "info"));
+  document.querySelector("#leads-deploy-clear").addEventListener("click", () => {
     localStorage.removeItem(STORAGE_KEY);
     state.workflowMode = "product_release";
     setMultiCountryMode(false);
     state.config = {
-      name: "Bot de nuevos productos",
+      name: "Bot Leads Deploy",
       environment: "sandbox",
       dry_run: true,
       country: "ecuador",
@@ -1190,7 +1190,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     renderPreview();
     renderStages([]);
     renderErrorLog({ results: [] });
-    document.querySelector("#bot-summary").innerHTML = "";
+    document.querySelector("#leads-deploy-summary").innerHTML = "";
     setValidation("Completa la configuracion para validar el flujo UTEL/InConcert.");
     showToast("Configuracion limpiada.", "info");
   });

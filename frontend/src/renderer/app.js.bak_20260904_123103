@@ -3,7 +3,7 @@
 // Coordinador de la interfaz: navegación, dashboard e historial compartido.
 import { api } from "../services/api.js";
 import { initializeBotModule } from "./bot-module.js?v=new-products-auto-download-2";
-import { initializeLeadsDeployModule } from "./leads-deploy-module.js?v=leads-deploy-isolated-4";
+import { initializeLeadsDeployModule } from "./leads-deploy-module.js?v=leads-deploy-2";
 import { initializePdpModule } from "./pdp-module.js";
 import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
 
