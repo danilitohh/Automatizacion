@@ -1,4 +1,4 @@
-"""Orquestador genÃ©rico Documento vs PÃ¡gina para el mÃ³dulo PDP."""
+"""Orquestador genérico Documento vs Página para el módulo PDP."""
 
 from __future__ import annotations
 

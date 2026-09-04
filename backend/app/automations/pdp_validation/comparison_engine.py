@@ -166,7 +166,7 @@ class ComparisonEngine:
 
     @staticmethod
     def _is_structural_heading(node: SemanticNode) -> bool:
-        """Omite rÃ³tulos editoriales numerados y grupos usados solo como contexto."""
+        """Omite rótulos editoriales numerados y grupos usados solo como contexto."""
 
         if node.type not in NON_CONTENT_TYPES:
             return False

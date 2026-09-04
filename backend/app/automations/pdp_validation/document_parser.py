@@ -143,8 +143,8 @@ class DocumentParser:
                 if not line:
                     continue
                 order += 1
-                node_type = "list_item" if re.match(r"^(?:[-*â€¢]|\d+[.)])\s+", line) else "paragraph"
-                nodes.append(SemanticNode(f"pdf-{order}", node_type, line, f"PÃ¡gina {page_number}", order, {"page": page_number}))
+                node_type = "list_item" if re.match(r"^(?:[-*•]|\d+[.)])\s+", line) else "paragraph"
+                nodes.append(SemanticNode(f"pdf-{order}", node_type, line, f"Página {page_number}", order, {"page": page_number}))
         title = nodes[0].text if nodes else ""
         return SemanticDocument("document", title, nodes, {"filename": filename, "format": ".pdf", "pages": len(reader.pages)})
 
