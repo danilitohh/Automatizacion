@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from backend.app.automations.utel_inconcert.runner import UtelInconcertRunner, UtelQaError
+from backend.app.modules.bot_nuevos_productos.runner import UtelInconcertRunner, UtelQaError
 from backend.app.config.settings import Settings
 
 

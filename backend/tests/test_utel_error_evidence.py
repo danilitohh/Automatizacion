@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from backend.app.automations.utel_inconcert.runner import UtelInconcertRunner, UtelQaError
+from backend.app.modules.bot_nuevos_productos.runner import UtelInconcertRunner, UtelQaError
 from backend.app.config.settings import Settings
 
 
@@ -105,8 +105,8 @@ def test_deferred_submission_without_visual_confirmation_waits_for_crm_without_r
     playwright.chromium.launch = AsyncMock(return_value=browser)
 
     from contextlib import asynccontextmanager
-    from backend.app.automations.utel_inconcert.runner import UnconfirmedSubmission
-    from backend.app.schemas.bot import UtelLead, UtelQaConfig
+    from backend.app.modules.bot_nuevos_productos.runner import UnconfirmedSubmission
+    from backend.app.modules.bot_nuevos_productos.schemas import UtelLead, UtelQaConfig
 
     @asynccontextmanager
     async def runtime(*args):
@@ -136,7 +136,7 @@ def test_deferred_explicit_error_waits_for_crm_after_exactly_one_click(tmp_path)
     """Un toast de error post-clic no autoriza otro envio ni evita la conciliacion."""
 
     from contextlib import asynccontextmanager
-    from backend.app.schemas.bot import UtelLead, UtelQaConfig
+    from backend.app.modules.bot_nuevos_productos.schemas import UtelLead, UtelQaConfig
 
     runner = UtelInconcertRunner(Settings(storage_dir=tmp_path))
     runner._validate_utel_form_before_submit = AsyncMock()

@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from backend.app.automations.weekly_auto.runner import WeeklyAutoError, WeeklyAutoRunner
+from backend.app.modules.weekly_auto.runner import WeeklyAutoError, WeeklyAutoRunner
 
 
 class _Settings:

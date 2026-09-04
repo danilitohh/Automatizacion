@@ -6,7 +6,7 @@ from docx import Document
 from openpyxl import Workbook
 
 from backend.app.config.settings import Settings
-from backend.app.services.pdp_validation_service import PdpValidationService
+from backend.app.modules.pdp_validation.service import PdpValidationService
 
 
 def build_excel() -> bytes:

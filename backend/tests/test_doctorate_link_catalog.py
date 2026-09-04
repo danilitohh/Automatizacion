@@ -4,10 +4,10 @@ from urllib.parse import urlparse
 
 import pytest
 
-from backend.app.automations.utel_inconcert.runner import UtelInconcertRunner, UtelQaError
+from backend.app.modules.bot_nuevos_productos.runner import UtelInconcertRunner, UtelQaError
 from backend.app.config.settings import Settings
-from backend.app.schemas.bot import UtelLead, UtelQaConfig
-from backend.app.services.doctorate_link_catalog import DoctorateLinkCatalog
+from backend.app.modules.bot_nuevos_productos.schemas import UtelLead, UtelQaConfig
+from backend.app.modules.bot_nuevos_productos.doctorate_link_catalog import DoctorateLinkCatalog
 
 
 def _config(country: str = "Bolivia", **overrides) -> UtelQaConfig:

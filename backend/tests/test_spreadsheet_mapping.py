@@ -3,7 +3,7 @@ from io import BytesIO
 from openpyxl import Workbook
 import pytest
 
-from backend.app.services.bot_spreadsheet_service import BotSpreadsheetService
+from backend.app.modules.bot_nuevos_productos.spreadsheet_service import BotSpreadsheetService
 
 
 @pytest.mark.parametrize("country,tenant", [

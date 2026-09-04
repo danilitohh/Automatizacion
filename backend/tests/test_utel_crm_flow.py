@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from backend.app.automations.utel_inconcert.runner import UtelInconcertRunner, UtelQaError, UnconfirmedSubmission
+from backend.app.modules.bot_nuevos_productos.runner import UtelInconcertRunner, UtelQaError, UnconfirmedSubmission
 from backend.app.config.settings import Settings
-from backend.app.schemas.bot import UtelQaConfig, UtelLead
+from backend.app.modules.bot_nuevos_productos.schemas import UtelQaConfig, UtelLead
 
 
 @pytest.mark.parametrize("dry_run,login_failure", [(True, False), (False, False), (False, True)])

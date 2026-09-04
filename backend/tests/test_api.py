@@ -5,8 +5,8 @@ from pydantic import SecretStr
 
 from backend.app.config.settings import Settings
 from backend.app.main import create_app
-from backend.app.automations.generic_bot.runner import BotRunner
-from backend.app.automations.utel_inconcert.runner import UtelInconcertRunner
+from backend.app.modules.generic_bot.runner import BotRunner
+from backend.app.modules.bot_nuevos_productos.runner import UtelInconcertRunner
 
 
 def test_health_and_dashboard_endpoints(tmp_path):
