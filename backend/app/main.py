@@ -89,6 +89,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.weekly_auto_jobs = {}
     application.state.bot_tasks = {}
     application.include_router(router)
+    # Las capturas se guardan bajo storage y deben ser accesibles desde los
+    # enlaces que devuelve Weekly Auto y los demás runners.
+    application.state.settings.ensure_directories()
+    screenshots_directory = application.state.settings.storage_dir / "screenshots"
+    screenshots_directory.mkdir(parents=True, exist_ok=True)
+    application.mount(
+        "/screenshots",
+        StaticFiles(directory=screenshots_directory),
+        name="screenshots",
+    )
     # Debe registrarse al final para que /api y /docs tengan prioridad.
     application.mount("/", StaticFiles(directory=FRONTEND_DIRECTORY, html=True), name="web-frontend")
     return application

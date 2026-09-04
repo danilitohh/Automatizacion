@@ -217,9 +217,8 @@ class WeeklyAutoRunner:
     async def _progressive_scroll(self, page: Any, pause_ms: int) -> None:
         """Realiza scroll por pantalla para cargar contenido lazy."""
 
-        if pause_ms <= 0:
-            return
-        total_height = await page.evaluate("() => document.body.scrollHeight")
+        pause_ms = max(100, pause_ms)
+        total_height = await page.evaluate("() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)")
         viewport_height = await page.evaluate("() => window.innerHeight")
         if not isinstance(total_height, (int, float)) or not isinstance(viewport_height, (int, float)) or viewport_height <= 0:
             return
@@ -230,16 +229,17 @@ class WeeklyAutoRunner:
             for _ in range(max_steps):
                 if current_position >= total_height:
                     break
-                current_position = min(current_position + viewport_height, total_height)
+                current_position = total_height
                 await page.evaluate("position => window.scrollTo(0, position)", current_position)
                 await page.wait_for_timeout(pause_ms)
-                new_height = await page.evaluate("() => document.body.scrollHeight")
+                new_height = await page.evaluate("() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)")
                 if isinstance(new_height, (int, float)) and new_height > total_height:
                     total_height = new_height
             else:
                 self.logger.warning("Se alcanzó el límite de scroll progresivo; se continuará con la captura.")
         finally:
-            await page.evaluate("() => window.scrollTo(0, 0)")
+            # Se conserva la posición al fondo para que la captura vea el estado final.
+            pass
 
     async def _stabilize_page(self, page: Any, pause_ms: int) -> None:
         """Dale tiempo al DOM para resolver cambios tras el scroll."""
