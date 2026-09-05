@@ -467,7 +467,10 @@ class UtelInconcertRunner:
                         and not task_is_cancelling
                     ):
                         keep_open["value"] = True
-                        UtelInconcertRunner._open_session = {
+                        # Guardar en la misma clase que consulta _close_open_session.
+                        # El adaptador LeadsDeployRunner puede tener estado propio;
+                        # escribir en la base dejaba el perfil de Chrome ocupado.
+                        type(self)._open_session = {
                             "playwright": playwright,
                             "context": context,
                             "browser": browser,
