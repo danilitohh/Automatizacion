@@ -1102,8 +1102,10 @@ class UtelInconcertRunner:
 
     async def _fill_utel_form(self, page: Any, form: Any, config: UtelQaConfig) -> None:
         academic_values: list[dict[str, str]] = []
-        if config.skip_preselected_fields:
-            self.logger.info("Fila marcada como 'Nuevos productos': se omite selección de modalidad/nivel/programa.")
+        # Regla exclusiva de Leads Deploy: los programas con enlace directo
+        # conservan su preselección en tarjeta, lateral y footer.
+        if config.skip_preselected_fields or (config.program_name and config.utel_url) or self._selected_direct_url:
+            self.logger.info("Enlace directo: se conserva la preselección de modalidad/nivel/programa.")
             self.selected_program_name = config.program_name or self.selected_program_name
         else:
             await self._set_dynamic_field(form, '[data-cy="formModalityInput"]', config.modality)
