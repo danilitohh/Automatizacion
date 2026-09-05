@@ -13,7 +13,7 @@ const state = {
     name: "Bot Leads Deploy",
     automation_module: "leads_deploy",
     environment: "sandbox",
-    dry_run: true,
+    dry_run: false,
     country: "ecuador",
     utel_url: "",
     inconcert_url: "",
@@ -96,7 +96,7 @@ function renderModuleShell() {
           <label class="field bot-internal-field" hidden><span>Modalidad</span><input id="leads-deploy-modality" type="text" placeholder="En linea" /></label>
           <label class="field bot-internal-field" hidden aria-hidden="true"><span>Nivel</span><input id="leads-deploy-level" type="hidden" value="Licenciatura" /></label>
           <label class="field"><span>Entorno</span><select id="leads-deploy-environment"><option value="sandbox">Sandbox</option><option value="production">Producción</option></select></label>
-          <label class="toggle-field bot-internal-field" hidden><input id="leads-deploy-dry-run" type="checkbox" checked /><span><strong>Dry run seguro</strong><small>Rellena el formulario sin enviar leads reales</small></span></label>
+          <input id="leads-deploy-dry-run" type="checkbox" hidden disabled />
           <label class="field"><span>Estrategia de programa</span><select id="leads-deploy-program-strategy"><option value="exact_match">Coincidencia exacta</option><option value="first">Primer programa visible</option></select></label>
           <label class="field full"><span>Nombre exacto del programa</span><input id="leads-deploy-program-name" type="text" placeholder="Obligatorio con coincidencia exacta" /></label>
           <label class="field full"><span>Patron de confirmacion (opcional)</span><input id="leads-deploy-success-pattern" type="text" placeholder="Ej. gracias|exito" /></label>
@@ -263,7 +263,8 @@ function setCountryValue(value) {
 function readForm() {
   state.config.name = (getInputValue("#leads-deploy-name") || "").trim();
   state.config.environment = getInputValue("#leads-deploy-environment") || state.config.environment;
-  state.config.dry_run = getInputValue("#leads-deploy-dry-run", { asBoolean: true });
+  // Leads Deploy ejecuta envíos reales, incluso con preferencias antiguas.
+  state.config.dry_run = false;
   state.config.country = canonicalCountryValue(getInputValue("#leads-deploy-country"));
   state.config.utel_url = (getInputValue("#leads-deploy-utel-url") || "").trim();
   state.config.inconcert_url = (getInputValue("#leads-deploy-inconcert-url") || "").trim();
@@ -296,7 +297,8 @@ function readForm() {
 function writeForm() {
   setInputValue("#leads-deploy-name", state.config.name);
   setInputValue("#leads-deploy-environment", state.config.environment);
-  setInputValue("#leads-deploy-dry-run", state.config.dry_run, { asBoolean: true });
+  state.config.dry_run = false;
+  setInputValue("#leads-deploy-dry-run", false, { asBoolean: true });
   setCountryValue(state.config.country);
   setInputValue("#leads-deploy-utel-url", state.config.utel_url);
   setInputValue("#leads-deploy-inconcert-url", state.config.inconcert_url);
@@ -1183,7 +1185,7 @@ export function initializeLeadsDeployModule({ showToast, runUtelInconcertBot, ut
       name: "Bot Leads Deploy",
     automation_module: "leads_deploy",
       environment: "sandbox",
-      dry_run: true,
+      dry_run: false,
       country: "ecuador",
       utel_url: "",
       inconcert_url: "",
