@@ -1102,6 +1102,9 @@ class UtelInconcertRunner:
 
     async def _fill_utel_form(self, page: Any, form: Any, config: UtelQaConfig) -> None:
         academic_values: list[dict[str, str]] = []
+        # La modalidad calculada desde Nivel en el Excel manda en los tres
+        # formularios, incluso cuando la página trae otra preseleccionada.
+        await self._apply_deploy_modality(form, config)
         # TarjetaBLC fija los campos académicos desde la página. Esta regla
         # aplica incluso cuando el Excel no incluye el nombre del programa.
         if config.form_type == "tarjeta":
@@ -1154,7 +1157,6 @@ class UtelInconcertRunner:
         """Completa el nivel y el programa vacíos antes de los datos personales."""
 
         for selector, value in (
-            ('[data-cy="formModalityInput"]', config.modality),
             ('[data-cy="educationLevelInput"]', config.level),
         ):
             field = form.locator(selector).first
@@ -1167,6 +1169,28 @@ class UtelInconcertRunner:
         field = form.locator(selector).first
         if await field.count() and not await self._has_academic_selection(field):
             await self._select_random_program(page, form, selector, config)
+
+    async def _apply_deploy_modality(self, form: Any, config: UtelQaConfig) -> None:
+        """Selecciona la modalidad de la fila sin repetir una selección correcta."""
+
+        selector = '[data-cy="formModalityInput"]'
+        field = form.locator(selector).first
+        if not await field.count():
+            return
+        expected = self._normalize(config.modality)
+        def key(value: str) -> str:
+            normalized = self._normalize(value)
+            if "hibr" in normalized:
+                return "hibrida"
+            if "ejecut" in normalized:
+                return "ejecutiva"
+            if "linea" in normalized or "online" in normalized or "virtual" in normalized:
+                return "online"
+            return normalized
+
+        current = await field.evaluate("element => element.tagName === 'SELECT' ? element.selectedOptions[0]?.textContent || '' : element.value || ''")
+        if key(current) != key(expected):
+            await self._set_dynamic_field(form, selector, config.modality)
 
     async def _has_academic_selection(self, field: Any) -> bool:
         """Distingue una selección de los textos guía del formulario."""

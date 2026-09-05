@@ -7,6 +7,7 @@ el comportamiento del Bot de nuevos productos.
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 from .spreadsheet_service import LeadsDeploySpreadsheetService as BaseLeadsDeploySpreadsheetService
 
@@ -46,6 +47,15 @@ class LeadsDeploySpreadsheetService(BaseLeadsDeploySpreadsheetService):
         """Interpreta Bachelor/Master en portales internacionales."""
 
         level = cls._normalize(raw_level)
+        # La columna Nivel define la modalidad; retirar el sufijo permite
+        # resolver también Doctorado, Diplomado y los niveles internacionales.
+        modality_match = re.search(r"\b(hibrida|ejecutiva)\b", level)
+        if modality_match:
+            base_level = re.sub(r"\b(hibrida|ejecutiva)\b", "", level).strip()
+            plan = cls.deploy_navigation_plan(base_level, country)
+            plan["modality"] = "Hibrida" if modality_match.group(1) == "hibrida" else "Ejecutiva"
+            plan["navigation_modality"] = f"Modalidad {plan['modality'].lower()}"
+            return plan
         country_key = cls._catalog_key(country)
         international = country_key in {
             "filipinas",
