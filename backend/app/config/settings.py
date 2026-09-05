@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     database_path: Path = PROJECT_ROOT / "storage" / "qa_automation.db"
     storage_dir: Path = PROJECT_ROOT / "storage"
     # Catálogo oficial de programas con URL directa por país y nivel.
-    program_catalog_path: Path = PROJECT_ROOT / "backend" / "data" / "utel_programas1.xlsx"
+    program_catalog_path: Path = PROJECT_ROOT / "backend" / "data" / "Programas_UTEL_Todos_los_Paises.xlsx"
     log_level: str = "INFO"
 
     # Estas variables se reservan para las fases que integrarán servicios externos.

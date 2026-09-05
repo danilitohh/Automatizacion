@@ -12,7 +12,7 @@ from .program_rotation_service import ProgramRotationService
 
 
 class BotSpreadsheetService:
-    DEFAULT_CATALOG_PATH = Path(__file__).resolve().parents[3] / "backend" / "data" / "utel_programas1.xlsx"
+    DEFAULT_CATALOG_PATH = Path(__file__).resolve().parents[3] / "data" / "Programas_UTEL_Todos_los_Paises.xlsx"
     # Agrega nuevos paises aqui cuando se incorporen nuevos balanceadores.
     INCONCERT_BY_COUNTRY = {
         "mexico": "https://mas-utel.inconcertcc.com/login?redirect=%2Fmas%2Fhome",
@@ -61,12 +61,15 @@ class BotSpreadsheetService:
                 "modality": self._catalog_index(headers, ("modalidad", "modality")),
                 "level": self._catalog_index(headers, ("nivel", "level")),
                 "program": self._catalog_index(headers, ("programa", "program")),
-                "url": self._catalog_index(headers, ("url del programa", "program url")),
+                "url": self._catalog_index(headers, ("url del programa", "program url", "url")),
             }
             if indexes["program"] is None or indexes["url"] is None:
                 continue
             for row in values[header_index + 1 :]:
                 row_country = self._cell(row, indexes["country"])
+                # Si no existe columna de país, el catálogo lo indica en la hoja.
+                if indexes["country"] is None:
+                    row_country = worksheet.title
                 row_level = self._cell(row, indexes["level"])
                 row_modality = self._cell(row, indexes["modality"])
                 program = self._cell(row, indexes["program"])
@@ -98,7 +101,7 @@ class BotSpreadsheetService:
     def _catalog_header_row(cls, row: tuple[Any, ...]) -> bool:
         normalized = {cls._normalize(cls._text(value)) for value in row}
         return bool({"programa", "program"} & normalized) and bool(
-            {"url del programa", "program url"} & normalized
+            {"url del programa", "program url", "url"} & normalized
         )
 
     @staticmethod
@@ -108,6 +111,8 @@ class BotSpreadsheetService:
     @classmethod
     def _catalog_key(cls, value: str) -> str:
         key = cls._normalize(value)
+        if key in {"rep. dominicana", "republica dominicana", "dominicana"}:
+            return "dominicana"
         return {"mexico": "mexico", "méxico": "mexico", "peru": "peru", "perú": "peru", "panama": "panama", "panamá": "panama", "philippines": "philippines", "filipinas": "philippines"}.get(key, key)
 
     @classmethod

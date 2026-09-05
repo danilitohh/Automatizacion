@@ -120,5 +120,5 @@ class LeadsDeploySpreadsheetService(BaseLeadsDeploySpreadsheetService):
         raise ValueError(
             "Leads Deploy no encontró un programa con URL en el catálogo interno "
             f"para País='{country}', Nivel='{level}', Modalidad='{modality}'. "
-            "Revisa esa combinación en backend/data/utel_programas1.xlsx."
+            "Revisa esa combinación en backend/data/Programas_UTEL_Todos_los_Paises.xlsx."
         )

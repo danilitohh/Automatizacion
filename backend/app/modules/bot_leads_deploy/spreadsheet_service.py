@@ -34,6 +34,7 @@ class LeadsDeploySpreadsheetService(BaseBotSpreadsheetService):
         "paraguay": "paraguay",
         "dominicana": "dominicana",
         "republica dominicana": "dominicana",
+        "rep. dominicana": "dominicana",
         "dominican republic": "dominicana",
         "guatemala": "guatemala",
         "panama": "panama",
@@ -44,6 +45,15 @@ class LeadsDeploySpreadsheetService(BaseBotSpreadsheetService):
         "indonesia": "indonesia",
         "global": "global",
     }
+
+    @classmethod
+    def _catalog_header_row(cls, row: tuple[Any, ...]) -> bool:
+        """Acepta el catálogo clásico y el formato NIVEL, PROGRAMA, URL."""
+
+        headers = [cls._normalize(cls._text(value)) for value in row]
+        return super()._catalog_header_row(row) or (
+            "nivel" in headers and "programa" in headers and "url" in headers
+        )
 
     @classmethod
     def _catalog_key(cls, value: str) -> str:
@@ -100,12 +110,13 @@ class LeadsDeploySpreadsheetService(BaseBotSpreadsheetService):
                 "modality": self._catalog_index(headers, ("modalidad", "modality")),
                 "level": self._catalog_index(headers, ("nivel", "level")),
                 "program": self._catalog_index(headers, ("programa", "program")),
-                "url": self._catalog_index(headers, ("url del programa", "program url")),
+                "url": self._catalog_index(headers, ("url del programa", "program url", "url")),
             }
             if indexes["program"] is None or indexes["url"] is None:
                 continue
 
-            last_country = ""
+            # El catálogo nuevo identifica el país mediante el nombre de la hoja.
+            last_country = worksheet.title if indexes["country"] is None else ""
             last_level = ""
             last_modality = ""
 
