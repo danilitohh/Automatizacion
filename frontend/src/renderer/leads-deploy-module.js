@@ -69,7 +69,7 @@ function renderModuleShell() {
         <div class="panel-header"><div><p class="eyebrow">Configuracion</p><h3>Define la verificacion</h3><p class="panel-subtitle">Configura los datos necesarios para ejecutar el caso.</p></div><span class="status-badge success">● PLAYWRIGHT</span></div>
         <div class="bot-fields">
           <label class="field full"><span>Nombre de la ejecucion</span><input id="leads-deploy-name" type="text" placeholder="Bot Leads Deploy" /></label>
-          <label class="field"><span>Pais</span><select id="leads-deploy-country">
+          <label class="field bot-internal-field" hidden><span>Pais</span><select id="leads-deploy-country">
             <option value="">Selecciona un pais</option>
             <option value="mexico">Mexico</option>
             <option value="ecuador">Ecuador</option>
@@ -151,7 +151,7 @@ function organizeBotForm() {
   const sections = document.createElement("div");
   sections.className = "bot-form-sections";
   sections.innerHTML = `
-    <section class="bot-form-section"><div class="bot-section-heading"><span class="step-number">1</span><div><strong>Origen del caso</strong><small>Selecciona el país y carga la fila del Excel</small></div></div><div class="bot-fields" data-section="source"></div></section>
+    <section class="bot-form-section"><div class="bot-section-heading"><span class="step-number">1</span><div><strong>Origen del caso</strong><small>Carga el Excel; el país se toma de cada fila</small></div></div><div class="bot-fields" data-section="source"></div></section>
     <details class="bot-advanced"><summary>Opciones avanzadas <span>Solo necesarias para casos especiales</span></summary><div class="bot-fields" data-section="advanced"></div></details>`;
   const source = sections.querySelector('[data-section="source"]');
   const advanced = sections.querySelector('[data-section="advanced"]');
@@ -871,12 +871,11 @@ export function initializeLeadsDeployModule({ showToast, runUtelInconcertBot, ut
   const normalizeCountry = (value) => String(value || "").trim().toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const setMultiCountryMode = (enabled) => {
     const countryField = document.querySelector("#leads-deploy-country")?.closest("label, .field");
-    if (countryField) countryField.classList.toggle("bot-internal-field", enabled);
+    // El país es un dato interno del Excel, nunca una opción manual de Deploy.
+    if (countryField) countryField.classList.add("bot-internal-field");
     const sourceHint = document.querySelector('#view-leads-deploy [data-section="source"]')?.closest("section")?.querySelector(".bot-section-heading small");
     if (sourceHint) {
-      sourceHint.textContent = enabled
-        ? "Los países y casos se toman de cada fila del Excel"
-        : "Selecciona el país y carga la fila del Excel";
+      sourceHint.textContent = "Los países y casos se toman de cada fila del Excel";
     }
   };
   const applyImportedRow = (row, index = null) => {
@@ -1175,7 +1174,7 @@ export function initializeLeadsDeployModule({ showToast, runUtelInconcertBot, ut
     }
     executeBot(showToast, runUtelInconcertBot, utelInconcertStatus);
   });
-  document.querySelector("#leads-deploy-guide").addEventListener("click", () => showToast("1. Selecciona el pais. 2. Carga el Excel y elige una fila. 3. Confirma modalidad y nivel. 4. Ejecuta la prueba. Usa Dry run para validar sin enviar.", "info"));
+  document.querySelector("#leads-deploy-guide").addEventListener("click", () => showToast("1. Carga el Excel. 2. Analiza y revisa las filas; el país se toma del documento. 3. Ejecuta la prueba. Usa Dry run para validar sin enviar.", "info"));
   document.querySelector("#leads-deploy-clear").addEventListener("click", () => {
     localStorage.removeItem(STORAGE_KEY);
     state.workflowMode = "product_release";
