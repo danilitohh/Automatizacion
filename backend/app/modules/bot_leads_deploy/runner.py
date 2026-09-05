@@ -1178,7 +1178,7 @@ class UtelInconcertRunner:
             raise UtelQaError("utel_fill", "No se encontró el selector del programa del catálogo.", selector)
         current = await field.evaluate("element => element.tagName === 'SELECT' ? element.selectedOptions[0]?.textContent || '' : element.value || ''")
         def program_key(text: str) -> str:
-            return re.sub(r"^(?:licenciatura|carrera|maestria|doctorado) en\s+", "", self._normalize(text))
+            return re.sub(r"^(?:licenciatura|carrera|maestria|doctorado|diplomado) en\s+", "", self._normalize(text))
         if program_key(current) != program_key(expected):
             await self._set_dynamic_field(form, selector, expected)
         confirmed = await field.evaluate("element => element.tagName === 'SELECT' ? element.selectedOptions[0]?.textContent || '' : element.value || ''")
@@ -2961,7 +2961,7 @@ class UtelInconcertRunner:
                 normalized_program = self._normalize(value)
                 # UTEL puede mostrar el programa sin el prefijo académico
                 # que sí aparece en el Excel o en el H1 de la PDP.
-                for prefix in ("carrera en ", "licenciatura en ", "maestria en ", "doctorado en "):
+                for prefix in ("carrera en ", "licenciatura en ", "maestria en ", "doctorado en ", "diplomado en "):
                     if normalized_program.startswith(prefix):
                         wanted.append(normalized_program[len(prefix):].strip())
                 if normalized_program.startswith("carrera "):
@@ -3010,7 +3010,7 @@ class UtelInconcertRunner:
 
         candidates = [value.strip()]
         normalized_program = self._normalize(value)
-        for prefix in ("carrera en ", "licenciatura en ", "maestria en ", "doctorado en "):
+        for prefix in ("carrera en ", "licenciatura en ", "maestria en ", "doctorado en ", "diplomado en "):
             if normalized_program.startswith(prefix):
                 # Conserva acentos y mayusculas quitando el mismo numero de
                 # caracteres que ocupa el prefijo visible del H1.
