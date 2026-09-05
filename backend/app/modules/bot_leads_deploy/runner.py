@@ -1116,12 +1116,8 @@ class UtelInconcertRunner:
         elif config.form_type == "footer":
             await self._complete_footer_academic_fields(page, form, config)
         elif config.form_type == "lateral":
-            # LateralBLC ya fija el área de interés. Solo se completa el
-            # programa vacío con una opción ofrecida por el desplegable.
-            selector = '[data-cy="productsInput"]'
-            field = form.locator(selector).first
-            if await field.count() and not await self._has_academic_selection(field):
-                await self._select_random_program(page, form, selector, config)
+            # El catálogo ya resolvió país, nivel, nombre y URL de esta fila.
+            await self._select_catalog_program(form, config)
         elif config.skip_preselected_fields or (config.program_name and config.utel_url) or self._selected_direct_url:
             self.logger.info("Enlace directo: se conserva la preselección de modalidad/nivel/programa.")
             self.selected_program_name = config.program_name or self.selected_program_name
@@ -1168,10 +1164,27 @@ class UtelInconcertRunner:
 
         # La lista depende del nivel seleccionado. El método de selección espera
         # su carga y confirma una opción real, tanto en select como autocomplete.
+        await self._select_catalog_program(form, config)
+
+    async def _select_catalog_program(self, form: Any, config: UtelQaConfig) -> None:
+        """Selecciona el programa de la URL del catálogo, nunca uno aleatorio."""
+
+        expected = self._selected_direct_page_program or config.program_name
         selector = '[data-cy="productsInput"]'
+        if not expected:
+            raise UtelQaError("utel_fill", "La fila no tiene un programa del catálogo asociado a su URL.", selector)
         field = form.locator(selector).first
-        if await field.count() and not await self._has_academic_selection(field):
-            await self._select_random_program(page, form, selector, config)
+        if not await field.count():
+            raise UtelQaError("utel_fill", "No se encontró el selector del programa del catálogo.", selector)
+        current = await field.evaluate("element => element.tagName === 'SELECT' ? element.selectedOptions[0]?.textContent || '' : element.value || ''")
+        def program_key(text: str) -> str:
+            return re.sub(r"^(?:licenciatura|carrera|maestria|doctorado) en\s+", "", self._normalize(text))
+        if program_key(current) != program_key(expected):
+            await self._set_dynamic_field(form, selector, expected)
+        confirmed = await field.evaluate("element => element.tagName === 'SELECT' ? element.selectedOptions[0]?.textContent || '' : element.value || ''")
+        if program_key(confirmed) != program_key(expected):
+            raise UtelQaError("utel_fill", f"No se pudo confirmar el programa del catálogo: '{expected}'.", selector)
+        self.selected_program_name = expected
 
     async def _apply_deploy_modality(self, form: Any, config: UtelQaConfig) -> None:
         """Selecciona la modalidad de la fila sin repetir una selección correcta."""
@@ -3018,8 +3031,6 @@ class UtelInconcertRunner:
                 if result_text in wanted:
                     chosen = result
                     break
-            if chosen is None and await results.count() == 1:
-                chosen = results.first
             if chosen is not None:
                 # Los listados largos del formulario lateral viven dentro de
                 # un contenedor con scroll. Un click fisico puede quedar
