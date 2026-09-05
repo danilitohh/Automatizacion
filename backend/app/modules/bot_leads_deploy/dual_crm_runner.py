@@ -10,12 +10,41 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from ...schemas.bot import UtelQaConfig
-from .runner import UtelInconcertRunner
+from .runner import RejectedSubmission, UtelInconcertRunner, UtelQaError
 from .service import LeadsDeploySpreadsheetService
 
 
 class LeadsDeployDualCrmRunner(UtelInconcertRunner):
     """Busca el lead en InConcert y Balanceador de forma segura y secuencial."""
+
+    async def _submit_utel_form(
+        self,
+        page: Any,
+        form: Any,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> None:
+        """No consulta CRM cuando UTEL confirma un rechazo del formulario.
+
+        El runner base trata cualquier POST como una señal que merece conciliación
+        para evitar duplicados. En Leads Deploy distinguimos el caso explícito de
+        rechazo: si UTEL devuelve un rechazo concluyente, el lead no se considera
+        enviado y no tiene sentido abrir InConcert ni Balanceador.
+
+        Las respuestas inciertas (por ejemplo HTTP 5xx o pérdida de respuesta)
+        siguen usando la lógica segura existente: verificar CRM y nunca reenviar.
+        """
+
+        try:
+            await super()._submit_utel_form(page, form, should_stop)
+        except RejectedSubmission as error:
+            raise UtelQaError(
+                "utel_submit",
+                (
+                    f"{error} UTEL confirmó que el formulario no fue aceptado; "
+                    "Leads Deploy no consultará InConcert ni Balanceador para este caso."
+                ),
+                error.selector,
+            ) from error
 
     @staticmethod
     def _failed_stage_name(result: dict[str, Any]) -> str:
@@ -42,12 +71,17 @@ class LeadsDeployDualCrmRunner(UtelInconcertRunner):
         if primary_result.get("status") != "FAIL":
             return None
 
+        # Nunca iniciar una búsqueda CRM si la etapa que falló fue el envío.
+        # Esto cubre rechazos explícitos de UTEL y evita buscar leads inexistentes.
+        failed_stage = self._failed_stage_name(primary_result)
+        if failed_stage == "utel_submit":
+            return None
+
         # Solo se permite buscar en el segundo CRM si el formulario ya fue
         # enviado, o si esta ejecución ya era una conciliación verification_only.
         if not config.verification_only and primary_result.get("utel_submission_attempted") is not True:
             return None
 
-        failed_stage = self._failed_stage_name(primary_result)
         origin_is_balanceador = self._lead_origin_is_balanceador(config)
 
         if origin_is_balanceador:
