@@ -8,6 +8,8 @@ programa/URL se obtiene del catálogo interno.
 from __future__ import annotations
 
 import io
+import re
+from urllib.parse import urlparse
 from pathlib import Path
 from typing import Any
 
@@ -302,7 +304,7 @@ class LeadsDeploySpreadsheetService(BaseBotSpreadsheetService):
 
         workbook = load_workbook(
             io.BytesIO(content),
-            read_only=True,
+            read_only=False,
             data_only=True,
         )
         selected = {
@@ -359,6 +361,35 @@ class LeadsDeploySpreadsheetService(BaseBotSpreadsheetService):
                     last_country = current_country
                 else:
                     current_country = last_country
+
+                # Al reanudar un reporte, conservar las filas que ya tienen
+                # enlace. No confundir URL LEAD con Url Origen Lead (el CRM).
+                lead_columns = {
+                    index for index, header in enumerate(headers)
+                    if self._normalize(header) in {
+                        "url lead", "link lead", "enlace lead", "url del lead",
+                        "link del lead", "lead url",
+                    }
+                }
+                if indexes.get("lead_url") is not None:
+                    lead_columns.add(indexes["lead_url"])
+                # Los reportes anteriores también usan inconcert/balanceador.
+                # En esa columna solo se omiten enlaces de detalle, no logins
+                # ni listados de CRM usados como configuración de entrada.
+                crm_index = indexes.get("inconcert_url")
+                if crm_index is not None:
+                    crm_link = self._cell(row_values, crm_index)
+                    if "/view/" in urlparse(crm_link).path or re.search(r"/leads/[^/]+/?$", urlparse(crm_link).path):
+                        lead_columns.add(crm_index)
+                if any(
+                    (
+                        (worksheet.cell(row_number, index + 1).hyperlink.target
+                         if worksheet.cell(row_number, index + 1).hyperlink else None)
+                        or self._cell(row_values, index)
+                    ).strip().lower().startswith(("https://", "http://"))
+                    for index in lead_columns
+                ):
+                    continue
 
                 if not level or not form_type or not current_country:
                     continue

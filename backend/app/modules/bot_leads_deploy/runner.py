@@ -1940,13 +1940,23 @@ class UtelInconcertRunner:
             return
         username = self._inconcert_username()
         password = self._inconcert_password()
+        if not username or not password:
+            raise UtelQaError("inconcert_login", "Faltan las credenciales comunes de InConcert en la configuración.")
         try:
-            await page.locator("#userId").wait_for(state="visible", timeout=60000)
-            await page.locator("#userId").fill(username)
-            await page.locator("#password").fill(password)
+            # Todos los países usan las mismas credenciales configuradas.
+            # Las variantes regionales pueden cambiar los identificadores HTML.
+            user_field = page.locator(
+                '#userId:visible, input[name="username"]:visible, '
+                'input[name="userId"]:visible, input[autocomplete="username"]:visible, '
+                'input[type="email"]:visible, input[type="text"]:visible'
+            ).first
+            password_field = page.locator('input[type="password"]:visible').first
+            await user_field.wait_for(state="visible", timeout=60000)
+            await user_field.fill(username)
+            await password_field.fill(password)
             await page.locator('button[type="submit"]').first.click()
             await page.wait_for_url(self._is_crm_route, timeout=60000)
-            await page.locator("#userId").wait_for(state="hidden", timeout=10000)
+            await password_field.wait_for(state="hidden", timeout=10000)
             if not self._is_crm_route(page.url) or await self._is_inconcert_login(page):
                 raise RuntimeError("La sesion no quedo establecida")
         except Exception as error:
