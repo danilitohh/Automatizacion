@@ -95,13 +95,13 @@ function renderModuleShell() {
           <label class="field"><span>Modalidad</span><input id="bot-modality" type="text" placeholder="En linea" /></label>
           <label class="field bot-internal-field" hidden aria-hidden="true"><span>Nivel</span><input id="bot-level" type="hidden" value="Licenciatura" /></label>
           <label class="field"><span>Entorno</span><select id="bot-environment"><option value="sandbox">Sandbox</option><option value="production">Producción</option></select></label>
-          <label class="toggle-field"><input id="bot-dry-run" type="checkbox" checked /><span><strong>Dry run seguro</strong><small>Rellena el formulario sin enviar leads reales</small></span></label>
+          <label class="toggle-field bot-internal-field" hidden><input id="bot-dry-run" type="checkbox" checked /><span><strong>Dry run seguro</strong><small>Rellena el formulario sin enviar leads reales</small></span></label>
           <label class="field"><span>Estrategia de programa</span><select id="bot-program-strategy"><option value="exact_match">Coincidencia exacta</option><option value="first">Primer programa visible</option></select></label>
           <label class="field full"><span>Nombre exacto del programa</span><input id="bot-program-name" type="text" placeholder="Obligatorio con coincidencia exacta" /></label>
           <label class="field full"><span>Patron de confirmacion (opcional)</span><input id="bot-success-pattern" type="text" placeholder="Ej. gracias|exito" /></label>
           <label class="field full"><span>Patron de error</span><input id="bot-error-pattern" type="text" /></label>
           <label class="field"><span>Navegador</span><select id="bot-browser"><option value="chromium">Chromium aislado</option><option value="chrome">Google Chrome - Perfil QA</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select></label>
-          <label class="toggle-field"><input id="bot-headless" type="checkbox" checked /><span><strong>Ejecutar en segundo plano</strong><small>Sin controlar tu navegador de trabajo</small></span></label>
+          <label class="toggle-field bot-internal-field" hidden><input id="bot-headless" type="checkbox" checked /><span><strong>Ejecutar en segundo plano</strong><small>Sin controlar tu navegador de trabajo</small></span></label>
           <label class="toggle-field full-toggle"><input id="bot-keep-browser-open" type="checkbox" /><span><strong>Modo debug visible</strong><small>Muestra el navegador durante la ejecucion y lo deja abierto al final</small></span></label>
         </div>
         <div class="security-note"><span>i</span><p>Las credenciales de InConcert se leen desde .env como INCONCERT_USERNAME/INCONCERT_PASSWORD o CRM_USERNAME/CRM_PASSWORD. No se guardan en la interfaz.</p></div>
