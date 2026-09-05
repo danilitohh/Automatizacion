@@ -18,7 +18,7 @@ const state = {
     inconcert_url: "",
     modality: "En linea",
     level: "Licenciatura",
-    form_type: "lateral",
+    form_type: "tarjeta",
     program_selection_strategy: "first",
     program_name: "",
     submit_success_pattern: "Env\u00edo correcto|Pronto recibir\u00e1s informaci\u00f3n",
@@ -87,12 +87,12 @@ function renderModuleShell() {
             <option value="filipinas">Filipinas</option>
             <option value="india">India</option>
           </select></label>
-          <label class="field"><span>Formulario</span><select id="bot-form-type"><option value="lateral">LateralBLC</option><option value="tarjeta">TarjetaBLC</option><option value="footer">FooterBLC</option></select></label>
+          <label class="field"><span>Formulario</span><select id="bot-form-type" disabled><option value="tarjeta">TarjetaBLC</option></select></label>
           <label class="field full bot-internal-field"><span>URL UTEL</span><input id="bot-utel-url" type="url" placeholder="Se carga desde el Excel segun el pais" /><small id="bot-utel-url-status">Selecciona una fila del Excel; tambien puedes escribirla manualmente.</small></label>
           <div class="field full"><span>Importar Excel</span><div class="file-action-row"><input id="bot-spreadsheet" type="file" accept=".xlsx" /><button class="secondary-button" id="bot-analyze-spreadsheet" type="button">Analizar Excel</button></div><small id="bot-spreadsheet-status">Adjunta el archivo y pulsa Analizar Excel para revisar sus columnas.</small><div id="bot-column-mapping"></div></div>
           <label class="field full"><span>Fila importada</span><select id="bot-spreadsheet-row"><option value="">Selecciona una fila después de analizar</option></select></label>
           <label class="field full"><span>URL InConcert</span><input id="bot-inconcert-url" type="url" placeholder="https://..." /></label>
-          <label class="field"><span>Modalidad</span><input id="bot-modality" type="text" placeholder="En linea" /></label>
+          <label class="field bot-internal-field" hidden><span>Modalidad</span><input id="bot-modality" type="text" placeholder="En linea" /></label>
           <label class="field bot-internal-field" hidden aria-hidden="true"><span>Nivel</span><input id="bot-level" type="hidden" value="Licenciatura" /></label>
           <label class="field"><span>Entorno</span><select id="bot-environment"><option value="sandbox">Sandbox</option><option value="production">Producción</option></select></label>
           <label class="toggle-field bot-internal-field" hidden><input id="bot-dry-run" type="checkbox" checked /><span><strong>Dry run seguro</strong><small>Rellena el formulario sin enviar leads reales</small></span></label>
@@ -277,7 +277,8 @@ function readForm() {
   state.config.level ||
   "Licenciatura"
   ).trim();
-  state.config.form_type = getInputValue("#bot-form-type") || state.config.form_type;
+  // Nuevos Productos trabaja exclusivamente con la tarjeta del enlace directo.
+  state.config.form_type = "tarjeta";
   state.config.program_selection_strategy = getInputValue("#bot-program-strategy") || state.config.program_selection_strategy;
   state.config.program_name = (getInputValue("#bot-program-name") || "").trim();
   state.config.submit_success_pattern = (getInputValue("#bot-success-pattern") || state.config.submit_success_pattern);
@@ -301,7 +302,8 @@ function writeForm() {
   setInputValue("#bot-inconcert-url", state.config.inconcert_url);
   setInputValue("#bot-modality", state.config.modality);
   setInputValue("#bot-level", state.config.level);
-  setInputValue("#bot-form-type", state.config.form_type);
+  state.config.form_type = "tarjeta";
+  setInputValue("#bot-form-type", "tarjeta");
   setInputValue("#bot-program-strategy", state.config.program_selection_strategy);
   setInputValue("#bot-program-name", state.config.program_name);
   setInputValue("#bot-success-pattern", state.config.submit_success_pattern);
@@ -1050,7 +1052,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
   const executeBatch = async (mappingOverride = null, retryCount = 0) => {
     if (!spreadsheetFile || !runUtelBatch) return;
     readForm();
-    const mappingToRun = mappingOverride || selectedMapping;
+    const mappingToRun = { ...(mappingOverride || selectedMapping), form_type: "", workflow_mode: "product_release" };
     if (!(mappingToRun.program_name || mappingToRun.level) || !mappingToRun.utel_url) {
       showToast("Selecciona Programa o Nivel, además de la columna URL.", "error");
       return;
@@ -1176,7 +1178,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       inconcert_url: "",
       modality: "En linea",
       level: "Licenciatura",
-      form_type: "lateral",
+      form_type: "tarjeta",
       program_selection_strategy: "first",
       program_name: "",
       submit_success_pattern: "Env\u00edo correcto|Pronto recibir\u00e1s informaci\u00f3n",
