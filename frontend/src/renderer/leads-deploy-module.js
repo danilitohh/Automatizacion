@@ -88,12 +88,12 @@ function renderModuleShell() {
             <option value="filipinas">Filipinas</option>
             <option value="india">India</option>
           </select></label>
-          <label class="field"><span>Formulario</span><select id="leads-deploy-form-type"><option value="lateral">LateralBLC</option><option value="tarjeta">TarjetaBLC</option><option value="footer">FooterBLC</option></select></label>
+          <label class="field bot-internal-field" hidden><span>Formulario</span><select id="leads-deploy-form-type"><option value="lateral">LateralBLC</option><option value="tarjeta">TarjetaBLC</option><option value="footer">FooterBLC</option></select></label>
           <label class="field full bot-internal-field"><span>URL UTEL</span><input id="leads-deploy-utel-url" type="url" placeholder="Se carga desde el Excel segun el pais" /><small id="leads-deploy-utel-url-status">Selecciona una fila del Excel; tambien puedes escribirla manualmente.</small></label>
           <div class="field full"><span>Importar Excel</span><div class="file-action-row"><input id="leads-deploy-spreadsheet" type="file" accept=".xlsx" /><button class="secondary-button" id="leads-deploy-analyze-spreadsheet" type="button">Analizar Excel</button></div><small id="leads-deploy-spreadsheet-status">Adjunta el archivo y pulsa Analizar Excel para revisar sus columnas.</small><div id="leads-deploy-column-mapping"></div></div>
           <label class="field full"><span>Fila importada</span><select id="leads-deploy-spreadsheet-row"><option value="">Selecciona una fila después de analizar</option></select></label>
           <label class="field full"><span>URL InConcert</span><input id="leads-deploy-inconcert-url" type="url" placeholder="https://..." /></label>
-          <label class="field"><span>Modalidad</span><input id="leads-deploy-modality" type="text" placeholder="En linea" /></label>
+          <label class="field bot-internal-field" hidden><span>Modalidad</span><input id="leads-deploy-modality" type="text" placeholder="En linea" /></label>
           <label class="field bot-internal-field" hidden aria-hidden="true"><span>Nivel</span><input id="leads-deploy-level" type="hidden" value="Licenciatura" /></label>
           <label class="field"><span>Entorno</span><select id="leads-deploy-environment"><option value="sandbox">Sandbox</option><option value="production">Producción</option></select></label>
           <label class="toggle-field bot-internal-field" hidden><input id="leads-deploy-dry-run" type="checkbox" checked /><span><strong>Dry run seguro</strong><small>Rellena el formulario sin enviar leads reales</small></span></label>
