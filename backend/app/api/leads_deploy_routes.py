@@ -7,6 +7,8 @@ estable se reutiliza mediante un adaptador y recibe automation_module=leads_depl
 from __future__ import annotations
 
 import json
+import re
+from datetime import datetime
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
@@ -73,6 +75,15 @@ async def run_leads_deploy_batch(
     raw_config["automation_module"] = "leads_deploy"
     raw_config["workflow_mode"] = "form_validation"
 
+    # Los reportes reimportados traen prefijos de trabajos anteriores. Quitarlos
+    # evita acumular UUIDs y exceder el límite de ruta al guardar el temporal.
+    if file.filename:
+        name = file.filename.replace("\\", "/").rsplit("/", 1)[-1]
+        name = re.sub(r"^(?:[0-9a-fA-F]{32}_)+", "", name)
+        if name.lower().endswith(".xlsx"):
+            name = name[:-5][:80] + ".xlsx"
+        file.filename = name
+
     return await run_utel_batch(
         request,
         file,
@@ -86,7 +97,23 @@ async def leads_deploy_batch_status(
     request: Request,
     job_id: str,
 ) -> dict:
-    return await utel_batch_status(request, job_id)
+    job = await utel_batch_status(request, job_id)
+    task = request.app.state.bot_tasks.get(job_id)
+    # Una excepción al guardar el reporte puede terminar el worker antes de
+    # publicar FAIL. Nunca presentar como activo un trabajo que ya terminó.
+    if job.get("status") not in {"PASS", "FAIL", "CANCELLED"} and (task is None or task.done()):
+        cancelled = task is not None and task.cancelled()
+        error = task.exception() if task is not None and not cancelled else None
+        job.update({
+            "status": "CANCELLED" if cancelled else "FAIL",
+            "phase": "Ejecución detenida" if cancelled else "El proceso terminó antes de completar el lote",
+            "finished_at": datetime.now().isoformat(timespec="seconds"),
+            "summary": "La tarea fue cancelada." if cancelled else (
+                f"El proceso de Leads Deploy terminó: {error}" if error
+                else "No hay una tarea activa para este lote. Revisa el reporte parcial antes de reintentar."
+            ),
+        })
+    return job
 
 
 @router.post("/batch/{job_id}/cancel")
@@ -94,6 +121,9 @@ async def cancel_leads_deploy_batch(
     request: Request,
     job_id: str,
 ) -> dict:
+    job = await leads_deploy_batch_status(request, job_id)
+    if job.get("status") in {"PASS", "FAIL", "CANCELLED"}:
+        return job
     return await cancel_utel_batch(request, job_id)
 
 
