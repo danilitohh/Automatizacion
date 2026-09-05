@@ -7,15 +7,171 @@ consulta el otro CRM sin volver a enviar el formulario de UTEL.
 
 from __future__ import annotations
 
+import asyncio
+from contextlib import suppress
+from time import perf_counter
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 from ...schemas.bot import UtelQaConfig
-from .runner import RejectedSubmission, UtelInconcertRunner, UtelQaError
+from .runner import (
+    RejectedSubmission,
+    UnconfirmedSubmission,
+    UtelInconcertRunner,
+    UtelQaError,
+)
 from .service import LeadsDeploySpreadsheetService
 
 
 class LeadsDeployDualCrmRunner(UtelInconcertRunner):
     """Busca el lead en InConcert y Balanceador de forma segura y secuencial."""
+
+    def _can_retry_footer_submit(self, error: UtelQaError) -> bool:
+        """Autoriza un segundo mecanismo solo si NO hubo ningún envío observado.
+
+        Diplomados y Bootcamps usan FooterBLC. En algunas PDP el click visual del
+        botón no dispara el ``submit`` de React, aunque todos los campos se vean
+        completos. Solo reintentamos cuando el runner base confirmó que no salió
+        ningún POST; así el segundo intento no puede duplicar un lead.
+        """
+
+        config = getattr(self, "_rotation_config", None)
+        if config is None or getattr(config, "form_type", "") != "footer":
+            return False
+        if self._submission_attempted or error.stage != "utel_submit":
+            return False
+
+        message = str(error).casefold()
+        return (
+            "no se observó ninguna solicitud post desde la página" in message
+            or "no se pudo completar el clic y no se observó post /api/forms" in message
+        )
+
+    async def _retry_footer_submit_with_request_submit(
+        self,
+        page: Any,
+        form: Any,
+        should_stop: Callable[[], bool] | None = None,
+    ) -> None:
+        """Dispara el submit nativo del FooterBLC y vuelve a exigir POST /api/forms.
+
+        ``HTMLFormElement.requestSubmit`` ejecuta las validaciones del navegador y
+        el ``onSubmit`` de React. No se usa ``form.submit()`` porque ese método
+        saltaría handlers y validaciones del formulario.
+        """
+
+        submit_selector = 'button[type="submit"], input[type="submit"]'
+        form, submit = await self._stable_utel_submit_context(
+            page,
+            form,
+            submit_selector,
+        )
+        self._raise_if_stop_requested(should_stop)
+        await self._show_active_page(page)
+        await asyncio.sleep(0.25)
+
+        loop = asyncio.get_running_loop()
+        api_request = loop.create_future()
+        api_response = loop.create_future()
+        observed_post_paths: list[str] = []
+
+        def is_utel_form_request(request: Any) -> bool:
+            try:
+                parsed = urlparse(str(request.url))
+                return (
+                    str(request.method).upper() == "POST"
+                    and parsed.path.rstrip("/").casefold().endswith("/api/forms")
+                )
+            except Exception:
+                return False
+
+        def capture_request(request: Any) -> None:
+            try:
+                if str(request.method).upper() == "POST":
+                    parsed = urlparse(str(request.url))
+                    observed_post_paths.append(f"{parsed.netloc}{parsed.path}")
+                if is_utel_form_request(request) and not api_request.done():
+                    api_request.set_result(request)
+            except Exception:
+                return
+
+        def capture_response(response: Any) -> None:
+            try:
+                if is_utel_form_request(response.request) and not api_response.done():
+                    api_response.set_result(response)
+            except Exception:
+                return
+
+        listeners_installed = False
+        try:
+            page.on("request", capture_request)
+            page.on("response", capture_response)
+            listeners_installed = True
+
+            await submit.scroll_into_view_if_needed()
+            mechanism = await submit.evaluate(
+                """button => {
+                    const owner = button.form || button.closest('form');
+                    if (owner && typeof owner.requestSubmit === 'function') {
+                        owner.requestSubmit(button);
+                        return 'requestSubmit';
+                    }
+                    button.click();
+                    return 'button.click';
+                }"""
+            )
+            self.logger.info(
+                "FooterBLC: segundo intento seguro de envío usando %s.",
+                mechanism,
+            )
+
+            request_deadline = perf_counter() + 15
+            while not api_request.done():
+                self._raise_if_stop_requested(should_stop)
+                remaining = request_deadline - perf_counter()
+                if remaining <= 0:
+                    unique_posts = list(dict.fromkeys(observed_post_paths))[-5:]
+                    observed = (
+                        f" POST observados: {', '.join(unique_posts)}."
+                        if unique_posts
+                        else " No se observó ninguna solicitud POST desde la página."
+                    )
+                    raise UtelQaError(
+                        "utel_submit",
+                        "FooterBLC recibió un segundo intento de envío, pero UTEL "
+                        "siguió sin generar POST /api/forms. El lead no se considera "
+                        "enviado y no se buscará en InConcert ni Balanceador."
+                        f"{observed}",
+                        submit_selector,
+                    )
+                await asyncio.sleep(min(0.25, remaining))
+
+            api_request.result()
+            self._submission_attempted = True
+
+            response_deadline = perf_counter() + 65
+            while not api_response.done():
+                self._raise_if_stop_requested(should_stop)
+                remaining = response_deadline - perf_counter()
+                if remaining <= 0:
+                    raise UnconfirmedSubmission(
+                        "utel_submit",
+                        "FooterBLC generó POST /api/forms, pero UTEL no entregó "
+                        "una respuesta concluyente. Se verificará CRM sin reenviar.",
+                        submit_selector,
+                    )
+                await asyncio.sleep(min(0.25, remaining))
+
+            await self._classify_utel_api_response(api_response.result())
+        finally:
+            if not api_request.done():
+                api_request.cancel()
+            if not api_response.done():
+                api_response.cancel()
+            if listeners_installed:
+                with suppress(Exception):
+                    page.remove_listener("request", capture_request)
+                    page.remove_listener("response", capture_response)
 
     async def _submit_utel_form(
         self,
@@ -23,19 +179,33 @@ class LeadsDeployDualCrmRunner(UtelInconcertRunner):
         form: Any,
         should_stop: Callable[[], bool] | None = None,
     ) -> None:
-        """No consulta CRM cuando UTEL confirma un rechazo del formulario.
+        """Envía de forma segura y evita CRM cuando UTEL confirma un rechazo.
 
-        El runner base trata cualquier POST como una señal que merece conciliación
-        para evitar duplicados. En Leads Deploy distinguimos el caso explícito de
-        rechazo: si UTEL devuelve un rechazo concluyente, el lead no se considera
-        enviado y no tiene sentido abrir InConcert ni Balanceador.
-
-        Las respuestas inciertas (por ejemplo HTTP 5xx o pérdida de respuesta)
-        siguen usando la lógica segura existente: verificar CRM y nunca reenviar.
+        El primer intento conserva exactamente el runner estable. Si FooterBLC
+        no emite ningún POST (caso observado en Diplomados/Bootcamps), se hace un
+        único segundo intento mediante ``requestSubmit``. Nunca se reintenta si
+        ya se observó un POST.
         """
 
         try:
-            await super()._submit_utel_form(page, form, should_stop)
+            try:
+                await super()._submit_utel_form(page, form, should_stop)
+                return
+            except RejectedSubmission:
+                raise
+            except UtelQaError as error:
+                if not self._can_retry_footer_submit(error):
+                    raise
+                self.logger.warning(
+                    "FooterBLC no emitió POST tras el click; se usará un segundo "
+                    "mecanismo seguro antes de declarar fallo de envío."
+                )
+                await self._retry_footer_submit_with_request_submit(
+                    page,
+                    form,
+                    should_stop,
+                )
+                return
         except RejectedSubmission as error:
             raise UtelQaError(
                 "utel_submit",
