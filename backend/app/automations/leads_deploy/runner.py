@@ -1,11 +1,10 @@
 """Runner exclusivo de Bot Leads Deploy.
 
-Al inicio hereda el comportamiento estable del Bot de nuevos productos.
-Los cambios futuros de Leads Deploy deben hacerse sobrescribiendo métodos aquí,
-sin editar backend/app/automations/utel_inconcert/runner.py.
+Este adaptador conserva el import usado por la API y ejecuta la implementación
+propia de Leads Deploy, sin heredar el runner general de otros bots.
 """
 
-from ..utel_inconcert.runner import UtelInconcertRunner
+from ...modules.bot_leads_deploy.runner import UtelInconcertRunner
 
 
 class LeadsDeployRunner(UtelInconcertRunner):
