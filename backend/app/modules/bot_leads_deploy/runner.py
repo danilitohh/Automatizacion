@@ -1102,9 +1102,21 @@ class UtelInconcertRunner:
 
     async def _fill_utel_form(self, page: Any, form: Any, config: UtelQaConfig) -> None:
         academic_values: list[dict[str, str]] = []
-        # Regla exclusiva de Leads Deploy: los programas con enlace directo
-        # conservan su preselección en tarjeta, lateral y footer.
-        if config.skip_preselected_fields or (config.program_name and config.utel_url) or self._selected_direct_url:
+        # TarjetaBLC fija los campos académicos desde la página. Esta regla
+        # aplica incluso cuando el Excel no incluye el nombre del programa.
+        if config.form_type == "tarjeta":
+            self.selected_program_name = config.program_name or self.selected_program_name
+            self.logger.info("TarjetaBLC: se conservan el área de interés y el programa preseleccionados.")
+        elif config.form_type == "footer":
+            await self._complete_footer_academic_fields(page, form, config)
+        elif config.form_type == "lateral":
+            # LateralBLC ya fija el área de interés. Solo se completa el
+            # programa vacío con una opción ofrecida por el desplegable.
+            selector = '[data-cy="productsInput"]'
+            field = form.locator(selector).first
+            if await field.count() and not await self._has_academic_selection(field):
+                await self._select_random_program(page, form, selector, config)
+        elif config.skip_preselected_fields or (config.program_name and config.utel_url) or self._selected_direct_url:
             self.logger.info("Enlace directo: se conserva la preselección de modalidad/nivel/programa.")
             self.selected_program_name = config.program_name or self.selected_program_name
         else:
@@ -1137,6 +1149,37 @@ class UtelInconcertRunner:
                 "El sitio reinicio la modalidad, el nivel o el programa durante el llenado. No se enviara el formulario.",
                 '[data-cy="formModalityInput"], [data-cy="educationLevelInput"], [data-cy="productsInput"]',
             )
+
+    async def _complete_footer_academic_fields(self, page: Any, form: Any, config: UtelQaConfig) -> None:
+        """Completa el nivel y el programa vacíos antes de los datos personales."""
+
+        for selector, value in (
+            ('[data-cy="formModalityInput"]', config.modality),
+            ('[data-cy="educationLevelInput"]', config.level),
+        ):
+            field = form.locator(selector).first
+            if await field.count() and not await self._has_academic_selection(field):
+                await self._set_dynamic_field(form, selector, value)
+
+        # La lista depende del nivel seleccionado. El método de selección espera
+        # su carga y confirma una opción real, tanto en select como autocomplete.
+        selector = '[data-cy="productsInput"]'
+        field = form.locator(selector).first
+        if await field.count() and not await self._has_academic_selection(field):
+            await self._select_random_program(page, form, selector, config)
+
+    async def _has_academic_selection(self, field: Any) -> bool:
+        """Distingue una selección de los textos guía del formulario."""
+
+        return await field.evaluate(r"""element => {
+            const normalize = value => String(value || '').normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+            const value = normalize(element.value);
+            const label = normalize(element.tagName === 'SELECT'
+                ? element.selectedOptions[0]?.textContent : element.value);
+            const guide = /^(area de interes|busca o selecciona|selecciona|seleccione|select an option|please select|cargando|loading)/;
+            return Boolean(value && label && !guide.test(label));
+        }""")
 
     async def _recover_missing_program_selection(self, form: Any, config: UtelQaConfig) -> None:
         """Selecciona el programa solo cuando UTEL no lo dejó preseleccionado."""
@@ -1357,7 +1400,8 @@ class UtelInconcertRunner:
                 candidate.get("context", ""),
                 re.I,
             ):
-                await select.select_option(value=candidate["value"])
+                if not (await select.input_value()).strip():
+                    await select.select_option(value=candidate["value"])
                 return
 
     async def _select_random_city(self, form: Any) -> None:
@@ -1373,7 +1417,8 @@ class UtelInconcertRunner:
                 ...Array.from(element.labels || []).map(label => label.textContent),
                 element.options[0]?.textContent].filter(Boolean).join(' ')""")
             if re.search(r"ciudad|city|provincia|province|estado|state", metadata, re.I):
-                await self._select_random_select_option(field, "Ciudad / provincia / estado")
+                if not (await field.input_value()).strip():
+                    await self._select_random_select_option(field, "Ciudad / provincia / estado")
 
     async def _select_preferred_contact_channel(self, form: Any) -> None:
         """Selecciona Cualquier canal en formularios con canal preferido."""
@@ -1382,6 +1427,8 @@ class UtelInconcertRunner:
         if not await fields.count():
             return
         field = fields.first
+        if (await field.input_value()).strip():
+            return
         options = await field.locator("option").evaluate_all(
             "elements => elements.map(option => ({ text: option.textContent || '', value: option.value || '' }))"
         )
@@ -2962,7 +3009,8 @@ class UtelInconcertRunner:
         for selector in selectors:
             locator = form.locator(selector).first
             if await locator.count():
-                await locator.fill(value)
+                if not (await locator.input_value()).strip():
+                    await locator.fill(value)
                 return
         raise UtelQaError("utel_fill", f"No se encontro campo para completar el valor requerido.", ", ".join(selectors))
 
@@ -3015,6 +3063,9 @@ class UtelInconcertRunner:
 
         current = self._normalize(await field.input_value())
         expected = self._normalize(selected["value"])
+        if current and current != expected:
+            self.logger.info("País ya preseleccionado (%s); se conserva.", current)
+            return
         if current != expected:
             if await field.is_disabled():
                 raise UtelQaError(
