@@ -1055,6 +1055,13 @@ class UtelInconcertRunner:
             # aparece en el hero de la PDP y hacer scroll allí puede fallar
             # mientras React termina de estabilizar la página.
             await form.scroll_into_view_if_needed()
+            await page.evaluate(
+                """(selector) => {
+                    const element = document.querySelector(selector);
+                    if (element) element.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'auto'});
+                }""",
+                selector,
+            )
             await asyncio.sleep(2)
             refreshed_form, refreshed_count = await self._wait_for_visible_form(
                 page,
@@ -1069,6 +1076,13 @@ class UtelInconcertRunner:
                     selector,
                 )
             form = refreshed_form
+            await page.evaluate(
+                """(selector) => {
+                    const element = document.querySelector(selector);
+                    if (element) element.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'auto'});
+                }""",
+                selector,
+            )
         return form
 
     async def _wait_for_visible_form(
