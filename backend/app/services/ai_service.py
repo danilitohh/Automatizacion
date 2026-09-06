@@ -108,12 +108,24 @@ class AIService:
         headers = {"Authorization": f"Bearer {key}"} if key else {}
         response = await self._post(endpoint, payload, headers)
         data, rate_limits = self._unpack_response(response)
-        text = str(data.get("message", {}).get("content", "")).strip()
+        # Ollama normalmente devuelve ``message`` como objeto, pero algunas
+        # versiones/configuraciones devuelven directamente el texto. Ambos
+        # formatos son válidos para el generador de teléfonos de Leads Deploy.
+        if not isinstance(data, dict):
+            content = data
+            model_name = payload["model"]
+            usage = {}
+        else:
+            message = data.get("message", {})
+            content = message.get("content", "") if isinstance(message, dict) else message
+            model_name = str(data.get("model") or payload["model"])
+            usage = self._usage("ollama", data)
+        text = str(content or "").strip()
         return AICompletion(
             provider="ollama",
-            model=str(data.get("model") or payload["model"]),
+            model=model_name,
             text=self._require_text(text),
-            usage=self._usage("ollama", data),
+            usage=usage,
             rate_limits=rate_limits,
         )
 

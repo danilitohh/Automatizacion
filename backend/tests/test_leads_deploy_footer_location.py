@@ -42,3 +42,14 @@ def test_footer_without_id_is_located_and_requeried_after_remount():
                 await browser.close()
 
     asyncio.run(scenario())
+
+
+def test_program_heading_tolerates_safe_singular_plural_difference():
+    assert LeadsDeployRunner._program_titles_equivalent(
+        "bootcamp fundamento de ciencias de datos proyectos agiles con scrum",
+        "bootcamp fundamentos de ciencias de datos proyectos agiles con scrum",
+    )
+    assert not LeadsDeployRunner._program_titles_equivalent(
+        "bootcamp fundamento de ciencias de datos",
+        "bootcamp fundamento de ciencias computacionales",
+    )

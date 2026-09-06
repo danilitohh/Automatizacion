@@ -793,12 +793,31 @@ class UtelInconcertRunner:
             {actual, expected} <= {"bachillerato general", "bachillerato en linea"}
             or ("bachillerato" in actual and "bachillerato" in expected)
         )
-        if actual != expected and not equivalent:
+        if actual != expected and not equivalent and not self._program_titles_equivalent(actual, expected):
             raise UtelQaError(
                 "utel_program_validation",
                 f"El programa no coincide. Esperado: '{expected_program}' | H1 encontrado: '{actual_title}'.",
                 "h1",
             )
+
+    @staticmethod
+    def _program_titles_equivalent(actual: str, expected: str) -> bool:
+        """Tolera diferencias editoriales seguras en el H1 del programa.
+
+        Algunas PDP cambian solo plural/singular o capitalización (por ejemplo
+        ``Fundamentos`` frente a ``Fundamento``). No se acepta una coincidencia
+        por subconjunto: deben conservarse la misma cantidad y orden de palabras.
+        """
+
+        def tokens(value: str) -> list[str]:
+            result: list[str] = []
+            for token in re.findall(r"[a-z0-9]+", value.casefold()):
+                if len(token) > 4 and token.endswith("s"):
+                    token = token[:-1]
+                result.append(token)
+            return result
+
+        return tokens(actual) == tokens(expected)
 
     async def _navigate_utel(self, page: Any, config: UtelQaConfig) -> None:
         if self._selected_direct_url:
@@ -1001,18 +1020,17 @@ class UtelInconcertRunner:
         form_id = self.FORM_IDS[config.form_type]
         selector = f"#{form_id}"
         if config.form_type == "footer":
-            # Colombia publica el formulario inferior sin id. Se reconoce por
-            # su contenedor y campos, excluyendo expresamente tarjeta y lateral.
-            # El mismo selector se conserva durante el llenado y estabilización.
-            if urlparse(page.url).path.startswith("/colombia/"):
-                selector += (
-                    ', .form-container-config-chakra-config form:not([id]), '
-                    '.form-container-config-chakra-config form[id=""]'
+            # Las PDP de varios países montan el footer sin id (no solo
+            # Colombia). Se distingue por su contenedor y sus tres campos
+            # académicos/contacto, excluyendo TarjetaBLC y LateralBLC.
+            selector = ", ".join(
+                part.strip() + ':has([data-cy="productsInput"]):has([data-cy="emailInput"]):has([data-cy="telephoneInput"])'
+                for part in (
+                    f"#{form_id}",
+                    '.form-container-config-chakra-config form:not([id])',
+                    '.form-container-config-chakra-config form[id=""]',
                 )
-                selector = ", ".join(
-                    part.strip() + ':has([data-cy="productsInput"]):has([data-cy="emailInput"]):has([data-cy="telephoneInput"])'
-                    for part in selector.split(",")
-                )
+            )
             self._footer_selector = selector
         if config.form_type == "lateral":
             try:
@@ -1024,6 +1042,11 @@ class UtelInconcertRunner:
                     "text=Solicitar informacion",
                 ) from error
 
+        if config.form_type == "footer":
+            # El footer se monta con lazy loading cuando entra en el viewport.
+            # Activamos la zona inferior antes de consultar el DOM para no
+            # confundir un formulario aún no montado con uno inexistente.
+            await self._activate_footer_zone(page, selector)
         form, form_count = await self._wait_for_visible_form(page, selector)
         reloaded = False
         if form is None:
@@ -1041,6 +1064,8 @@ class UtelInconcertRunner:
             expected_page_program = self._selected_direct_page_program or self.selected_program_name
             if expected_page_program:
                 await self._validate_program_heading(page, expected_page_program)
+            if config.form_type == "footer":
+                await self._activate_footer_zone(page, selector)
             form, form_count = await self._wait_for_visible_form(page, selector)
 
         if form is None:
@@ -1101,6 +1126,26 @@ class UtelInconcertRunner:
             const top = Math.max(headerBottom + 16, (innerHeight - rect.height) / 2);
             window.scrollTo({top: Math.max(0, scrollY + rect.top - top), behavior: 'instant'});
         }""")
+
+    async def _activate_footer_zone(self, page: Any, selector: str) -> None:
+        """Activa el lazy loading del footer sin depender de un id concreto."""
+
+        try:
+            if await page.locator(selector).count():
+                return
+            for _ in range(12):
+                if await page.locator(selector).count():
+                    return
+                await page.evaluate("window.scrollBy(0, Math.max(500, Math.floor(innerHeight * 0.85)))")
+                await asyncio.sleep(0.35)
+            # Un último salto al límite inferior cubre páginas que calculan el
+            # footer solo al recibir scroll near-bottom.
+            await page.evaluate("window.scrollTo({top: document.documentElement.scrollHeight, behavior: 'instant'})")
+            await asyncio.sleep(0.75)
+        except Exception:
+            # La consulta normal conservará el diagnóstico original si la página
+            # está navegando o el sitio bloquea la sesión.
+            return
 
     async def _wait_for_visible_form(
         self,

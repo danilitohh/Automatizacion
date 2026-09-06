@@ -38,6 +38,45 @@ def test_groq_response_is_normalized_without_network(tmp_path, monkeypatch):
     assert result.rate_limits["x-ratelimit-remaining-tokens"] == "990"
 
 
+def test_ollama_accepts_text_message_shape_without_attribute_error(tmp_path, monkeypatch):
+    settings = Settings(
+        database_path=tmp_path / "ollama.db",
+        storage_dir=tmp_path / "storage",
+        ollama_local_base_url="http://ollama.test/api",
+        ollama_local_model="qa-model",
+    )
+    service = AIService(settings)
+
+    async def fake_post(endpoint, payload, headers):
+        return AIHttpResponse(
+            data={"model": payload["model"], "message": "5512345678"},
+            headers={},
+        )
+
+    monkeypatch.setattr(service, "_post", fake_post)
+    result = asyncio.run(service.generate("ollama", "Genera un teléfono", local=True))
+
+    assert result.text == "5512345678"
+
+
+def test_ollama_accepts_plain_text_response_shape(tmp_path, monkeypatch):
+    settings = Settings(
+        database_path=tmp_path / "ollama-plain.db",
+        storage_dir=tmp_path / "storage",
+        ollama_local_base_url="http://ollama.test/api",
+        ollama_local_model="qa-model",
+    )
+    service = AIService(settings)
+
+    async def fake_post(endpoint, payload, headers):
+        return AIHttpResponse(data="5512345678", headers={})
+
+    monkeypatch.setattr(service, "_post", fake_post)
+    result = asyncio.run(service.generate("ollama", "Genera un teléfono", local=True))
+
+    assert result.text == "5512345678"
+
+
 def test_unconfigured_provider_fails_before_network(tmp_path):
     service = AIService(
         Settings(
