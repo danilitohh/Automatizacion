@@ -1161,10 +1161,20 @@ class UtelInconcertRunner:
         await self._select_optional_bachillerato(form)
         await self._select_random_city(form)
         await self._select_preferred_contact_channel(form)
-        await self._fill_first_available(form, ['[data-cy="textfieldInput"]', '#first_name', 'input[name="first_name"]'], config.lead.name)
-        await self._fill_first_available(form, ['[data-cy="emailInput"]', '#email', 'input[type="email"]', 'input[name="email"]'], config.lead.email)
+        await self._fill_first_available(form, [
+            '[data-cy="textfieldInput"]', '#first_name', 'input[name="first_name"]',
+            'input[placeholder*="Nombre" i]', 'input[placeholder*="name" i]',
+        ], config.lead.name)
+        await self._fill_first_available(form, [
+            '[data-cy="emailInput"]', '#email', 'input[type="email"]', 'input[name="email"]',
+            'input[placeholder*="Correo" i]', 'input[placeholder*="email" i]',
+        ], config.lead.email)
         await self._set_country_if_possible(form, config.country)
-        await self._fill_first_available(form, ['[data-cy="telephoneInput"]', '#phone', 'input[type="tel"]', 'input[name="phone"]'], config.lead.phone)
+        await self._fill_first_available(form, [
+            '[data-cy="telephoneInput"]', '#phone', 'input[type="tel"]', 'input[name="phone"]',
+            'input[placeholder*="Teléfono" i]', 'input[placeholder*="Telefono" i]',
+            'input[placeholder*="phone" i]',
+        ], config.lead.phone)
         await self._check_privacy(form)
         if academic_values and academic_values != await self._academic_values(form):
             raise UtelQaError(
