@@ -784,7 +784,16 @@ class UtelInconcertRunner:
                 "No se encontro el titulo H1 del programa en la URL indicada.",
                 "h1",
             ) from error
-        if self._normalize(actual_title) != self._normalize(expected_program):
+        actual = self._normalize(actual_title)
+        expected = self._normalize(expected_program)
+        # Algunas páginas índice usan un título comercial distinto al del
+        # catálogo (por ejemplo, Bachillerato General/Bachillerato en línea).
+        # Validamos la misma familia académica sin exigir igualdad literal.
+        equivalent = (
+            {actual, expected} <= {"bachillerato general", "bachillerato en linea"}
+            or ("bachillerato" in actual and "bachillerato" in expected)
+        )
+        if actual != expected and not equivalent:
             raise UtelQaError(
                 "utel_program_validation",
                 f"El programa no coincide. Esperado: '{expected_program}' | H1 encontrado: '{actual_title}'.",
@@ -1003,10 +1012,10 @@ class UtelInconcertRunner:
 
         form, form_count = await self._wait_for_visible_form(page, selector)
         reloaded = False
-        if form is None and config.form_type == "tarjeta":
-            # En varias PDP el formulario React aparece justo cuando vence la
-            # espera. Una recarga antes de rellenar todavía es segura y evita
-            # clasificar esa demora como un formulario inexistente.
+        if form is None:
+            # Los tres formularios se montan de forma asíncrona. Una sola
+            # recarga controlada evita fallos falsos por un render tardío y no
+            # reenvía nada porque ocurre antes de rellenar el formulario.
             reloaded = True
             self.logger.warning(
                 "El formulario %s no estuvo listo en %s segundos; se recargara una vez.",
