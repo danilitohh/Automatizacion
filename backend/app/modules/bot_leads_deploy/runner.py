@@ -1458,12 +1458,18 @@ class UtelInconcertRunner:
         selects = form.locator("select")
         for index in range(await selects.count()):
             select = selects.nth(index)
+            if not await select.is_visible() or await select.is_disabled():
+                continue
             candidate = await select.evaluate(
                 """(element) => {
                     const normalize = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, ' ').trim();
                     const context = element.closest('label, .form-group, .chakra-form-control, div')?.innerText || element.parentElement?.innerText || '';
                     const option = [...element.options].find((item) => normalize(item.textContent) === 'si');
-                    return { context: normalize(context), value: option?.value || null };
+                    return {
+                        context: normalize(context),
+                        value: option?.value || null,
+                        current: element.value || ''
+                    };
                 }"""
             )
             if candidate.get("value") and re.search(
@@ -1471,7 +1477,7 @@ class UtelInconcertRunner:
                 candidate.get("context", ""),
                 re.I,
             ):
-                if not (await select.input_value()).strip():
+                if not candidate.get("current", "").strip():
                     await select.select_option(value=candidate["value"])
                 return
 
