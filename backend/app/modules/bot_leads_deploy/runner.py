@@ -3112,11 +3112,21 @@ class UtelInconcertRunner:
 
     async def _fill_first_available(self, form: Any, selectors: list[str], value: str) -> None:
         for selector in selectors:
-            locator = form.locator(selector).first
-            if await locator.count():
-                if not (await locator.input_value()).strip():
-                    await locator.fill(value)
-                return
+            candidates = form.locator(selector)
+            for index in range(await candidates.count()):
+                locator = candidates.nth(index)
+                try:
+                    if not await locator.is_visible() or await locator.is_disabled():
+                        continue
+                    current = (await locator.input_value()).strip()
+                    if not current:
+                        await locator.fill(value)
+                    return
+                except Exception:
+                    # React puede desmontar el control mientras actualiza el
+                    # FooterBLC; probar el siguiente control visible evita
+                    # quedarse con un clon oculto del formulario.
+                    continue
         raise UtelQaError("utel_fill", f"No se encontro campo para completar el valor requerido.", ", ".join(selectors))
 
     async def _set_country_if_possible(self, form: Any, country: str) -> None:
