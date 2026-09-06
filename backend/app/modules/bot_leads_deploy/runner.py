@@ -295,6 +295,11 @@ class UtelInconcertRunner:
                             lambda: self._submit_utel_form(utel_page, form, should_stop),
                             "03_formulario_enviado",
                         )
+                    except RejectedSubmission:
+                        # UTEL rechazo explícitamente el formulario (por ejemplo,
+                        # "Error al enviar / Contacta a soporte"). Aunque hubo POST,
+                        # no existe un lead válido que consultar en CRM.
+                        raise
                     except PostSubmitSignal as error:
                         # _submit_utel_form solo emite esta señal después de observar
                         # el POST real. Por seguridad se consulta CRM sin reenviar.
@@ -1703,7 +1708,23 @@ class UtelInconcertRunner:
                 )
 
             if api_response in done:
-                await self._classify_utel_api_response(api_response.result())
+                response = api_response.result()
+                # Un HTTP 500 puede llegar antes que el toast que explica el
+                # rechazo real. Dar una breve ventana al feedback visible evita
+                # clasificar "Contacta a soporte" como pendiente y abrir CRM.
+                if not feedback_task.done():
+                    with suppress(Exception):
+                        await asyncio.wait_for(asyncio.shield(feedback_task), timeout=2)
+                feedback_text = ""
+                if feedback_task.done() and not feedback_task.cancelled():
+                    with suppress(Exception):
+                        feedback_text = str(feedback_task.result() or "").strip()
+                if feedback_text and self._is_explicit_submit_rejection(feedback_text):
+                    raise RejectedSubmission(
+                        "utel_submit",
+                        f"UTEL mostró un rechazo después del POST: {feedback_text}",
+                    )
+                await self._classify_utel_api_response(response)
                 return
 
             text = ""
@@ -1820,6 +1841,16 @@ class UtelInconcertRunner:
                 return value.strip()
         toast = page.locator("#chakra-toast-manager-bottom")
         return (await toast.inner_text()).strip()
+
+    @staticmethod
+    def _is_explicit_submit_rejection(text: str) -> bool:
+        """Detecta el rechazo visible de UTEL sin confundirlo con un éxito."""
+
+        normalized = re.sub(r"\s+", " ", str(text or "")).strip().lower()
+        return bool(
+            re.search(r"error\s+al\s+enviar", normalized)
+            and re.search(r"contacta\s+a\s+soporte", normalized)
+        )
 
     async def _classify_utel_api_response(self, response: Any) -> None:
         """Interpreta la respuesta real sin registrar correos ni teléfonos."""
