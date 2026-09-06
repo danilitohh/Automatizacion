@@ -1010,6 +1010,13 @@ class UtelInconcertRunner:
                     "text=Solicitar informacion",
                 ) from error
 
+        if config.form_type == "footer":
+            # Algunas PDP montan FooterBLC mediante lazy-load al acercarse al
+            # final de la página. Desplazar antes de buscar el nodo evita que
+            # el bot quede detenido en el formulario principal del hero.
+            await page.evaluate("window.scrollTo({top: document.body.scrollHeight, behavior: 'instant'})")
+            await asyncio.sleep(1)
+
         form, form_count = await self._wait_for_visible_form(page, selector)
         reloaded = False
         if form is None:
