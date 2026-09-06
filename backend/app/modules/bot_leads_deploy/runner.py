@@ -1000,6 +1000,20 @@ class UtelInconcertRunner:
         await self._check_access(page)
         form_id = self.FORM_IDS[config.form_type]
         selector = f"#{form_id}"
+        if config.form_type == "footer":
+            # Colombia publica el formulario inferior sin id. Se reconoce por
+            # su contenedor y campos, excluyendo expresamente tarjeta y lateral.
+            # El mismo selector se conserva durante el llenado y estabilización.
+            if urlparse(page.url).path.startswith("/colombia/"):
+                selector += (
+                    ', .form-container-config-chakra-config form:not([id]), '
+                    '.form-container-config-chakra-config form[id=""]'
+                )
+                selector = ", ".join(
+                    part.strip() + ':has([data-cy="productsInput"]):has([data-cy="emailInput"]):has([data-cy="telephoneInput"])'
+                    for part in selector.split(",")
+                )
+            self._footer_selector = selector
         if config.form_type == "lateral":
             try:
                 await self._open_lateral_form(page)
@@ -1009,13 +1023,6 @@ class UtelInconcertRunner:
                     "No se pudo abrir el formulario lateral con el boton Solicitar informacion.",
                     "text=Solicitar informacion",
                 ) from error
-
-        if config.form_type == "footer":
-            # Algunas PDP montan FooterBLC mediante lazy-load al acercarse al
-            # final de la página. Desplazar antes de buscar el nodo evita que
-            # el bot quede detenido en el formulario principal del hero.
-            await page.evaluate("window.scrollTo({top: document.body.scrollHeight, behavior: 'instant'})")
-            await asyncio.sleep(1)
 
         form, form_count = await self._wait_for_visible_form(page, selector)
         reloaded = False
@@ -1051,17 +1058,12 @@ class UtelInconcertRunner:
             raise UtelQaError("utel_form", message, selector)
 
         if config.form_type == "footer":
+            if await page.locator(selector).filter(visible=True).count() != 1:
+                raise UtelQaError("utel_form", "Hay varios formularios inferiores visibles; no se puede elegir uno con seguridad.", selector)
             # Solo el footer requiere ser llevado a la zona inferior. La tarjeta
             # aparece en el hero de la PDP y hacer scroll allí puede fallar
             # mientras React termina de estabilizar la página.
-            await form.scroll_into_view_if_needed()
-            await page.evaluate(
-                """(selector) => {
-                    const element = document.querySelector(selector);
-                    if (element) element.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'auto'});
-                }""",
-                selector,
-            )
+            await self._position_footer_form(form)
             await asyncio.sleep(2)
             refreshed_form, refreshed_count = await self._wait_for_visible_form(
                 page,
@@ -1076,14 +1078,29 @@ class UtelInconcertRunner:
                     selector,
                 )
             form = refreshed_form
-            await page.evaluate(
-                """(selector) => {
-                    const element = document.querySelector(selector);
-                    if (element) element.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'auto'});
-                }""",
-                selector,
-            )
+            await self._position_footer_form(form)
         return form
+
+    def _footer_locator(self, page: Any) -> Any:
+        """Reconsulta el mismo formulario, incluso si React reemplaza sus nodos."""
+
+        return page.locator(getattr(self, "_footer_selector", "#FooterBLC")).filter(visible=True).first
+
+    async def _position_footer_form(self, form: Any) -> None:
+        """Coloca el formulario bajo el encabezado fijo sin saltar al pie legal."""
+
+        await form.evaluate("""element => {
+            const rect = element.getBoundingClientRect();
+            const headers = [...document.querySelectorAll('header, nav, [role="banner"]')];
+            const headerBottom = headers.reduce((bottom, node) => {
+                const box = node.getBoundingClientRect();
+                const position = getComputedStyle(node).position;
+                return ['fixed', 'sticky'].includes(position) && box.top <= 1 && box.bottom < innerHeight / 2
+                    ? Math.max(bottom, box.bottom) : bottom;
+            }, 0);
+            const top = Math.max(headerBottom + 16, (innerHeight - rect.height) / 2);
+            window.scrollTo({top: Math.max(0, scrollY + rect.top - top), behavior: 'instant'});
+        }""")
 
     async def _wait_for_visible_form(
         self,
@@ -1097,9 +1114,9 @@ class UtelInconcertRunner:
         deadline = perf_counter() + (wait_ms / 1000)
         last_count = 0
         while perf_counter() < deadline:
-            form = page.locator(selector).first
+            form = page.locator(selector).filter(visible=True).first
             try:
-                last_count = await asyncio.wait_for(form.count(), timeout=3)
+                last_count = await asyncio.wait_for(page.locator(selector).count(), timeout=3)
                 if last_count and await asyncio.wait_for(form.is_visible(), timeout=3):
                     return form, last_count
             except Exception:  # El nodo puede desaparecer mientras React lo sustituye.

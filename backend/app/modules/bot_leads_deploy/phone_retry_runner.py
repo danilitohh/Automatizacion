@@ -75,7 +75,7 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
         program_selector = '[data-cy="productsInput"]'
 
         for attempt in range(4):
-            footer = page.locator("#FooterBLC:visible").first
+            footer = self._footer_locator(page)
             await footer.wait_for(state="visible", timeout=8000)
 
             await self._apply_deploy_modality(footer, config)
@@ -99,7 +99,7 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
             await self._check_privacy(footer)
             await asyncio.sleep(0.6)
 
-            footer = page.locator("#FooterBLC:visible").first
+            footer = self._footer_locator(page)
             await footer.wait_for(state="visible", timeout=5000)
             program_field = footer.locator(program_selector).first
             if not await program_field.count():
@@ -176,7 +176,7 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
         únicamente esos eventos normales; no evita ni altera validaciones de UTEL.
         """
 
-        footer = page.locator("#FooterBLC:visible").first
+        footer = self._footer_locator(page)
         await footer.wait_for(state="visible", timeout=8000)
 
         name_field = await self._first_existing_footer_field(
