@@ -261,6 +261,12 @@ def _is_support_rejection(result: dict[str, Any]) -> bool:
 def _is_post_submit_crm_retry_candidate(result: dict[str, Any]) -> bool:
     """Permite una segunda consulta CRM cuando UTEL ya fue enviado."""
 
+    # Un rechazo visible de UTEL es definitivo para esta ejecución. Aunque el
+    # navegador haya alcanzado a observar un POST, no se consulta CRM porque el
+    # propio sitio informó que no creó el lead.
+    if _is_support_rejection(result):
+        return False
+
     if result.get("utel_submission_attempted") is not True:
         return False
 
