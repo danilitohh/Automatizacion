@@ -1782,12 +1782,7 @@ class UtelInconcertRunner:
                 if feedback_task.done() and not feedback_task.cancelled():
                     with suppress(Exception):
                         feedback_text = str(feedback_task.result() or "").strip()
-                if feedback_text and self._is_explicit_submit_rejection(feedback_text):
-                    raise RejectedSubmission(
-                        "utel_submit",
-                        f"UTEL mostró un rechazo después del POST: {feedback_text}",
-                    )
-                await self._classify_utel_api_response(response)
+                await self._classify_utel_api_response(response, feedback_text)
                 return
 
             text = ""
@@ -1809,7 +1804,7 @@ class UtelInconcertRunner:
                 if api_response.done() and not api_response.cancelled():
                     response = api_response.result()
                 if response is not None:
-                    await self._classify_utel_api_response(response)
+                    await self._classify_utel_api_response(response, text)
                     return
                 raise RejectedSubmission(
                     "utel_submit",
@@ -1915,11 +1910,12 @@ class UtelInconcertRunner:
             and re.search(r"contacta\s+a\s+soporte", normalized)
         )
 
-    async def _classify_utel_api_response(self, response: Any) -> None:
+    async def _classify_utel_api_response(self, response: Any, feedback: str = "") -> None:
         """Interpreta la respuesta real sin registrar correos ni teléfonos."""
 
         status = int(getattr(response, "status", 0) or 0)
-        if 200 <= status < 300:
+        rejected = self._is_explicit_submit_rejection(feedback)
+        if 200 <= status < 300 and not rejected:
             return
         body = ""
         try:
@@ -1928,6 +1924,28 @@ class UtelInconcertRunner:
             body = ""
         diagnostic = self._sanitize_submit_diagnostic(body)
         suffix = f" Detalle: {diagnostic}" if diagnostic else ""
+        # Conservar la causa HTTP aunque el toast llegue primero. Solo se
+        # registran metadatos académicos y presencia de datos, nunca tokens,
+        # teléfonos, correos ni el objeto completo del producto.
+        with suppress(Exception):
+            payload = response.request.post_data_json
+            if isinstance(payload, dict):
+                inputs = payload.get("inputs") or {}
+                metadata = {
+                    "formId": payload.get("formId"),
+                    "integration": payload.get("integration"),
+                    **{key: inputs.get(key) for key in ("modality", "area", "program", "siuKey")},
+                    "nombre_presente": bool(inputs.get("first_name")),
+                    "correo_presente": bool(inputs.get("email")),
+                    "telefono_presente": bool(inputs.get("phone")),
+                }
+                suffix += f" Datos técnicos: {metadata}."
+        if rejected:
+            raise RejectedSubmission(
+                "utel_submit",
+                f"UTEL mostró Error al enviar / Contacta a soporte. "
+                f"POST /api/forms: HTTP {status}.{suffix}",
+            )
         if status >= 500:
             raise UnconfirmedSubmission(
                 "utel_submit",
