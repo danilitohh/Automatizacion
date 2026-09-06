@@ -151,6 +151,82 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
             program_selector,
         )
 
+    async def _first_existing_footer_field(
+        self,
+        footer: Any,
+        selectors: list[str],
+    ) -> Any | None:
+        for selector in selectors:
+            field = footer.locator(selector).first
+            if await field.count() and await field.is_visible():
+                return field
+        return None
+
+    async def _settle_footer_contact_state(
+        self,
+        page: Any,
+        config: UtelQaConfig,
+    ) -> None:
+        """Imita el cierre natural de campos antes del clic manual.
+
+        En las PDP de Diplomados/Bootcamps el DOM puede mostrar el teléfono y el
+        programa correctos mientras React todavía conserva una validación interna
+        pendiente. Un envío manual funciona con los mismos datos porque cada campo
+        recibe foco, blur y unos segundos de estabilización. Esta rutina reproduce
+        únicamente esos eventos normales; no evita ni altera validaciones de UTEL.
+        """
+
+        footer = page.locator("#FooterBLC:visible").first
+        await footer.wait_for(state="visible", timeout=8000)
+
+        name_field = await self._first_existing_footer_field(
+            footer,
+            ['[data-cy="textfieldInput"]', '#first_name', 'input[name="first_name"]'],
+        )
+        email_field = await self._first_existing_footer_field(
+            footer,
+            ['[data-cy="emailInput"]', '#email', 'input[type="email"]', 'input[name="email"]'],
+        )
+        phone_field = await self._first_existing_footer_field(
+            footer,
+            ['[data-cy="telephoneInput"]', '#phone', 'input[type="tel"]', 'input[name="phone"]'],
+        )
+
+        # Nombre y correo ya fueron llenados por Playwright. Darles foco y salir
+        # con Tab fuerza los handlers onBlur/onChange que un usuario activa al
+        # avanzar manualmente por el formulario.
+        for field in (name_field, email_field):
+            if field is None:
+                continue
+            await field.focus()
+            await field.press("End")
+            await field.press("Tab")
+            await asyncio.sleep(0.2)
+
+        # El teléfono es el campo que más suele tener validación/máscara propia.
+        # Se vuelve a escribir de forma secuencial para que el componente reciba
+        # eventos de teclado reales antes del blur final.
+        if phone_field is not None:
+            await phone_field.focus()
+            await phone_field.fill("")
+            await phone_field.press_sequentially(config.lead.phone, delay=35)
+            await phone_field.press("Tab")
+            await asyncio.sleep(0.35)
+
+        with suppress(Exception):
+            await page.evaluate(
+                "() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }"
+            )
+
+        # Dar tiempo a validaciones asíncronas y metadatos ocultos del formulario.
+        # En el video el bot enviaba casi inmediatamente después del llenado,
+        # mientras que el mismo lead enviado manualmente sí fue aceptado.
+        await asyncio.sleep(3.0)
+
+        # Si algún handler remontó FooterBLC durante el blur, restaurar y validar
+        # el formulario una vez más antes de permitir el submit.
+        await self._stabilize_footer_before_submit(page, config)
+
     async def _fill_utel_form(
         self,
         page: Any,
@@ -160,6 +236,7 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
         await super()._fill_utel_form(page, form, config)
         if config.form_type == "footer":
             await self._stabilize_footer_before_submit(page, config)
+            await self._settle_footer_contact_state(page, config)
 
     async def _surface_utel_feedback(self, page: Any) -> None:
         """Hace visible el toast sin hacer scroll ni cambiar el layout del form."""
