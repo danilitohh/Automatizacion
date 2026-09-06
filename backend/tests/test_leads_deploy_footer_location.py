@@ -1,12 +1,37 @@
 """Regresión del formulario inferior sin id publicado por UTEL Colombia."""
 
 import asyncio
+from unittest.mock import AsyncMock
 
 from playwright.async_api import async_playwright
 
 from backend.app.automations.leads_deploy.runner import LeadsDeployRunner
 from backend.app.config.settings import Settings
 from backend.app.schemas.bot import UtelQaConfig, UtelLead
+
+
+def test_asian_footer_opens_home_and_preserves_catalog_program():
+    async def scenario():
+        runner = LeadsDeployRunner(Settings())
+        runner._maximize_visible_browser = AsyncMock()
+        runner._check_access = AsyncMock()
+        runner._validate_program_heading = AsyncMock()
+        page = AsyncMock()
+        config = UtelQaConfig(country="Indonesia", level="Master's Degree", modality="Online",
+                              form_type="footer", utel_url="https://utel.edu.mx/indonesia/master-in-education",
+                              program_name="Master in Education", lead=UtelLead())
+        await runner._open_utel(page, config)
+        await runner._navigate_utel(page, config)
+        page.goto.assert_awaited_once_with("https://utel.edu.mx/indonesia", wait_until="domcontentloaded")
+        runner._validate_program_heading.assert_not_awaited()
+        assert config.program_name == "Master in Education"
+        assert not runner._uses_home_footer(config.model_copy(update={"form_type": "lateral"}))
+        assert not runner._uses_home_footer(config.model_copy(update={"country": "Ecuador"}))
+        for country in ("Filipinas", "Philippines"):
+            page.goto.reset_mock()
+            await runner._open_utel(page, config.model_copy(update={"country": country}))
+            page.goto.assert_awaited_once_with("https://utel.edu.mx/philippines", wait_until="domcontentloaded")
+    asyncio.run(scenario())
 
 
 def test_footer_without_id_is_located_and_requeried_after_remount():

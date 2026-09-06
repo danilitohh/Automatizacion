@@ -175,15 +175,15 @@ class UtelInconcertRunner:
                 browser = None
                 context = None
                 launch_headless = False if config.keep_browser_open else config.headless
-                if config.browser == "chrome":
+                if config.browser in {"chrome", "brave"}:
                     profile_directory = self.settings.storage_dir / "browser_profiles" / "chrome-qa"
                     profile_directory.mkdir(parents=True, exist_ok=True)
-                    context = await playwright.chromium.launch_persistent_context(
-                        str(profile_directory),
-                        channel="chrome",
-                        headless=launch_headless,
-                        viewport={"width": 1440, "height": 900},
-                    )
+                    launch_options = {"headless": launch_headless, "viewport": {"width": 1440, "height": 900}}
+                    if config.browser == "brave":
+                        launch_options["executable_path"] = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
+                    else:
+                        launch_options["channel"] = "chrome"
+                    context = await playwright.chromium.launch_persistent_context(str(profile_directory), **launch_options)
                 else:
                     browser_type = getattr(playwright, config.browser)
                     browser = await browser_type.launch(headless=launch_headless)
@@ -565,7 +565,7 @@ class UtelInconcertRunner:
                 "defer_crm_verification": False,
                 "verification_only": False,
                 "keep_browser_open": False,
-                "headless": True,
+                "headless": False,
             }
         )
         self._validate_config(safe_config)
@@ -584,15 +584,15 @@ class UtelInconcertRunner:
         try:
             async with self._playwright(async_playwright, keep_open) as playwright:
                 try:
-                    if safe_config.browser == "chrome":
+                    if safe_config.browser in {"chrome", "brave"}:
                         profile_directory = self.settings.storage_dir / "browser_profiles" / "chrome-qa"
                         profile_directory.mkdir(parents=True, exist_ok=True)
-                        context = await playwright.chromium.launch_persistent_context(
-                            str(profile_directory),
-                            channel="chrome",
-                            headless=safe_config.headless,
-                            viewport={"width": 1440, "height": 900},
-                        )
+                        launch_options = {"headless": safe_config.headless, "viewport": {"width": 1440, "height": 900}}
+                        if safe_config.browser == "brave":
+                            launch_options["executable_path"] = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
+                        else:
+                            launch_options["channel"] = "chrome"
+                        context = await playwright.chromium.launch_persistent_context(str(profile_directory), **launch_options)
                     else:
                         browser_type = getattr(playwright, safe_config.browser)
                         browser = await browser_type.launch(headless=safe_config.headless)
@@ -721,6 +721,13 @@ class UtelInconcertRunner:
             self.logger.debug("No fue posible enfocar la pestaña activa del Bot: %s", error)
 
     async def _open_utel(self, page: Any, config: UtelQaConfig) -> None:
+        if self._uses_home_footer(config):
+            # Indonesia y Filipinas publican FooterBLC en la portada.
+            # El programa del catálogo se conserva para seleccionarlo allí.
+            slug = "indonesia" if self._normalize(config.country) == "indonesia" else "philippines"
+            await page.goto(f"https://utel.edu.mx/{slug}", wait_until="domcontentloaded")
+            await self._check_access(page)
+            return
         direct_program = self._select_direct_doctorate_program(config)
         target_url = direct_program["url"] if direct_program else config.utel_url
         await page.goto(target_url, wait_until="domcontentloaded")
@@ -728,6 +735,14 @@ class UtelInconcertRunner:
         expected_program = direct_program.get("page_title", direct_program["text"]) if direct_program else config.program_name
         if expected_program:
             await self._validate_program_heading(page, expected_program)
+
+    def _uses_home_footer(self, config: UtelQaConfig) -> bool:
+        """Reconoce los footers de portada de Indonesia y Filipinas."""
+
+        return config.form_type == "footer" and self._is_asian_home_country(config)
+
+    def _is_asian_home_country(self, config: UtelQaConfig) -> bool:
+        return self._normalize(config.country) in {"indonesia", "filipinas", "philippines"}
 
     def _select_direct_doctorate_program(self, config: UtelQaConfig) -> dict[str, str] | None:
         """Selecciona una PDP directa para Doctorados de Leads Deploy."""
@@ -817,9 +832,29 @@ class UtelInconcertRunner:
                 result.append(token)
             return result
 
-        return tokens(actual) == tokens(expected)
+        actual_tokens = tokens(actual)
+        expected_tokens = tokens(expected)
+        if actual_tokens == expected_tokens:
+            return True
+
+        # UTEL suele anteponer el nivel académico en el H1 de la PDP,
+        # mientras que el catálogo guarda solo el nombre comercial.
+        academic_prefixes = (
+            ("licenciatura", "en"),
+            ("carrera", "en"),
+            ("maestria", "en"),
+            ("master", "en"),
+            ("doctorado", "en"),
+            ("diplomado", "en"),
+        )
+        for prefix in academic_prefixes:
+            if tuple(actual_tokens[:len(prefix)]) == prefix:
+                return actual_tokens[len(prefix):] == expected_tokens
+        return False
 
     async def _navigate_utel(self, page: Any, config: UtelQaConfig) -> None:
+        if self._uses_home_footer(config):
+            return
         if self._selected_direct_url:
             self.logger.info("PDP directa confirmada; se omite el clic desde el listado de programas.")
             return
@@ -1062,7 +1097,7 @@ class UtelInconcertRunner:
             await page.reload(wait_until="domcontentloaded", timeout=self.FORM_WAIT_TIMEOUT_MS)
             await self._check_access(page)
             expected_page_program = self._selected_direct_page_program or self.selected_program_name
-            if expected_page_program:
+            if expected_page_program and not self._uses_home_footer(config):
                 await self._validate_program_heading(page, expected_page_program)
             if config.form_type == "footer":
                 await self._activate_footer_zone(page, selector)
@@ -1176,6 +1211,7 @@ class UtelInconcertRunner:
 
         controls = page.locator('button:visible, a:visible, [role="button"]:visible')
         accepted_prefixes = (
+            "request information",
             "solicitar informaci",
             "solicita informaci",
             "quiero informaci",
@@ -1214,7 +1250,11 @@ class UtelInconcertRunner:
             await self._complete_footer_academic_fields(page, form, config)
         elif config.form_type == "lateral":
             # El catálogo ya resolvió país, nivel, nombre y URL de esta fila.
-            await self._select_catalog_program(form, config)
+            if self._is_asian_home_country(config) and config.program_name:
+                # En las PDP de estos países el lateral ya fija nivel/programa.
+                self.selected_program_name = config.program_name
+            else:
+                await self._select_catalog_program(form, config)
         elif config.skip_preselected_fields or (config.program_name and config.utel_url) or self._selected_direct_url:
             self.logger.info("Enlace directo: se conserva la preselección de modalidad/nivel/programa.")
             self.selected_program_name = config.program_name or self.selected_program_name
@@ -1266,7 +1306,7 @@ class UtelInconcertRunner:
             ('[data-cy="educationLevelInput"]', config.level),
         ):
             field = form.locator(selector).first
-            if await field.count() and not await self._has_academic_selection(field):
+            if await field.count() and (self._uses_home_footer(config) or not await self._has_academic_selection(field)):
                 await self._set_dynamic_field(form, selector, value)
 
         # La lista depende del nivel seleccionado. El método de selección espera

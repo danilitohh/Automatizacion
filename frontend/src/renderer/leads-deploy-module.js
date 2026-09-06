@@ -25,7 +25,8 @@ const state = {
     submit_success_pattern: "Env\u00edo correcto|Pronto recibir\u00e1s informaci\u00f3n",
     submit_error_pattern: "Error al enviar|Contacta a soporte|error|invalido|inválido|obligatorio|requerido|fall",
     browser: "chromium",
-    headless: true,
+    // Leads Deploy se ejecuta visible para poder supervisar el navegador.
+    headless: false,
     keep_browser_open: false,
     lead: { name: "pending", email: "pending@testingUtel.com", phone: "900000000" },
   },
@@ -102,7 +103,7 @@ function renderModuleShell() {
           <label class="field full"><span>Patron de confirmacion (opcional)</span><input id="leads-deploy-success-pattern" type="text" placeholder="Ej. gracias|exito" /></label>
           <label class="field full"><span>Patron de error</span><input id="leads-deploy-error-pattern" type="text" /></label>
           <label class="field"><span>Navegador</span><select id="leads-deploy-browser"><option value="chromium">Chromium aislado</option><option value="chrome">Google Chrome - Perfil QA</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select></label>
-          <label class="toggle-field bot-internal-field" hidden><input id="leads-deploy-headless" type="checkbox" checked /><span><strong>Ejecutar en segundo plano</strong><small>Sin controlar tu navegador de trabajo</small></span></label>
+          <label class="toggle-field bot-internal-field" hidden><input id="leads-deploy-headless" type="checkbox" /><span><strong>Ejecutar en segundo plano</strong><small>Sin controlar tu navegador de trabajo</small></span></label>
           <label class="toggle-field full-toggle"><input id="leads-deploy-keep-browser-open" type="checkbox" /><span><strong>Modo debug visible</strong><small>Muestra el navegador durante la ejecucion y lo deja abierto al final</small></span></label>
         </div>
         <div class="security-note"><span>i</span><p>Las credenciales de InConcert se leen desde .env como INCONCERT_USERNAME/INCONCERT_PASSWORD o CRM_USERNAME/CRM_PASSWORD. No se guardan en la interfaz.</p></div>
@@ -190,6 +191,9 @@ function loadConfig() {
     const storedConfig = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (storedConfig?.lead) state.config = { ...state.config, ...storedConfig, lead: { ...state.config.lead, ...storedConfig.lead } };
     if (state.config.program_selection_strategy === "exact_match" && !state.config.program_name) state.config.program_selection_strategy = "first";
+    // Leads Deploy siempre se supervisa con el navegador visible; no heredar
+    // configuraciones antiguas que lo dejaron en segundo plano.
+    state.config.headless = false;
     if (!state.config.submit_success_pattern) state.config.submit_success_pattern = "Env\u00edo correcto|Pronto recibir\u00e1s informaci\u00f3n";
     if (!state.config.submit_error_pattern) state.config.submit_error_pattern = "Error al enviar|Contacta a soporte|error|invalido|inválido|obligatorio|requerido|fall";
   } catch {
@@ -1204,7 +1208,7 @@ export function initializeLeadsDeployModule({ showToast, runUtelInconcertBot, ut
       submit_success_pattern: "Env\u00edo correcto|Pronto recibir\u00e1s informaci\u00f3n",
       submit_error_pattern: "Error al enviar|Contacta a soporte|error|invalido|inválido|obligatorio|requerido|fall",
       browser: "chromium",
-      headless: true,
+      headless: false,
       keep_browser_open: false,
       lead: { name: "pending", email: "pending@testingUtel.com", phone: "900000000" },
     };

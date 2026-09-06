@@ -7,6 +7,7 @@ import { initializeBotModule } from "./bot-module.js?v=new-products-auto-downloa
 import { initializeLeadsDeployModule } from "./leads-deploy-module.js?v=leads-deploy-isolated-4";
 import { initializePdpModule } from "./pdp-module.js";
 import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
+import { initializeGooeyButtons } from "./gooey-buttons.js";
 
 // Estado mínimo persistido para restaurar la última pantalla abierta.
 const LAST_VIEW_KEY = "qa-automation.last-view";
@@ -112,6 +113,20 @@ function renderHistory(executions) {
   const rows = executions.length ? executions.map(executionRow).join("") : emptyRow;
   if (body) body.innerHTML = rows;
   if (fullBody) fullBody.innerHTML = rows;
+  const queued = executions.filter((execution) => execution.status === "PENDING").length;
+  const running = executions.filter((execution) => execution.status === "RUNNING").length;
+  const completed = executions.filter((execution) => ["SUCCESS", "FAIL", "WARNING"].includes(execution.status)).length;
+  const updateStat = (selector, value) => {
+    const element = document.querySelector(selector);
+    if (element) element.textContent = value;
+  };
+  updateStat("#stat-queued", queued);
+  updateStat("#stat-running", running);
+  updateStat("#stat-completed", completed);
+  const recent = document.querySelector("#recent-activity");
+  if (recent) {
+    recent.innerHTML = executions.slice(0, 4).map((execution) => `<div class="recent-item"><i class="health-dot ${statusClass(execution.status) === "success" ? "online" : "offline"}"></i><span><b>${escapeHtml(execution.name)}</b><small>${escapeHtml(execution.summary || statusLabel(execution.status))}</small></span><small>${escapeHtml(formatDate(execution.started_at))}</small></div>`).join("") || '<div class="recent-item recent-item-empty"><i class="health-dot online"></i><span><b>Sin actividad reciente</b><small>Los eventos aparecerán aquí.</small></span><small>Ahora</small></div>';
+  }
 }
 
 function renderLatest(execution) {
@@ -135,6 +150,35 @@ function renderSummary(summary) {
   document.querySelector("#metric-success").textContent = summary.successful_today;
   document.querySelector("#metric-failed").textContent = summary.failed_today;
   document.querySelector("#metric-changes").textContent = summary.changes_detected_today;
+  const donutTotal = document.querySelector("#donut-total");
+  const legendSuccess = document.querySelector("#legend-success");
+  const legendFailed = document.querySelector("#legend-failed");
+  const legendChanges = document.querySelector("#legend-changes");
+  if (donutTotal) donutTotal.textContent = summary.total_today;
+  if (legendSuccess) legendSuccess.textContent = summary.successful_today;
+  if (legendFailed) legendFailed.textContent = summary.failed_today;
+  if (legendChanges) legendChanges.textContent = summary.changes_detected_today;
+  const total = Number(summary.total_today) || 0;
+  const updateRate = (selector, value, suffix = "del total") => {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    const rate = total > 0 ? Math.round((Number(value) || 0) * 100 / total) : 0;
+    element.textContent = `${rate}% ${suffix}`;
+    element.closest(".metric-card")?.style.setProperty("--metric-activity", `${Math.max(8, rate)}%`);
+  };
+  const totalRate = document.querySelector("#metric-total-rate");
+  if (totalRate) totalRate.textContent = `${total > 0 ? 100 : 0}% hoy`;
+  updateRate("#metric-success-rate", summary.successful_today);
+  updateRate("#metric-failed-rate", summary.failed_today);
+  updateRate("#metric-changes-rate", summary.changes_detected_today);
+  const donut = document.querySelector(".donut-chart");
+  if (donut) {
+    const successEnd = total > 0 ? (Number(summary.successful_today) || 0) * 100 / total : 0;
+    const failedEnd = total > 0 ? successEnd + (Number(summary.failed_today) || 0) * 100 / total : 0;
+    donut.style.setProperty("--success-end", `${successEnd}%`);
+    donut.style.setProperty("--failed-end", `${failedEnd}%`);
+    donut.classList.toggle("is-empty", total === 0);
+  }
   renderLatest(summary.latest_execution);
 }
 
@@ -194,6 +238,7 @@ function bindEvents() {
 }
 
 bindEvents();
+initializeGooeyButtons();
 state.activeView = localStorage.getItem(LAST_VIEW_KEY) || state.activeView;
 navigate(state.activeView);
 initializeBotModule({

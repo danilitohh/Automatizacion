@@ -1,0 +1,95 @@
+:root {
+  --gooey-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.gooey-button-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+.gooey-button-burst {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--gooey-primary) 52%, transparent));
+  mix-blend-mode: screen;
+}
+
+.gooey-button-flash {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--gooey-width);
+  height: var(--gooey-height);
+  border: 1px solid color-mix(in srgb, var(--gooey-primary) 72%, transparent);
+  border-radius: min(10px, calc(var(--gooey-height) / 2));
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.96);
+  box-shadow: inset 0 0 12px color-mix(in srgb, var(--gooey-primary) 12%, transparent), 0 0 14px color-mix(in srgb, var(--gooey-primary) 22%, transparent);
+}
+
+.gooey-button-particle {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0;
+  background: var(--gooey-color);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--gooey-color) 70%, transparent);
+  transform: translate(0, 0) rotate(0) scale(.96);
+  will-change: transform, opacity;
+}
+
+.gooey-button-burst.active .gooey-button-flash {
+  animation: gooey-button-flash var(--gooey-duration) var(--gooey-ease-out) both;
+}
+
+.gooey-button-burst.active .gooey-button-particle {
+  animation: gooey-button-particle var(--gooey-duration) var(--gooey-ease-out) both;
+  animation-delay: var(--gooey-delay);
+}
+
+@keyframes gooey-button-flash {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.96); }
+  22% { opacity: .82; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.04); }
+}
+
+@keyframes gooey-button-particle {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0) scale(.96); }
+  20% { opacity: .96; }
+  72% { opacity: .72; }
+  100% { opacity: 0; transform: translate(var(--gooey-x), var(--gooey-y)) rotate(var(--gooey-rotate)) scale(var(--gooey-scale)); }
+}
+
+button:not(:disabled) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled):active {
+  transform: scale(.97);
+  transition: transform 140ms var(--gooey-ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled) { cursor: pointer; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gooey-button-burst { filter: none; mix-blend-mode: normal; }
+  .gooey-button-burst.active .gooey-button-flash { animation: gooey-button-flash-reduced 160ms ease both; }
+  button:not(:disabled):active { transform: none; }
+}
+
+@keyframes gooey-button-flash-reduced {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+  45% { opacity: .55; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
