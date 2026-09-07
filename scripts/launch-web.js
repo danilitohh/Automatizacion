@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
+require('./ensure-setup')();
 
 const projectDirectory = path.resolve(__dirname, "..");
 const host = process.env.WEB_HOST || "127.0.0.1";
