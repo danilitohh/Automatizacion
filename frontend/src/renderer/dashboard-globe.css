@@ -1,0 +1,60 @@
+/* Globo Three.js del dashboard. Todo queda acotado a la vista Dashboard. */
+#view-dashboard .dashboard-globe.three-globe-active {
+  width: clamp(230px, 18vw, 292px) !important;
+  height: clamp(230px, 18vw, 292px) !important;
+  min-width: 0 !important;
+  aspect-ratio: 1 / 1;
+  position: relative;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(18, 231, 239, .055), transparent 58%),
+    transparent !important;
+  box-shadow: none !important;
+  cursor: grab;
+  isolation: isolate;
+  touch-action: none;
+}
+
+#view-dashboard .dashboard-globe.three-globe-active.is-dragging { cursor: grabbing; }
+
+#view-dashboard .dashboard-globe.three-globe-active::before,
+#view-dashboard .dashboard-globe.three-globe-active::after {
+  content: none !important;
+  display: none !important;
+}
+
+#view-dashboard .dashboard-globe.three-globe-active > canvas {
+  position: absolute;
+  inset: -18%;
+  width: 136% !important;
+  height: 136% !important;
+  display: block;
+  filter:
+    drop-shadow(0 0 14px rgba(18, 231, 239, .16))
+    drop-shadow(0 0 34px rgba(0, 174, 239, .09));
+  outline: none;
+}
+
+#view-dashboard .latest-panel:has(.three-globe-active) {
+  overflow: visible;
+}
+
+@media (max-width: 1180px) {
+  #view-dashboard .dashboard-globe.three-globe-active {
+    width: 218px !important;
+    height: 218px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  #view-dashboard .dashboard-globe.three-globe-active {
+    width: 190px !important;
+    height: 190px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #view-dashboard .dashboard-globe.three-globe-active { cursor: default; }
+}
