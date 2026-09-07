@@ -849,8 +849,21 @@ class UtelInconcertRunner:
         )
         for prefix in academic_prefixes:
             if tuple(actual_tokens[:len(prefix)]) == prefix:
-                return actual_tokens[len(prefix):] == expected_tokens
-        return False
+                actual_tokens = actual_tokens[len(prefix):]
+                break
+        for prefix in academic_prefixes:
+            if tuple(expected_tokens[:len(prefix)]) == prefix:
+                expected_tokens = expected_tokens[len(prefix):]
+                break
+
+        if actual_tokens == expected_tokens:
+            return True
+
+        # Algunos títulos presentan el mismo nombre comercial en otro orden,
+        # por ejemplo "Mindfulness (Conciencia Plena Aplicada)" frente a
+        # "Conciencia Plena Aplicada — Mindfulness". Solo se acepta cuando el
+        # conjunto completo de palabras coincide; no se admiten subconjuntos.
+        return sorted(actual_tokens) == sorted(expected_tokens)
 
     async def _navigate_utel(self, page: Any, config: UtelQaConfig) -> None:
         if self._uses_home_footer(config):
@@ -1326,12 +1339,71 @@ class UtelInconcertRunner:
         current = await field.evaluate("element => element.tagName === 'SELECT' ? element.selectedOptions[0]?.textContent || '' : element.value || ''")
         def program_key(text: str) -> str:
             return re.sub(r"^(?:licenciatura|carrera|maestria|doctorado|diplomado) en\s+", "", self._normalize(text))
-        if program_key(current) != program_key(expected):
-            await self._set_dynamic_field(form, selector, expected)
+        if not self._program_titles_equivalent(program_key(current), program_key(expected)):
+            try:
+                await self._set_dynamic_field(form, selector, expected)
+            except UtelQaError:
+                # En Leads Deploy algunas PDP publican un programa que no está
+                # disponible en el selector del propio formulario. Para poder
+                # validar el envío se usa una opción real del mismo nivel y se
+                # deja constancia explícita del desajuste.
+                fallback = await self._select_first_available_program(form, field, selector)
+                if not fallback:
+                    raise
+                self.program_selection_notice = (
+                    f"El programa de la PDP '{expected}' no estaba disponible en el formulario; "
+                    f"se seleccionó '{fallback}' del mismo nivel."
+                )
+                self.selected_program_name = fallback
+                return
         confirmed = await field.evaluate("element => element.tagName === 'SELECT' ? element.selectedOptions[0]?.textContent || '' : element.value || ''")
-        if program_key(confirmed) != program_key(expected):
+        if not self._program_titles_equivalent(program_key(confirmed), program_key(expected)):
             raise UtelQaError("utel_fill", f"No se pudo confirmar el programa del catálogo: '{expected}'.", selector)
         self.selected_program_name = expected
+
+    async def _select_first_available_program(self, form: Any, field: Any, selector: str) -> str:
+        """Selecciona una opción real cuando la PDP no existe en su formulario."""
+
+        tag_name = await field.evaluate("element => element.tagName.toLowerCase()")
+        placeholders = {
+            "", "programa", "programa de interes", "selecciona una opcion",
+            "busca o selecciona tu programa de interes", "escribe o selecciona tu programa de interes",
+        }
+        if tag_name == "select":
+            await self._wait_for_select_options(field)
+            options = await field.locator("option").evaluate_all(
+                "elements => elements.map(option => ({ text: option.textContent || '', value: option.value || '', disabled: option.disabled }))"
+            )
+            chosen = next(
+                (
+                    option for option in options
+                    if option["value"] and not option["disabled"]
+                    and self._normalize(option["text"]) not in placeholders
+                ),
+                None,
+            )
+            if chosen is None:
+                return ""
+            await field.select_option(value=chosen["value"])
+            await asyncio.sleep(0.8)
+            return chosen["text"].strip()
+
+        await field.fill("")
+        await field.click()
+        results = form.locator('[id^="result-"]:visible')
+        try:
+            await results.first.wait_for(state="visible", timeout=6000)
+        except Exception:
+            return ""
+        for index in range(await results.count()):
+            result = results.nth(index)
+            text = (await result.inner_text()).strip()
+            if self._normalize(text) in placeholders:
+                continue
+            await result.evaluate("element => element.click()")
+            await asyncio.sleep(0.8)
+            return text
+        return ""
 
     async def _apply_deploy_modality(self, form: Any, config: UtelQaConfig) -> None:
         """Selecciona la modalidad de la fila sin repetir una selección correcta."""
@@ -2316,24 +2388,9 @@ class UtelInconcertRunner:
             )
             await asyncio.sleep(min(10, remaining))
 
-        # En algunos tenants el filtro Email de la vista basica es inestable.
-        # El email se vuelve a comprobar dentro de Gestionar antes de aceptar.
-        # Algunos tenants concatenan un apellido vacío como un punto final.
-        if await self._search_contact_with_session(page, "Nombre", f"{expected_name} .", expected_name):
-            self.logger.warning(
-                "El lead se localizo por el nombre unico %s; el email se verificara en Gestionar.",
-                expected_name,
-            )
-            return
-        if await self._search_contact_with_session(page, "Nombre", expected_name.rstrip(" ."), expected_name):
-            self.logger.warning(
-                "El lead se localizo por el nombre sin el sufijo punto %s; el email se verificara en Gestionar.",
-                expected_name,
-            )
-            return
         raise LeadNotFoundError(
             "inconcert_search",
-            f"No se encontro el lead por email ({email}) ni por nombre ({expected_name}) despues de esperar su indexacion.",
+            f"No se encontro el lead por email ({email}) despues de esperar su indexacion.",
         )
 
     async def _search_lead_balancer(self, page: Any, email: str, expected_name: str) -> None:
@@ -2652,7 +2709,18 @@ class UtelInconcertRunner:
         if search_input is None:
             raise UtelQaError("inconcert_search", "No se pudo ubicar el campo de busqueda en InConcert.")
         filter_container = search_input.locator("xpath=ancestor::div[contains(@class,'input-group')][1]")
-        filter_button = filter_container.locator("button.dropdown-toggle").first
+        filter_button = filter_container.locator(
+            "button:visible, [role='button']:visible, .dropdown-toggle:visible"
+        ).filter(has_text=re.compile(r"^\s*(Nombre|Email)\s*$", re.I)).first
+        if not await self._locator_count(filter_button, timeout_ms=1200):
+            # El tenant Singapur separa visualmente el botón y el input sin un
+            # ancestro .input-group compartido y no siempre usa la clase
+            # Bootstrap dropdown-toggle.
+            filter_button = page.locator(
+                "button:visible, [role='button']:visible, .dropdown-toggle:visible"
+            ).filter(
+                has_text=re.compile(r"^\s*(Nombre|Email)\s*$", re.I)
+            ).first
         current_filter = ""
         if await self._locator_count(filter_button, timeout_ms=1200) > 0:
             try:
@@ -2661,34 +2729,73 @@ class UtelInconcertRunner:
                 current_filter = self._normalize(await filter_button.inner_text(timeout=1000))
             except Exception:
                 current_filter = ""
-            if current_filter and current_filter != self._normalize(filter_name):
+            desired_filter = self._normalize(filter_name)
+            if current_filter != desired_filter:
                 await filter_button.click(force=True)
-                option = page.locator("a.dropdown-item:visible").filter(
-                    has_text=re.compile(rf"^{re.escape(filter_name)}$", re.I)
-                ).first
-                option_normalized = self._normalize(filter_name)
                 selected_filter = False
-                try:
-                    if await self._locator_count(option, timeout_ms=1200):
-                        await option.click(force=True)
-                        selected_filter = True
-                    else:
-                        fallback = page.locator("a.dropdown-item:visible").filter(
-                            has_text=re.compile(rf"{re.escape(option_normalized)}", re.I)
-                        ).first
-                        if await self._locator_count(fallback, timeout_ms=1200):
-                            await fallback.click(force=True)
+                options = page.locator(
+                    ".dropdown-menu:visible a, .dropdown-menu:visible button, "
+                    "[role='menu']:visible [role='menuitem'], "
+                    "a.dropdown-item:visible, button.dropdown-item:visible, "
+                    "li:visible a, li:visible button"
+                )
+                for index in range(await options.count()):
+                    option = options.nth(index)
+                    try:
+                        if self._normalize((await option.inner_text()).strip()) == desired_filter:
+                            await option.click(force=True)
                             selected_filter = True
-                except Exception:
-                    selected_filter = False
+                            break
+                    except Exception:
+                        continue
                 if not selected_filter:
                     close_button = page.locator("button[title='Cerrar']").first
                     if await self._locator_count(close_button, timeout_ms=1200):
                         await close_button.click(force=True)
-        if current_filter and current_filter != self._normalize(filter_name):
-            # Si no logramos ajustar el filtro, se intenta el filtro actual por robustez.
-            self.logger.warning("No fue posible cambiar el filtro de InConcert a %s; se usa el filtro actual.", filter_name)
-        await search_input.fill(value)
+                filter_changed = False
+                deadline = perf_counter() + 5
+                while perf_counter() < deadline:
+                    try:
+                        if self._normalize(await filter_button.inner_text()) == desired_filter:
+                            filter_changed = True
+                            break
+                    except Exception:
+                        pass
+                    await asyncio.sleep(0.2)
+                if not filter_changed:
+                    raise UtelQaError(
+                        "inconcert_search",
+                        f"InConcert mantuvo el filtro '{current_filter or 'desconocido'}' y no permitió cambiarlo a '{filter_name}'. No se ejecutó una búsqueda ambigua.",
+                    )
+
+                # El cambio de filtro puede remontar el input; se vuelve a
+                # resolver para escribir el correo en el control vigente.
+                search_input = await self._resolve_inconcert_search_input(page)
+                if search_input is None:
+                    raise UtelQaError("inconcert_search", "El campo de búsqueda desapareció después de seleccionar Email.")
+                filter_container = search_input.locator("xpath=ancestor::div[contains(@class,'input-group')][1]")
+        else:
+            raise UtelQaError("inconcert_search", "InConcert no mostró el selector de filtro de búsqueda.")
+        grouped_input = filter_container.locator("input:visible").first
+        if await self._locator_count(grouped_input, timeout_ms=1200):
+            search_input = grouped_input
+        await search_input.click(force=True)
+        await search_input.press("Control+A")
+        await search_input.press("Backspace")
+        # Este campo de InConcert conserva un modelo Angular distinto del valor
+        # DOM cuando se usa fill() sobre una búsqueda previa. La escritura
+        # secuencial reproduce el evento de teclado que actualiza ambos.
+        await search_input.press_sequentially(value, delay=15)
+        try:
+            await search_input.press("Tab")
+        except Exception:
+            pass
+        typed_value = (await search_input.input_value()).strip()
+        if typed_value.casefold() != value.strip().casefold():
+            raise UtelQaError(
+                "inconcert_search",
+                f"InConcert no conservó el email solicitado en el campo visible. Esperado: {value} | Visible: {typed_value or 'vacío'}.",
+            )
         condition_container = filter_container.locator("xpath=ancestor::div[contains(@class,'flexCondition')][1]")
         search_button = condition_container.locator("button[title='Buscar']:visible").first
         if not await self._locator_count(search_button, timeout_ms=1200):
@@ -2714,6 +2821,12 @@ class UtelInconcertRunner:
                 await search_button.click(force=True)
             else:
                 await search_input.press("Enter")
+        visible_value = (await search_input.input_value()).strip()
+        if visible_value.casefold() != value.strip().casefold():
+            raise UtelQaError(
+                "inconcert_search",
+                f"InConcert reemplazó el email de la consulta. Esperado: {value} | Visible: {visible_value or 'vacío'}.",
+            )
         await asyncio.sleep(1)
 
     async def _locator_count(self, locator: Any, timeout_ms: int = 2000) -> int:
@@ -2995,10 +3108,17 @@ class UtelInconcertRunner:
 
         try:
             await detail_page.wait_for_function(
-                """({ expectedName, expectedEmail }) => {
+                r"""({ expectedName, expectedEmail }) => {
                     const text = (document.body?.innerText || '').toLocaleLowerCase();
-                    return text.includes(expectedName.toLocaleLowerCase())
-                        && text.includes(expectedEmail.toLocaleLowerCase());
+                    const fieldValues = Array.from(document.querySelectorAll('input, textarea'))
+                        .map(element => element.value || '')
+                        .join(' ')
+                        .toLocaleLowerCase();
+                    const searchable = `${text} ${fieldValues}`;
+                    const compact = value => String(value || '').toLocaleLowerCase().replace(/\s+/g, '');
+                    const normalizedName = value => String(value || '').toLocaleLowerCase().replace(/\s+/g, ' ').trim();
+                    return normalizedName(searchable).includes(normalizedName(expectedName))
+                        && compact(searchable).includes(compact(expectedEmail));
                 }""",
                 arg={"expectedName": expected_name, "expectedEmail": expected_email},
                 timeout=60000,
@@ -3019,7 +3139,12 @@ class UtelInconcertRunner:
             raise
 
         body_text = await detail_page.locator("body").inner_text()
-        if expected_email.casefold() not in body_text.casefold():
+        field_values = await detail_page.locator("input, textarea").evaluate_all(
+            "elements => elements.map(element => element.value || '').join(' ')"
+        )
+        compact_body = re.sub(r"\s+", "", f"{body_text} {field_values}").casefold()
+        compact_email = re.sub(r"\s+", "", expected_email).casefold()
+        if compact_email not in compact_body:
             failure = UtelQaError(
                 "inconcert_manage",
                 f"El contacto {expected_name} fue abierto, pero su email no coincide con {expected_email}.",
@@ -3166,7 +3291,13 @@ class UtelInconcertRunner:
             selected = next(
                 (
                     option for option in options
-                    if self._normalize(option["text"]) in wanted or self._normalize(option["value"]) in wanted
+                    if self._normalize(option["text"]) in wanted
+                    or self._normalize(option["value"]) in wanted
+                    or any(
+                        self._program_titles_equivalent(self._normalize(option["text"]), expected)
+                        or self._program_titles_equivalent(self._normalize(option["value"]), expected)
+                        for expected in wanted
+                    )
                 ),
                 None,
             )
@@ -3225,7 +3356,10 @@ class UtelInconcertRunner:
             for index in range(await results.count()):
                 result = results.nth(index)
                 result_text = self._normalize((await result.inner_text()).strip())
-                if result_text in wanted:
+                if result_text in wanted or any(
+                    self._program_titles_equivalent(result_text, expected)
+                    for expected in wanted
+                ):
                     chosen = result
                     break
             if chosen is not None:

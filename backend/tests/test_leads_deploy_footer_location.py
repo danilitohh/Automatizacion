@@ -78,3 +78,14 @@ def test_program_heading_tolerates_safe_singular_plural_difference():
         "bootcamp fundamento de ciencias de datos",
         "bootcamp fundamento de ciencias computacionales",
     )
+
+
+def test_program_heading_tolerates_same_words_in_editorial_order():
+    assert LeadsDeployRunner._program_titles_equivalent(
+        "maestria en mindfulness conciencia plena aplicada",
+        "conciencia plena aplicada mindfulness",
+    )
+    assert not LeadsDeployRunner._program_titles_equivalent(
+        "maestria en mindfulness conciencia plena aplicada",
+        "maestria en educacion y docencia",
+    )
