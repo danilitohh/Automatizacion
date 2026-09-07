@@ -1,6 +1,7 @@
 "use strict";
 
 import { initializeDashboardGlobe } from "./dashboard-globe.js?v=hollow-arcs-2";
+import { initializeDashboardRobot } from "./dashboard-robot.js?v=utel-face-1";
 
 // Adaptación sin dependencias del efecto GooeyNav de React Bits.
 // La delegación conserva los listeners, IDs y estados de todos los botones existentes y futuros.
@@ -85,8 +86,8 @@ function makeBurst(button, event, reducedMotion) {
 
 export function initializeGooeyButtons() {
   // El dashboard comparte este bootstrap visual para no tocar los módulos de bots.
-  // El globo tiene fallback al planeta CSS actual si Three.js no está disponible.
   initializeDashboardGlobe();
+  initializeDashboardRobot();
 
   if (document.documentElement.dataset.gooeyButtons === "ready") return;
   document.documentElement.dataset.gooeyButtons = "ready";

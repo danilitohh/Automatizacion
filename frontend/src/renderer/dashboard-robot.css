@@ -1,0 +1,259 @@
+/* Cara animada UTEL QA. Todo está acotado al robot del radar del dashboard. */
+#view-dashboard .robot-core.utel-robot-face {
+  inset: 27% 18% 24% !important;
+  border: 1.5px solid rgba(32, 244, 255, .94) !important;
+  border-radius: 30% 30% 27% 27% / 35% 35% 38% 38% !important;
+  overflow: visible !important;
+  background:
+    linear-gradient(180deg, rgba(93, 247, 255, .34), rgba(10, 102, 130, .2) 18%, transparent 28%),
+    linear-gradient(145deg, rgba(12, 104, 132, .92), rgba(4, 28, 43, .99) 40%, rgba(1, 9, 17, 1)) !important;
+  box-shadow:
+    inset 0 0 7px rgba(32, 244, 255, .30),
+    inset 0 -5px 10px rgba(0, 0, 0, .72),
+    0 0 7px rgba(32, 244, 255, .72),
+    0 0 20px rgba(32, 244, 255, .24) !important;
+  transform-origin: 50% 58%;
+  isolation: isolate;
+}
+
+#view-dashboard .robot-core.utel-robot-face::before,
+#view-dashboard .robot-core.utel-robot-face::after {
+  content: none !important;
+  display: none !important;
+}
+
+#view-dashboard .utel-robot-visor {
+  position: absolute;
+  inset: 8% 8% 11%;
+  z-index: 4;
+  overflow: hidden;
+  border: 1px solid rgba(32, 244, 255, .38);
+  border-radius: 27% / 33%;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(0, 229, 255, .075), transparent 48%),
+    linear-gradient(145deg, rgba(4, 27, 42, .98), rgba(0, 8, 16, .995));
+  box-shadow:
+    inset 0 0 11px rgba(0, 225, 255, .10),
+    inset 0 -5px 12px rgba(0, 0, 0, .58),
+    0 0 5px rgba(0, 225, 255, .16);
+}
+
+#view-dashboard .utel-robot-visor::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(132deg, rgba(255,255,255,.10), transparent 24%, transparent 72%, rgba(32,244,255,.04));
+  opacity: .55;
+}
+
+#view-dashboard .utel-robot-eyes {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  transition: transform .16s cubic-bezier(.2,.8,.2,1);
+}
+
+#view-dashboard .utel-robot-eye {
+  position: absolute;
+  top: 34%;
+  width: 15.5%;
+  height: 34%;
+  border-radius: 48%;
+  background: linear-gradient(180deg, #61fbff, #19e9f4);
+  box-shadow:
+    0 0 4px rgba(81,250,255,.95),
+    0 0 8px rgba(34,240,255,.80),
+    0 0 15px rgba(34,240,255,.40);
+  transform-origin: center;
+  transition:
+    transform .14s ease,
+    width .24s ease,
+    height .24s ease,
+    top .24s ease,
+    border-radius .24s ease,
+    background .25s ease,
+    box-shadow .25s ease;
+}
+
+#view-dashboard .utel-robot-eye.eye-left { left: 22%; }
+#view-dashboard .utel-robot-eye.eye-right { right: 22%; }
+
+#view-dashboard .utel-robot-pupil {
+  position: absolute;
+  left: 50%;
+  top: 23%;
+  width: 26%;
+  height: 20%;
+  border-radius: 50%;
+  background: rgba(241,255,255,.92);
+  transform: translate(-50%, -50%);
+  opacity: .66;
+  filter: blur(.1px);
+}
+
+#view-dashboard .utel-robot-mouth {
+  position: absolute;
+  left: 31%;
+  top: 60%;
+  z-index: 3;
+  width: 38%;
+  height: 24%;
+  overflow: visible;
+  color: #20f4ff;
+  filter:
+    drop-shadow(0 0 3px rgba(32,244,255,.98))
+    drop-shadow(0 0 7px rgba(32,244,255,.55));
+}
+
+#view-dashboard .utel-robot-mouth path {
+  transition: d .28s ease, stroke .28s ease, stroke-width .28s ease;
+}
+
+#view-dashboard .utel-robot-ear {
+  position: absolute;
+  z-index: 2;
+  top: 27%;
+  width: 15%;
+  height: 47%;
+  border: 1px solid rgba(32, 244, 255, .86);
+  border-radius: 48%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(32,244,255,.20), transparent 46%),
+    linear-gradient(180deg, rgba(11,104,132,.92), rgba(3,25,39,.98));
+  box-shadow: inset 0 0 5px rgba(32,244,255,.22), 0 0 6px rgba(32,244,255,.42);
+}
+
+#view-dashboard .utel-robot-ear-left { left: -10%; }
+#view-dashboard .utel-robot-ear-right { right: -10%; }
+#view-dashboard .utel-robot-ear i {
+  position: absolute;
+  inset: 25% 27%;
+  border: 1px solid rgba(32,244,255,.65);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(32,244,255,.35);
+}
+
+#view-dashboard .utel-robot-antenna {
+  position: absolute;
+  z-index: 1;
+  left: 47%;
+  top: -26%;
+  width: 6%;
+  height: 28%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #20f4ff, #087c9a);
+  box-shadow: 0 0 5px rgba(32,244,255,.52);
+}
+
+#view-dashboard .utel-robot-antenna i {
+  position: absolute;
+  left: 50%;
+  top: -12px;
+  width: 13px;
+  height: 13px;
+  border: 1px solid #7effff;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #9fffff 0 14%, #20f4ff 35%, #087c9a 76%, #052334 100%);
+  box-shadow: 0 0 6px rgba(32,244,255,.9), 0 0 14px rgba(32,244,255,.42);
+  transform: translateX(-50%);
+  animation: utel-antenna-pulse 2.8s ease-in-out infinite;
+}
+
+#view-dashboard .utel-robot-head-light,
+#view-dashboard .utel-robot-chin-light {
+  position: absolute;
+  left: 42%;
+  z-index: 6;
+  width: 16%;
+  height: 4%;
+  border-radius: 999px;
+  background: #5dfaff;
+  box-shadow: 0 0 5px rgba(32,244,255,.86), 0 0 10px rgba(32,244,255,.38);
+}
+
+#view-dashboard .utel-robot-head-light { top: 5%; }
+#view-dashboard .utel-robot-chin-light { bottom: 5%; }
+
+#view-dashboard .utel-robot-corner {
+  position: absolute;
+  z-index: 4;
+  width: 12%;
+  height: 18%;
+  opacity: .76;
+}
+
+#view-dashboard .utel-robot-corner.corner-one {
+  top: 14%;
+  right: 9%;
+  border-top: 1px solid #20f4ff;
+  border-right: 1px solid #20f4ff;
+  border-radius: 0 4px 0 0;
+}
+
+#view-dashboard .utel-robot-corner.corner-two {
+  bottom: 14%;
+  left: 9%;
+  border-bottom: 1px solid #20f4ff;
+  border-left: 1px solid #20f4ff;
+  border-radius: 0 0 0 4px;
+}
+
+#view-dashboard .robot-core.utel-robot-face.blink .utel-robot-eye {
+  transform: scaleY(.065) !important;
+}
+
+#view-dashboard .robot-core.utel-robot-face[data-state="working"] .utel-robot-visor {
+  box-shadow: inset 0 0 14px rgba(32,244,255,.16), 0 0 9px rgba(32,244,255,.18);
+}
+
+#view-dashboard .robot-core.utel-robot-face[data-state="working"] .utel-robot-eye {
+  height: 27%;
+  top: 38%;
+  border-radius: 40%;
+}
+
+#view-dashboard .robot-core.utel-robot-face[data-state="success"] .utel-robot-visor {
+  box-shadow: inset 0 0 14px rgba(54,241,168,.14), 0 0 9px rgba(54,241,168,.19);
+}
+
+#view-dashboard .robot-core.utel-robot-face[data-state="success"] .utel-robot-eye {
+  background: linear-gradient(180deg, #89ffe0, #36f1a8);
+  box-shadow: 0 0 5px rgba(54,241,168,.95), 0 0 12px rgba(54,241,168,.5);
+}
+
+#view-dashboard .robot-core.utel-robot-face[data-state="success"] .utel-robot-mouth { color: #36f1a8; }
+
+#view-dashboard .robot-core.utel-robot-face[data-state="error"] .utel-robot-visor {
+  box-shadow: inset 0 0 14px rgba(255,77,133,.12), 0 0 9px rgba(255,77,133,.18);
+}
+
+#view-dashboard .robot-core.utel-robot-face[data-state="error"] .utel-robot-eye {
+  background: linear-gradient(180deg, #ff779f, #ff4d85);
+  box-shadow: 0 0 5px rgba(255,77,133,.95), 0 0 12px rgba(255,77,133,.5);
+}
+
+#view-dashboard .robot-core.utel-robot-face[data-state="error"] .utel-robot-mouth { color: #ff4d85; }
+
+#view-dashboard .robot-core.utel-robot-face[data-state="sleep"] .utel-robot-eye {
+  top: 48%;
+  height: 7%;
+  border-radius: 999px;
+}
+
+@keyframes utel-antenna-pulse {
+  0%, 100% { opacity: .45; transform: translateX(-50%) scale(.94); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+}
+
+@media (max-width: 1180px) {
+  #view-dashboard .robot-core.utel-robot-face { inset: 25% 17% 23% !important; }
+  #view-dashboard .utel-robot-antenna i { width: 11px; height: 11px; top: -10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #view-dashboard .utel-robot-antenna i { animation: none; }
+  #view-dashboard .utel-robot-eyes,
+  #view-dashboard .utel-robot-eye,
+  #view-dashboard .utel-robot-mouth path { transition: none; }
+}
