@@ -12,7 +12,7 @@ const state = {
   config: {
     name: "Bot de nuevos productos",
     environment: "sandbox",
-    dry_run: true,
+    dry_run: false,
     country: "ecuador",
     utel_url: "",
     inconcert_url: "",
@@ -95,7 +95,6 @@ function renderModuleShell() {
           <label class="field bot-internal-field" hidden><span>Modalidad</span><input id="bot-modality" type="text" placeholder="En linea" /></label>
           <label class="field bot-internal-field" hidden aria-hidden="true"><span>Nivel</span><input id="bot-level" type="hidden" value="Licenciatura" /></label>
           <label class="field"><span>Entorno</span><select id="bot-environment"><option value="sandbox">Sandbox</option><option value="production">Producción</option></select></label>
-          <label class="toggle-field bot-internal-field" hidden><input id="bot-dry-run" type="checkbox" checked /><span><strong>Dry run seguro</strong><small>Rellena el formulario sin enviar leads reales</small></span></label>
           <label class="field"><span>Estrategia de programa</span><select id="bot-program-strategy"><option value="exact_match">Coincidencia exacta</option><option value="first">Primer programa visible</option></select></label>
           <label class="field full"><span>Nombre exacto del programa</span><input id="bot-program-name" type="text" placeholder="Obligatorio con coincidencia exacta" /></label>
           <label class="field full"><span>Patron de confirmacion (opcional)</span><input id="bot-success-pattern" type="text" placeholder="Ej. gracias|exito" /></label>
@@ -262,7 +261,8 @@ function setCountryValue(value) {
 function readForm() {
   state.config.name = (getInputValue("#bot-name") || "").trim();
   state.config.environment = getInputValue("#bot-environment") || state.config.environment;
-  state.config.dry_run = getInputValue("#bot-dry-run", { asBoolean: true });
+  // Nuevos Productos siempre envia; ignora configuraciones antiguas guardadas.
+  state.config.dry_run = false;
   state.config.country = canonicalCountryValue(getInputValue("#bot-country"));
   state.config.utel_url = (getInputValue("#bot-utel-url") || "").trim();
   state.config.inconcert_url = (getInputValue("#bot-inconcert-url") || "").trim();
@@ -294,6 +294,7 @@ function readForm() {
 }
 
 function writeForm() {
+  state.config.dry_run = false;
   setInputValue("#bot-name", state.config.name);
   setInputValue("#bot-environment", state.config.environment);
   setInputValue("#bot-dry-run", state.config.dry_run, { asBoolean: true });
@@ -1172,7 +1173,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
     state.config = {
       name: "Bot de nuevos productos",
       environment: "sandbox",
-      dry_run: true,
+      dry_run: false,
       country: "ecuador",
       utel_url: "",
       inconcert_url: "",
