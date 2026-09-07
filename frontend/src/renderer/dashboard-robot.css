@@ -1,21 +1,28 @@
-/* Robot UTEL QA del dashboard: la ilustración compartida es la base visual exacta.
-   CSS solo cubre el visor para animar ojos y boca sin redibujar el cuerpo. */
+/* Robot original sin placa rectangular: fondo exterior transparente, visor opaco.
+   Todas las reglas quedan dentro del dashboard; no afectan al planeta ni a bots. */
 #view-dashboard .execution-radar:has(.utel-robot-png-face) {
+  display: grid;
+  place-items: center;
   overflow: visible;
-  background: radial-gradient(circle, rgba(18,231,239,.055), transparent 68%);
+  background: transparent;
   box-shadow: none;
 }
 
+/* El recorte ya contiene sus anillos. No dibujar otro radar encima/debajo. */
 #view-dashboard .execution-radar:has(.utel-robot-png-face) .radar-ring {
-  opacity: .14;
+  display: none;
 }
 
 #view-dashboard .robot-core.utel-robot-png-face {
-  inset: 2px 5px !important;
+  position: relative !important;
+  inset: auto !important;
+  width: min(116px, calc(100% - 8px));
+  height: auto !important;
+  aspect-ratio: 116 / 122;
   z-index: 4;
-  overflow: hidden !important;
+  overflow: visible !important;
   border: 0 !important;
-  border-radius: 18px !important;
+  border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
   isolation: isolate;
@@ -35,10 +42,16 @@
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: fill;
+  object-fit: contain;
   pointer-events: none;
   user-select: none;
   image-rendering: auto;
+}
+
+/* Respaldo durante la carga o si el navegador deshabilita lectura de Canvas. */
+#view-dashboard .utel-robot-png-face:not([data-artwork="transparent"]) .utel-robot-art {
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 74%, transparent 100%);
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 74%, transparent 100%);
 }
 
 /* Zona interior del visor de la imagen original (116 x 122). */
@@ -59,7 +72,6 @@
     0 0 3px rgba(0, 225, 255, .045);
 }
 
-/* Mantiene parte del brillo/reflejo que se ve en el visor del PNG. */
 #view-dashboard .utel-robot-face-overlay::after {
   content: "";
   position: absolute;
@@ -183,10 +195,7 @@
   50% { transform: translateY(-3px); }
 }
 
-@media (max-width: 1180px) {
-  #view-dashboard .robot-core.utel-robot-png-face { inset: 2px 4px !important; }
-}
-
 @media (prefers-reduced-motion: reduce) {
+  #view-dashboard .robot-core.utel-robot-png-face { animation: none !important; }
   #view-dashboard .utel-robot-eyes { transition: none; }
 }

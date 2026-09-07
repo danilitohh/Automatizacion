@@ -4,12 +4,14 @@ import robotArt1 from "./dashboard-robot-art-1.js?v=png-face-2";
 import robotArt2 from "./dashboard-robot-art-2.js?v=png-face-2";
 import robotArt3 from "./dashboard-robot-art-3.js?v=png-face-2";
 import robotArt4 from "./dashboard-robot-art-4.js?v=png-face-2";
+import { createTransparentRobotArtwork } from "./dashboard-robot-matte.js?v=transparent-face-3";
 
-// Robot del dashboard: usa la ilustración exacta compartida por Danilo como
-// base visual y anima únicamente la expresión sobre el visor.
+// Conserva la ilustración original. El matte elimina únicamente el fondo
+// exterior; la expresión sigue siendo una capa independiente sobre el visor.
 const STYLE_ID = "dashboard-robot-face-style";
 const ROBOT_ART_URL = `data:image/webp;base64,${robotArt1}${robotArt2}${robotArt3}${robotArt4}`;
 let activeRobot = null;
+let artworkPromise = null;
 
 const MOUTH_SHAPES = {
   idle: "M 45 28 Q 80 55 115 28",
@@ -22,12 +24,32 @@ const MOUTH_SHAPES = {
 };
 
 function installStylesheet() {
-  if (document.getElementById(STYLE_ID)) return;
-  const link = document.createElement("link");
-  link.id = STYLE_ID;
-  link.rel = "stylesheet";
-  link.href = new URL("./dashboard-robot.css?v=png-face-2", import.meta.url).href;
-  document.head.appendChild(link);
+  let link = document.getElementById(STYLE_ID);
+  if (!link) {
+    link = document.createElement("link");
+    link.id = STYLE_ID;
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+  }
+  const href = new URL("./dashboard-robot.css?v=transparent-face-3", import.meta.url).href;
+  if (link.href !== href) link.href = href;
+}
+
+function prepareArtwork() {
+  // Una única conversión pequeña y local, reutilizada al montar otra vez.
+  if (!artworkPromise) {
+    artworkPromise = (async () => {
+      const source = new Image();
+      source.src = ROBOT_ART_URL;
+      await source.decode();
+      const url = createTransparentRobotArtwork(source);
+      const prepared = new Image();
+      prepared.src = url;
+      await prepared.decode();
+      return url;
+    })();
+  }
+  return artworkPromise;
 }
 
 function statusToState(value) {
@@ -42,6 +64,7 @@ function statusToState(value) {
 function buildFace(robot) {
   robot.classList.add("utel-robot-face", "utel-robot-png-face");
   robot.dataset.state = "idle";
+  robot.dataset.artwork = "masked";
   robot.replaceChildren();
   robot.insertAdjacentHTML("afterbegin", `
     <img class="utel-robot-art" src="${ROBOT_ART_URL}" alt="" draggable="false" aria-hidden="true" />
@@ -57,18 +80,30 @@ function buildFace(robot) {
   `);
 }
 
-function createRobotController(robot) {
+function createRobotController(robot, originalMarkup) {
   const stage = robot.closest(".latest-panel") || robot.closest(".execution-radar") || robot.parentElement;
   const eyes = robot.querySelector(".utel-robot-eyes");
   const mouth = robot.querySelector(".utel-robot-mouth path");
+  const art = robot.querySelector(".utel-robot-art");
   const status = document.querySelector("#latest-status");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let state = "idle";
   let blinkTimer = 0;
+  let blinkReleaseTimer = 0;
+  let doubleBlinkTimer = 0;
   let talkingTimer = 0;
   let isBlinking = false;
   let destroyed = false;
+
+  prepareArtwork().then((url) => {
+    if (destroyed) return;
+    art.src = url;
+    robot.dataset.artwork = "transparent";
+  }).catch((error) => {
+    // La máscara CSS mantiene bordes suaves si Canvas está bloqueado.
+    if (!destroyed) console.warn("[Dashboard] Robot: se conserva la máscara de respaldo.", error);
+  });
 
   const setMouth = (shape) => mouth?.setAttribute("d", shape);
   const stopTalking = () => {
@@ -90,7 +125,7 @@ function createRobotController(robot) {
   }
 
   function applyState(nextState) {
-    if (destroyed || !MOUTH_SHAPES[nextState]) return;
+    if (destroyed || !Object.hasOwn(MOUTH_SHAPES, nextState)) return;
     state = nextState;
     robot.dataset.state = nextState;
     stopTalking();
@@ -103,7 +138,8 @@ function createRobotController(robot) {
     if (destroyed || state === "sleep" || isBlinking) return;
     isBlinking = true;
     robot.classList.add("blink");
-    window.setTimeout(() => {
+    blinkReleaseTimer = window.setTimeout(() => {
+      if (destroyed) return;
       robot.classList.remove("blink");
       isBlinking = false;
     }, 115);
@@ -115,7 +151,7 @@ function createRobotController(robot) {
     blinkTimer = window.setTimeout(() => {
       if (state !== "sleep") {
         doBlink();
-        if (!reducedMotion.matches && Math.random() < 0.18) window.setTimeout(doBlink, 260);
+        if (!reducedMotion.matches && Math.random() < 0.18) doubleBlinkTimer = window.setTimeout(doBlink, 260);
       }
       scheduleBlink();
     }, 2200 + Math.random() * 3600);
@@ -144,7 +180,7 @@ function createRobotController(robot) {
   applyState(statusToState(status?.textContent));
   scheduleBlink();
 
-  return {
+  const controller = {
     setState(nextState) {
       const normalized = String(nextState || "").trim().toLowerCase();
       applyState(normalized === "talking" ? "working" : normalized);
@@ -155,14 +191,20 @@ function createRobotController(robot) {
     destroy() {
       if (destroyed) return;
       destroyed = true;
-      window.clearTimeout(blinkTimer);
+      for (const timer of [blinkTimer, blinkReleaseTimer, doubleBlinkTimer]) window.clearTimeout(timer);
       stopTalking();
       statusObserver?.disconnect();
       stage?.removeEventListener("pointermove", onPointerMove);
       stage?.removeEventListener("pointerleave", resetEyes);
       robot.classList.remove("blink", "utel-robot-face", "utel-robot-png-face");
+      delete robot.dataset.artwork;
+      delete robot.dataset.state;
+      robot.innerHTML = originalMarkup;
+      if (activeRobot === controller) activeRobot = null;
+      if (window.UTELRobot === controller) delete window.UTELRobot;
     },
   };
+  return controller;
 }
 
 export function initializeDashboardRobot() {
@@ -170,8 +212,9 @@ export function initializeDashboardRobot() {
   const robot = document.querySelector("#view-dashboard .execution-radar .robot-core");
   if (!robot) return null;
   installStylesheet();
+  const originalMarkup = robot.innerHTML;
   buildFace(robot);
-  activeRobot = createRobotController(robot);
+  activeRobot = createRobotController(robot, originalMarkup);
   window.UTELRobot = activeRobot;
   return activeRobot;
 }
