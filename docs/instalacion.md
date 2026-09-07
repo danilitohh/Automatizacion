@@ -27,4 +27,8 @@ Un móvil o una tableta puede actuar como cliente de una instalación web accesi
 
 ## Alcance de verificación
 
-El diagnóstico y la sintaxis se verifican sin instalar paquetes en el equipo de desarrollo. La instalación limpia de runtimes requiere una prueba adicional en un Windows nuevo o una máquina virtual; no se garantiza compatibilidad universal por instalar dependencias.
+El 7 de septiembre de 2026 se ejecutó Iniciar.cmd en una copia temporal sin .venv, node_modules ni .env. Se autorizó la instalación, se instalaron las librerías Python y Electron, se comprobó Chromium y se inició la app en el puerto de prueba 8017. La interfaz, /api/health y /api/dashboard/summary respondieron HTTP 200; Chromium cargó el dashboard sin errores JavaScript. El diagnóstico posterior devolvió código 0 sin volver a solicitar instalación.
+
+La prueba detectó y corrigió el uso de Get-FileHash no disponible en ese arranque, una extracción incompleta de Electron y una comprobación de Playwright que cerraba su conexión demasiado pronto. El asistente ahora comprueba la apertura real de Chromium y la presencia del ejecutable de Electron antes de guardar la preparación.
+
+Python, Node.js y Chrome ya estaban instalados en el computador anfitrión; Chromium estaba en la caché del usuario. Sus instalaciones iniciales mediante winget y la descarga de Chromium en un Windows completamente vacío aún requieren una máquina virtual o un equipo nuevo. npm también reportó dos vulnerabilidades de severidad alta en el árbol existente; no se actualizaron versiones como parte de esta prueba del instalador.

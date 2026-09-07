@@ -10,6 +10,12 @@ function Invoke-Checked([string]$Executable, [string[]]$Arguments) {
 function Refresh-Path {
     $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 }
+function Get-SetupHash([string]$FilePath) {
+    $stream = [IO.File]::OpenRead((Join-Path $projectRoot $FilePath))
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { return [BitConverter]::ToString($sha.ComputeHash($stream)) }
+    finally { $stream.Dispose(); $sha.Dispose() }
+}
 function Find-Python {
     foreach ($candidate in @("$env:LOCALAPPDATA\Programs\Python\Python312\python.exe", 'python', 'python3')) {
         if (Get-Command $candidate -ErrorAction SilentlyContinue) {
@@ -30,12 +36,12 @@ try {
     $chromePaths = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe", "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe")
     $chromeReady = @($chromePaths | Where-Object { Test-Path -LiteralPath $_ }).Count -gt 0
     $stamp = Join-Path $projectRoot '.venv\utel-setup.json'
-    $signature = (Get-FileHash backend/requirements.txt).Hash + (Get-FileHash package-lock.json).Hash
+    $signature = (Get-SetupHash 'backend/requirements.txt') + (Get-SetupHash 'package-lock.json')
     $ready = $false
     if ((Test-Path $stamp) -and (Test-Path $venvPython) -and $nodeReady -and $chromeReady -and (Test-Path 'node_modules/electron/dist/electron.exe')) {
         $previous = Get-Content $stamp -Raw | ConvertFrom-Json
         if ($previous.signature -eq $signature -and $previous.computer -eq $env:COMPUTERNAME -and $previous.root -eq $projectRoot) {
-            & $venvPython -c "import fastapi, uvicorn, pydantic_settings, httpx, cloudscraper, openpyxl, docx, multipart, pypdf, phonenumbers; from pathlib import Path; from playwright.sync_api import sync_playwright; p=sync_playwright().start(); ok=Path(p.chromium.executable_path).exists(); p.stop(); raise SystemExit(0 if ok else 1)" 2>$null
+            & $venvPython (Join-Path $PSScriptRoot 'check-runtime.py')
             $ready = $LASTEXITCODE -eq 0
         }
     }
@@ -58,8 +64,13 @@ try {
         if (-not (Test-Path $venvPython)) { Invoke-Checked $python @('-m', 'venv', '.venv') }
         Invoke-Checked $venvPython @('-m', 'pip', 'install', '-r', 'backend/requirements.txt')
         Invoke-Checked 'npm.cmd' @('ci')
+        if (-not (Test-Path 'node_modules/electron/dist/electron.exe')) {
+            Invoke-Checked 'node' @('scripts/install-electron.js')
+        }
+        if (-not (Test-Path 'node_modules/electron/dist/electron.exe')) { throw 'Electron no se descargo correctamente; no se marcara la instalacion como completa.' }
         Invoke-Checked $venvPython @('-m', 'playwright', 'install', 'chromium')
         Invoke-Checked $venvPython @('-m', 'pip', 'check')
+        Invoke-Checked $venvPython @((Join-Path $PSScriptRoot 'check-runtime.py'))
         if (-not (Test-Path '.env')) { Copy-Item -LiteralPath '.env.example' -Destination '.env'; Write-Host 'Se creo .env: configure sus credenciales de CRM/IA antes de ejecutar automatizaciones.' }
         @{ signature = $signature; computer = $env:COMPUTERNAME; root = $projectRoot } | ConvertTo-Json | Set-Content -LiteralPath $stamp -Encoding UTF8
     }
