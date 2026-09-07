@@ -77,6 +77,16 @@ try {
         if (-not (Test-Path '.env')) { Copy-Item -LiteralPath '.env.example' -Destination '.env'; Write-Host 'Se creo .env: configure sus credenciales de CRM/IA antes de ejecutar automatizaciones.' }
         @{ signature = $signature; computer = $env:COMPUTERNAME; root = $projectRoot } | ConvertTo-Json | Set-Content -LiteralPath $stamp -Encoding UTF8
     }
-    Write-Host 'Dependencias locales preparadas. CRM e IA requieren credenciales propias; Ollama local es opcional y se configura por separado.'
+    & $venvPython (Join-Path $PSScriptRoot 'prepare-resources.py')
+    $resourceStatus = $LASTEXITCODE
+    if ($resourceStatus -eq 2) {
+        if ($CheckOnly) { exit 2 }
+        Write-Host 'Se preparara .env y se habilitara la generacion local de telefonos de QA, como en el equipo original.'
+        Write-Host 'Son numeros sinteticos con formato nacional; no garantizan una linea activa y pueden coincidir con numeros asignados.'
+        $resourceConsent = Read-Host 'Autoriza esta configuracion para sus pruebas? Escriba SI'
+        if ($resourceConsent.Trim() -ine 'SI') { Write-Host 'Configuracion cancelada. Puede configurar UTEL_TEST_PHONES_JSON con su banco autorizado.'; exit 1 }
+        Invoke-Checked $venvPython @((Join-Path $PSScriptRoot 'prepare-resources.py'), '--prepare')
+    } elseif ($resourceStatus -ne 0) { throw 'Faltan recursos de la app o su configuracion es invalida. Revise el mensaje anterior.' }
+    Write-Host 'Dependencias y recursos locales preparados. CRM e IA requieren credenciales propias; Ollama local es opcional.'
     if ($Launch) { Invoke-Checked 'node' @('scripts/launch-web.js') }
 } catch { Write-Host "No se pudo preparar UTEL QA: $_" -ForegroundColor Red; exit 1 }

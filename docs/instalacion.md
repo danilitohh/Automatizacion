@@ -21,6 +21,14 @@ Ollama local es opcional: requiere instalar Ollama y descargar un modelo adecuad
 
 ## Otros sistemas y dispositivos
 
+### Recursos y teléfonos en un equipo nuevo
+
+Iniciar.cmd comprueba el catálogo `backend/data/Programas_UTEL_Todos_los_Paises.xlsx`, los catálogos auxiliares de los módulos y las listas de URLs incluidas en el proyecto. Es necesario compartir la carpeta completa o el ZIP del repositorio: el lanzador solo no contiene estos archivos. Si falta un recurso, informa su ruta antes del arranque.
+
+El equipo original no tiene un banco privado cargado: utiliza generación local de teléfonos sintéticos. Si el nuevo equipo tiene el banco vacío y la generación desactivada, el asistente solicita autorización una vez para habilitarla y guarda `UTEL_ALLOW_SYNTHETIC_REAL_PHONES=true` en `.env`. También repara este caso en instalaciones anteriores y conserva el resto de la configuración. Los teléfonos tienen formato nacional validado, pero no garantizan una línea activa ni que el número no esté asignado.
+
+Si ya existe un banco en `UTEL_TEST_PHONES_JSON`, se conserva y debe cubrir los países de las pruebas. Las credenciales, claves de API y sesiones de navegador no se distribuyen; se configuran por equipo. Ollama local y sus modelos siguen siendo opcionales y no están incluidos en este asistente. La generación local de teléfonos funciona sin una clave de IA.
+
 El asistente incluido es para Windows con winget. No se ha certificado la automatización completa en macOS o Linux: existen rutas y funciones específicas de Windows. Estos sistemas requieren preparar Python, Node y los navegadores manualmente y validar cada módulo; en Linux Playwright puede necesitar bibliotecas del sistema.
 
 Un móvil o una tableta puede actuar como cliente de una instalación web accesible, pero no ejecutar este instalador ni los bots locales. El navegador no puede instalar Python, Electron o programas del sistema. Publicar la app para acceso remoto requiere configurar alojamiento y autenticación antes de exponer el backend; este cambio no la publica ni cambia sus permisos de red.
