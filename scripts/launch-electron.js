@@ -3,7 +3,7 @@
 // Punto de arranque de escritorio: delega en Electron el proceso principal del frontend.
 const { spawn } = require("node:child_process");
 const path = require("node:path");
-require('./ensure-setup')();
+require('./ensure-setup')('desktop');
 
 // Algunos entornos de desarrollo exportan esta variable y hacen que Electron
 // se ejecute como Node.js. El launcher la elimina antes de iniciar la ventana.

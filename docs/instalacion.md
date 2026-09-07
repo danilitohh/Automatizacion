@@ -9,11 +9,11 @@ El backend utiliza Python, FastAPI, Uvicorn, Pydantic Settings, HTTPX, cloudscra
 1. Copiar o clonar el proyecto sin .venv, node_modules, .env ni perfiles privados de storage.
 2. Abrir Iniciar.cmd. No necesita Node ni Python para mostrar el asistente.
 3. Leer la lista de instalaciones y escribir SI para autorizarlas. Cancelar no instala nada y no inicia la app.
-4. El asistente instala los runtimes faltantes mediante winget, crea .venv, instala los requisitos Python, Electron y Chromium, y comprueba dependencias. Puede aparecer el aviso de permisos de Windows. Si winget falta, muestra instrucciones y se detiene.
+4. El asistente instala los runtimes faltantes mediante winget, crea .venv, instala los requisitos Python y Chromium, y comprueba dependencias. Electron se requiere únicamente al iniciar el modo escritorio con npm start. Puede aparecer el aviso de permisos de Windows. Si winget falta, muestra instrucciones y se detiene.
 5. Configurar las credenciales propias en .env e iniciar sesión en los CRM cuando corresponda. Las claves, sesiones y permisos externos no se pueden crear instalando librerías.
 6. Cuando la consola indique que el servidor está listo, abrir http://127.0.0.1:8000.
 
-Cada arranque con Iniciar.cmd, npm run web o npm start revisa la preparación. Solicita autorización si falta la preparación o cambian los manifiestos, la carpeta o el equipo. No reinstala cuando la comprobación pasa. Ejecutar Uvicorn directamente omite este asistente.
+Cada arranque con Iniciar.cmd, npm run web o npm start comprueba las dependencias instaladas, sus versiones admitidas y Chromium. El modo web no exige Electron. Un registro ausente, antiguo o con distinta firma no provoca una reinstalación si las dependencias funcionan. Sólo solicita autorización cuando falla la comprobación de un requisito. Ejecutar Uvicorn directamente omite este asistente.
 
 Diagnóstico sin instalaciones: powershell -NoProfile -File scripts/setup-windows.ps1 -CheckOnly. Código 0: listo; 2: preparación pendiente; 1: error.
 

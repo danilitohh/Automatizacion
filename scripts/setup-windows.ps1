@@ -1,4 +1,4 @@
-param([switch]$Launch, [switch]$CheckOnly)
+param([switch]$Launch, [switch]$CheckOnly, [ValidateSet('web','desktop')][string]$Mode = 'web')
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 Set-Location -LiteralPath $projectRoot
@@ -38,16 +38,17 @@ try {
     $stamp = Join-Path $projectRoot '.venv\utel-setup.json'
     $signature = (Get-SetupHash 'backend/requirements.txt') + (Get-SetupHash 'package-lock.json')
     $ready = $false
-    if ((Test-Path $stamp) -and (Test-Path $venvPython) -and $nodeReady -and $chromeReady -and (Test-Path 'node_modules/electron/dist/electron.exe')) {
-        $previous = Get-Content $stamp -Raw | ConvertFrom-Json
-        if ($previous.signature -eq $signature -and $previous.computer -eq $env:COMPUTERNAME -and $previous.root -eq $projectRoot) {
-            & $venvPython (Join-Path $PSScriptRoot 'check-runtime.py')
-            $ready = $LASTEXITCODE -eq 0
-        }
+    $electronReady = $Mode -eq 'web' -or (Test-Path 'node_modules/electron/dist/electron.exe')
+    # El registro es informativo: una instalacion existente y valida no requiere
+    # reinstalar por un cambio de hash, carpeta o formato del registro.
+    if ((Test-Path $venvPython) -and $nodeReady -and $chromeReady -and $electronReady) {
+        & $venvPython (Join-Path $PSScriptRoot 'check-runtime.py')
+        $ready = $LASTEXITCODE -eq 0
     }
     if (-not $ready) {
         Write-Host 'UTEL QA necesita preparar/verificar las dependencias de este equipo.'
-        Write-Host 'Instalara Python 3.12 y Node.js LTS si faltan, librerias en .venv, Electron, Chromium y Google Chrome si falta.'
+        Write-Host 'Preparara Python, Node.js, librerias en .venv, Chromium y Chrome segun lo necesario.'
+        if ($Mode -eq 'desktop') { Write-Host 'El modo escritorio tambien requiere Electron.' }
         Write-Host 'Se requiere internet y espacio en disco. Windows puede solicitar permisos de administrador.'
         if ($CheckOnly) { Write-Host 'Diagnostico: preparacion pendiente. No se instalo nada.'; exit 2 }
         $answer = Read-Host 'Autoriza la descarga e instalacion? Escriba SI para continuar'
@@ -63,11 +64,13 @@ try {
         if (-not $python) { throw 'Python no esta disponible. Cierre y vuelva a abrir Iniciar.cmd.' }
         if (-not (Test-Path $venvPython)) { Invoke-Checked $python @('-m', 'venv', '.venv') }
         Invoke-Checked $venvPython @('-m', 'pip', 'install', '-r', 'backend/requirements.txt')
-        Invoke-Checked 'npm.cmd' @('ci')
-        if (-not (Test-Path 'node_modules/electron/dist/electron.exe')) {
-            Invoke-Checked 'node' @('scripts/install-electron.js')
+        if ($Mode -eq 'desktop') {
+            Invoke-Checked 'npm.cmd' @('ci')
+            if (-not (Test-Path 'node_modules/electron/dist/electron.exe')) {
+                Invoke-Checked 'node' @('scripts/install-electron.js')
+            }
+            if (-not (Test-Path 'node_modules/electron/dist/electron.exe')) { throw 'Electron no se descargo correctamente; no se marcara la instalacion como completa.' }
         }
-        if (-not (Test-Path 'node_modules/electron/dist/electron.exe')) { throw 'Electron no se descargo correctamente; no se marcara la instalacion como completa.' }
         Invoke-Checked $venvPython @('-m', 'playwright', 'install', 'chromium')
         Invoke-Checked $venvPython @('-m', 'pip', 'check')
         Invoke-Checked $venvPython @((Join-Path $PSScriptRoot 'check-runtime.py'))
