@@ -1,8 +1,14 @@
 "use strict";
 
-// Cara animada del robot del dashboard. Esta integración está aislada del
-// backend y de los módulos de automatización; reutiliza el robot del radar.
+import robotArt1 from "./dashboard-robot-art-1.js?v=png-face-2";
+import robotArt2 from "./dashboard-robot-art-2.js?v=png-face-2";
+import robotArt3 from "./dashboard-robot-art-3.js?v=png-face-2";
+import robotArt4 from "./dashboard-robot-art-4.js?v=png-face-2";
+
+// Robot del dashboard: usa la ilustración exacta compartida por Danilo como
+// base visual y anima únicamente la expresión sobre el visor.
 const STYLE_ID = "dashboard-robot-face-style";
+const ROBOT_ART_URL = `data:image/webp;base64,${robotArt1}${robotArt2}${robotArt3}${robotArt4}`;
 let activeRobot = null;
 
 const MOUTH_SHAPES = {
@@ -20,7 +26,7 @@ function installStylesheet() {
   const link = document.createElement("link");
   link.id = STYLE_ID;
   link.rel = "stylesheet";
-  link.href = new URL("./dashboard-robot.css?v=utel-face-1", import.meta.url).href;
+  link.href = new URL("./dashboard-robot.css?v=png-face-2", import.meta.url).href;
   document.head.appendChild(link);
 }
 
@@ -34,17 +40,12 @@ function statusToState(value) {
 }
 
 function buildFace(robot) {
-  robot.classList.add("utel-robot-face");
+  robot.classList.add("utel-robot-face", "utel-robot-png-face");
   robot.dataset.state = "idle";
   robot.replaceChildren();
   robot.insertAdjacentHTML("afterbegin", `
-    <span class="utel-robot-ear utel-robot-ear-left" aria-hidden="true"><i></i></span>
-    <span class="utel-robot-ear utel-robot-ear-right" aria-hidden="true"><i></i></span>
-    <span class="utel-robot-antenna" aria-hidden="true"><i></i></span>
-    <span class="utel-robot-head-light" aria-hidden="true"></span>
-    <span class="utel-robot-visor" aria-hidden="true">
-      <span class="utel-robot-corner corner-one"></span>
-      <span class="utel-robot-corner corner-two"></span>
+    <img class="utel-robot-art" src="${ROBOT_ART_URL}" alt="" draggable="false" aria-hidden="true" />
+    <span class="utel-robot-face-overlay" aria-hidden="true">
       <span class="utel-robot-eyes">
         <span class="utel-robot-eye eye-left"><span class="utel-robot-pupil"></span></span>
         <span class="utel-robot-eye eye-right"><span class="utel-robot-pupil"></span></span>
@@ -53,7 +54,6 @@ function buildFace(robot) {
         <path d="${MOUTH_SHAPES.idle}" fill="none" stroke="currentColor" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"></path>
       </svg>
     </span>
-    <span class="utel-robot-chin-light" aria-hidden="true"></span>
   `);
 }
 
@@ -70,14 +70,11 @@ function createRobotController(robot) {
   let isBlinking = false;
   let destroyed = false;
 
-  function setMouth(shape) {
-    if (mouth) mouth.setAttribute("d", shape);
-  }
-
-  function stopTalking() {
+  const setMouth = (shape) => mouth?.setAttribute("d", shape);
+  const stopTalking = () => {
     window.clearInterval(talkingTimer);
     talkingTimer = 0;
-  }
+  };
 
   function startTalking() {
     stopTalking();
@@ -97,11 +94,9 @@ function createRobotController(robot) {
     state = nextState;
     robot.dataset.state = nextState;
     stopTalking();
-
     if (nextState === "working") startTalking();
     else setMouth(MOUTH_SHAPES[nextState]);
-
-    if (nextState === "sleep") eyes.style.transform = "translate(0px, 0px)";
+    if (nextState === "sleep" && eyes) eyes.style.transform = "translate(0px, 0px)";
   }
 
   function doBlink() {
@@ -117,60 +112,46 @@ function createRobotController(robot) {
   function scheduleBlink() {
     window.clearTimeout(blinkTimer);
     if (destroyed) return;
-    const delay = 2200 + Math.random() * 3600;
     blinkTimer = window.setTimeout(() => {
       if (state !== "sleep") {
         doBlink();
-        if (!reducedMotion.matches && Math.random() < 0.18) {
-          window.setTimeout(doBlink, 260);
-        }
+        if (!reducedMotion.matches && Math.random() < 0.18) window.setTimeout(doBlink, 260);
       }
       scheduleBlink();
-    }, delay);
+    }, 2200 + Math.random() * 3600);
   }
 
   function onPointerMove(event) {
-    if (destroyed || state === "sleep" || isBlinking || !stage) return;
-    const robotRect = robot.getBoundingClientRect();
-    const centerX = robotRect.left + robotRect.width / 2;
-    const centerY = robotRect.top + robotRect.height / 2;
+    if (destroyed || state === "sleep" || isBlinking || !stage || !eyes) return;
+    const rect = robot.getBoundingClientRect();
     const stageRect = stage.getBoundingClientRect();
-    const dx = (event.clientX - centerX) / Math.max(stageRect.width / 2, 1);
-    const dy = (event.clientY - centerY) / Math.max(stageRect.height / 2, 1);
-    const x = Math.max(-1, Math.min(1, dx)) * 4.2;
-    const y = Math.max(-1, Math.min(1, dy)) * 2.8;
+    const dx = (event.clientX - (rect.left + rect.width / 2)) / Math.max(stageRect.width / 2, 1);
+    const dy = (event.clientY - (rect.top + rect.height / 2)) / Math.max(stageRect.height / 2, 1);
+    const x = Math.max(-1, Math.min(1, dx)) * 3.2;
+    const y = Math.max(-1, Math.min(1, dy)) * 2.1;
     eyes.style.transform = `translate(${x}px, ${y}px)`;
   }
 
-  function resetEyes() {
+  const resetEyes = () => {
     if (eyes) eyes.style.transform = "translate(0px, 0px)";
-  }
+  };
 
-  const statusObserver = status ? new MutationObserver(() => {
-    applyState(statusToState(status.textContent));
-  }) : null;
+  const statusObserver = status ? new MutationObserver(() => applyState(statusToState(status.textContent))) : null;
   statusObserver?.observe(status, { childList: true, subtree: true, characterData: true });
-
   stage?.addEventListener("pointermove", onPointerMove);
   stage?.addEventListener("pointerleave", resetEyes);
 
   applyState(statusToState(status?.textContent));
   scheduleBlink();
 
-  const api = {
+  return {
     setState(nextState) {
       const normalized = String(nextState || "").trim().toLowerCase();
-      if (normalized === "talking") applyState("working");
-      else applyState(normalized);
+      applyState(normalized === "talking" ? "working" : normalized);
     },
     blink: doBlink,
-    speak(enabled = true) {
-      if (enabled) applyState("working");
-      else applyState("idle");
-    },
-    getState() {
-      return state;
-    },
+    speak(enabled = true) { applyState(enabled ? "working" : "idle"); },
+    getState() { return state; },
     destroy() {
       if (destroyed) return;
       destroyed = true;
@@ -179,11 +160,9 @@ function createRobotController(robot) {
       statusObserver?.disconnect();
       stage?.removeEventListener("pointermove", onPointerMove);
       stage?.removeEventListener("pointerleave", resetEyes);
-      robot.classList.remove("blink", "utel-robot-face");
+      robot.classList.remove("blink", "utel-robot-face", "utel-robot-png-face");
     },
   };
-
-  return api;
 }
 
 export function initializeDashboardRobot() {
