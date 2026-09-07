@@ -1,6 +1,6 @@
 "use strict";
 
-import { initializeDashboardGlobe } from "./dashboard-globe.js?v=utel-three-1";
+import { initializeDashboardGlobe } from "./dashboard-globe.js?v=hollow-arcs-2";
 
 // Adaptación sin dependencias del efecto GooeyNav de React Bits.
 // La delegación conserva los listeners, IDs y estados de todos los botones existentes y futuros.

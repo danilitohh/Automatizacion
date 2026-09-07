@@ -1,7 +1,7 @@
-/* Globo Three.js del dashboard. Todo queda acotado a la vista Dashboard. */
+/* Integración del globo Hollow + Arcs compartido por el usuario. */
 #view-dashboard .dashboard-globe.three-globe-active {
-  width: clamp(230px, 18vw, 292px) !important;
-  height: clamp(230px, 18vw, 292px) !important;
+  width: clamp(244px, 19vw, 306px) !important;
+  height: clamp(244px, 19vw, 306px) !important;
   min-width: 0 !important;
   aspect-ratio: 1 / 1;
   position: relative;
@@ -9,12 +9,14 @@
   border: 0 !important;
   border-radius: 50% !important;
   background:
-    radial-gradient(circle at 50% 50%, rgba(18, 231, 239, .055), transparent 58%),
+    radial-gradient(circle at 42% 38%, rgba(66, 239, 255, .075), transparent 45%),
+    radial-gradient(circle at 66% 64%, rgba(255, 79, 167, .045), transparent 48%),
     transparent !important;
   box-shadow: none !important;
   cursor: grab;
   isolation: isolate;
   touch-action: none;
+  user-select: none;
 }
 
 #view-dashboard .dashboard-globe.three-globe-active.is-dragging { cursor: grabbing; }
@@ -27,24 +29,23 @@
 
 #view-dashboard .dashboard-globe.three-globe-active > canvas {
   position: absolute;
-  inset: -18%;
-  width: 136% !important;
-  height: 136% !important;
+  inset: -12%;
+  width: 124% !important;
+  height: 124% !important;
   display: block;
-  filter:
-    drop-shadow(0 0 14px rgba(18, 231, 239, .16))
-    drop-shadow(0 0 34px rgba(0, 174, 239, .09));
   outline: none;
+  filter:
+    drop-shadow(0 0 14px rgba(66, 239, 255, .18))
+    drop-shadow(0 0 30px rgba(13, 207, 225, .12))
+    drop-shadow(0 0 24px rgba(255, 79, 167, .065));
 }
 
-#view-dashboard .latest-panel:has(.three-globe-active) {
-  overflow: visible;
-}
+#view-dashboard .latest-panel:has(.three-globe-active) { overflow: visible; }
 
 @media (max-width: 1180px) {
   #view-dashboard .dashboard-globe.three-globe-active {
-    width: 218px !important;
-    height: 218px !important;
+    width: 220px !important;
+    height: 220px !important;
   }
 }
 
