@@ -90,6 +90,11 @@ export function initializeGooeyButtons() {
 
   if (document.documentElement.dataset.gooeyButtons === "ready") return;
   document.documentElement.dataset.gooeyButtons = "ready";
+  // Carga visual aislada: un fallo del tema no bloquea los módulos funcionales.
+  import("../modules/bot_nuevos_productos/visual.js?v=reference-1")
+    .then(({ initializeNewProductsVisuals }) => initializeNewProductsVisuals())
+    .catch((error) => console.warn("No se pudo cargar el tema de Nuevos productos.", error));
+
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   document.addEventListener("click", (event) => {
