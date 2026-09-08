@@ -16,6 +16,7 @@ const state = {
     country: "ecuador",
     utel_url: "",
     inconcert_url: "",
+    lead_search_destination: "both",
     modality: "En linea",
     level: "Licenciatura",
     form_type: "tarjeta",
@@ -92,6 +93,7 @@ function renderModuleShell() {
           <div class="field full"><span>Importar Excel</span><div class="file-action-row"><input id="bot-spreadsheet" type="file" accept=".xlsx" /><button class="secondary-button" id="bot-analyze-spreadsheet" type="button">Analizar Excel</button></div><small id="bot-spreadsheet-status">Adjunta el archivo y pulsa Analizar Excel para revisar sus columnas.</small><div id="bot-column-mapping"></div></div>
           <label class="field full"><span>Fila importada</span><select id="bot-spreadsheet-row"><option value="">Selecciona una fila después de analizar</option></select></label>
           <label class="field full"><span>URL InConcert</span><input id="bot-inconcert-url" type="url" placeholder="https://..." /></label>
+          <label class="field full"><span>Buscar el lead en</span><select id="bot-lead-search-destination"><option value="inconcert">Solo InConcert</option><option value="balanceador">Solo Balanceador</option><option value="both">Ambos: InConcert y respaldo en Balanceador</option></select><small>Define directamente dónde se verificará el lead después de enviar el formulario.</small></label>
           <label class="field bot-internal-field" hidden><span>Modalidad</span><input id="bot-modality" type="text" placeholder="En linea" /></label>
           <label class="field bot-internal-field" hidden aria-hidden="true"><span>Nivel</span><input id="bot-level" type="hidden" value="Licenciatura" /></label>
           <label class="field"><span>Entorno</span><select id="bot-environment"><option value="sandbox">Sandbox</option><option value="production">Producción</option></select></label>
@@ -168,6 +170,7 @@ function organizeBotForm() {
   "bot-success-pattern",
   "bot-error-pattern",
   "bot-inconcert-url",
+  "bot-lead-search-destination",
   "bot-browser",
   "bot-dry-run",
   "bot-headless",
@@ -266,6 +269,7 @@ function readForm() {
   state.config.country = canonicalCountryValue(getInputValue("#bot-country"));
   state.config.utel_url = (getInputValue("#bot-utel-url") || "").trim();
   state.config.inconcert_url = (getInputValue("#bot-inconcert-url") || "").trim();
+  state.config.lead_search_destination = getInputValue("#bot-lead-search-destination") || "both";
   state.config.modality = (
   getInputValue("#bot-modality") ||
   state.config.modality ||
@@ -301,6 +305,7 @@ function writeForm() {
   setCountryValue(state.config.country);
   setInputValue("#bot-utel-url", state.config.utel_url);
   setInputValue("#bot-inconcert-url", state.config.inconcert_url);
+  setInputValue("#bot-lead-search-destination", state.config.lead_search_destination || "both");
   setInputValue("#bot-modality", state.config.modality);
   setInputValue("#bot-level", state.config.level);
   state.config.form_type = "tarjeta";
@@ -1177,6 +1182,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       country: "ecuador",
       utel_url: "",
       inconcert_url: "",
+      lead_search_destination: "both",
       modality: "En linea",
       level: "Licenciatura",
       form_type: "tarjeta",

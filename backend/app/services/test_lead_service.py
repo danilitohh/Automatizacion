@@ -19,7 +19,7 @@ class TestLeadService:
     # Prefijo nacional y cantidad total de dígitos del teléfono que espera el formulario.
     PHONE_FORMATS = {
         "mexico": ("55", 10),
-        "ecuador": ("9", 9),
+        "ecuador": ("99", 9),
         "colombia": ("3", 10),
         "peru": ("9", 9),
         "chile": ("9", 9),
@@ -44,6 +44,7 @@ class TestLeadService:
         "filipinas": ("9", 10),
         "philippines": ("9", 10),
         "india": ("9", 10),
+        "indonesia": ("812", 11),
     }
 
     # Región ISO usada por libphonenumber para comprobar que un número
@@ -70,6 +71,7 @@ class TestLeadService:
         "filipinas": "PH",
         "philippines": "PH",
         "india": "IN",
+        "indonesia": "ID",
     }
     COUNTRY_POOL_ALIASES = {
         "usa": ("usa", "united states", "estados unidos"),
@@ -267,16 +269,16 @@ class TestLeadService:
         prefix, total_digits = self.PHONE_FORMATS.get(normalized_country, ("9", 10))
         suffix_digits = total_digits - len(prefix)
         capacity = 10 ** suffix_digits
-        # Distribuye la secuencia por todo el rango para evitar patrones obvios
-        # durante dry run. Estos valores nunca se permiten en envíos reales.
+        # Distribuye los candidatos y valida el plan nacional cuando se ha
+        # habilitado explicitamente el uso de datos sinteticos.
         candidate = (capacity // 3 + phone_sequence * 7919) % capacity
-        for _ in range(len(used) + 1):
+        for _ in range(min(capacity, len(used) + 10000)):
             phone = prefix + str(candidate).zfill(suffix_digits)
-            if phone not in used:
+            if phone not in used and self._is_valid_generated_phone(phone, normalized_country):
                 return phone
             candidate = (candidate + 1) % capacity
         raise ValueError(
-            f"Se agotaron los teléfonos generados para dry run de {country_label}."
+            f"No se pudo generar un telefono unico con formato valido para {country_label}."
         )
 
     def _is_valid_generated_phone(self, phone: str, normalized_country: str) -> bool:

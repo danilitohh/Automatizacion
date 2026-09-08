@@ -121,6 +121,8 @@ class UtelQaConfig(BaseModel):
     inconcert_url: str = Field(default="", max_length=2000)
     # URL explícita de origen del lead: InConcert o Balanceador.
     lead_origin_url: str = Field(default="", max_length=2000)
+    # ``auto`` conserva el comportamiento histórico de los demás módulos.
+    lead_search_destination: Literal["auto", "inconcert", "balanceador", "both"] = "auto"
     modality: str = Field(min_length=1, max_length=100)
     level: str = Field(min_length=1, max_length=120)
     form_type: Literal["lateral", "tarjeta", "footer"] = "lateral"

@@ -192,7 +192,7 @@ class UtelInconcertRunner:
                     if config.verification_only:
                         self.status_flags["utel_submission"] = "skipped"
                         self.status_flags["utel_submission_message"] = "Envio ya realizado en la fase UTEL."
-                        if self._lead_origin_is_balanceador(config):
+                        if self._searches_balanceador_only(config):
                             balancer_page = await context.new_page()
                             page = balancer_page
                             balancer_page.set_default_timeout(30000)
@@ -234,6 +234,8 @@ class UtelInconcertRunner:
                             page = inconcert_page
                         except UtelQaError as search_error:
                             if search_error.stage != "inconcert_search":
+                                raise
+                            if not self._allows_balanceador_fallback(config):
                                 raise
                             balancer_page = await context.new_page()
                             page = balancer_page
@@ -278,7 +280,7 @@ class UtelInconcertRunner:
                     post_submit_signal = None
                     verification_destination = (
                         "Balanceador"
-                        if self._lead_origin_is_balanceador(config)
+                        if self._searches_balanceador_only(config)
                         else "InConcert"
                     )
                     submit_success_message = (
@@ -329,7 +331,7 @@ class UtelInconcertRunner:
                         self.status_flags["conversion_found"] = "pending"
                         return self._build_result(config, started_at, timer)
 
-                    if self._lead_origin_is_balanceador(config):
+                    if self._searches_balanceador_only(config):
                         balancer_page = await context.new_page()
                         page = balancer_page
                         balancer_page.set_default_timeout(30000)
@@ -396,6 +398,8 @@ class UtelInconcertRunner:
                         self.status_flags["lead_source"] = "inconcert"
                     except UtelQaError as search_error:
                         if search_error.stage != "inconcert_search":
+                            raise
+                        if not self._allows_balanceador_fallback(config):
                             raise
                         self.logger.warning(
                             "El lead %s no apareció en InConcert; se consultará el "
@@ -1102,9 +1106,45 @@ class UtelInconcertRunner:
 
     async def _fill_utel_form(self, page: Any, form: Any, config: UtelQaConfig) -> None:
         academic_values: list[dict[str, str]] = []
-        if config.skip_preselected_fields:
-            self.logger.info("Fila marcada como 'Nuevos productos': se omite selección de modalidad/nivel/programa.")
+        preserve_academic_fields = config.skip_preselected_fields or (
+            config.workflow_mode == "product_release" and config.form_type == "tarjeta"
+        )
+        if preserve_academic_fields:
+            self.logger.info(
+                "Fila de Nuevos productos: se conservan los campos académicos ya preseleccionados."
+            )
             self.selected_program_name = config.program_name or self.selected_program_name
+            academic_values = await self._academic_values(form)
+            current_academic = {
+                item["field"]: item["value"].strip() for item in academic_values
+            }
+            if (
+                "formModalityInput" in current_academic
+                and not current_academic["formModalityInput"]
+            ):
+                await self._set_dynamic_field(
+                    form, '[data-cy="formModalityInput"]', config.modality
+                )
+            if (
+                "educationLevelInput" in current_academic
+                and not current_academic["educationLevelInput"]
+            ):
+                await self._set_dynamic_field(
+                    form, '[data-cy="educationLevelInput"]', config.level
+                )
+            if (
+                "productsInput" in current_academic
+                and not current_academic["productsInput"]
+            ):
+                await self._recover_missing_program_selection(form, config)
+            academic_values = await self._academic_values(form)
+            if any(not item["value"].strip() for item in academic_values):
+                raise UtelQaError(
+                    "utel_fill",
+                    "La tarjeta del enlace directo dejó un campo académico vacío y UTEL "
+                    "no permitió completarlo. No se envió el formulario.",
+                    '[data-cy="educationLevelInput"], [data-cy="productsInput"]',
+                )
         else:
             await self._set_dynamic_field(form, '[data-cy="formModalityInput"]', config.modality)
             await self._set_dynamic_field(form, '[data-cy="educationLevelInput"]', config.level)
@@ -1865,6 +1905,24 @@ class UtelInconcertRunner:
 
         origin = (config.lead_origin_url or "").casefold()
         return "balance" in origin or "lead-balancer" in origin
+
+    @classmethod
+    def _searches_balanceador_only(cls, config: UtelQaConfig) -> bool:
+        destination = config.lead_search_destination
+        if destination == "balanceador":
+            return True
+        if destination in {"inconcert", "both"}:
+            return False
+        return cls._lead_origin_is_balanceador(config)
+
+    @classmethod
+    def _allows_balanceador_fallback(cls, config: UtelQaConfig) -> bool:
+        destination = config.lead_search_destination
+        if destination == "both":
+            return True
+        if destination in {"inconcert", "balanceador"}:
+            return False
+        return not cls._lead_origin_is_balanceador(config)
 
     @staticmethod
     def _is_crm_route(url: str) -> bool:
@@ -3390,7 +3448,7 @@ class UtelInconcertRunner:
 
     def _validate_config(self, config: UtelQaConfig) -> None:
         urls = {"utel_url": config.utel_url}
-        if not config.dry_run:
+        if not config.dry_run and not self._searches_balanceador_only(config):
             urls["inconcert_url"] = config.inconcert_url
         for field_name, value in urls.items():
             parsed = urlparse(value)
@@ -3403,7 +3461,7 @@ class UtelInconcertRunner:
         if (
             not config.dry_run
             and not config.defer_crm_verification
-            and not self._lead_origin_is_balanceador(config)
+            and not self._searches_balanceador_only(config)
             and not self.has_inconcert_credentials()
         ):
             raise UtelQaError(

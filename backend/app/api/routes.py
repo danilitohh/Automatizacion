@@ -71,6 +71,15 @@ def _is_new_products_scope(sheet_name: str, filename: str) -> bool:
     return "nuevos productos" in source
 
 
+def _new_products_case_name(base_name: str, case_name: str) -> str:
+    """Construye un nombre válido sin perder la identificación del caso."""
+
+    full_name = f"{base_name} - {case_name}"
+    if len(full_name) <= 120:
+        return full_name
+    return f"{full_name[:117].rstrip()}..."
+
+
 def _save_utel_batch_report(
     settings: Any,
     job_id: str,
@@ -341,6 +350,16 @@ def _is_temporary_access_block(result: dict[str, Any]) -> bool:
     )
 
 
+def _new_products_retry_browser(
+    result: dict[str, Any], *, is_leads_deploy: bool
+) -> str:
+    """Cambia de motor solo ante un bloqueo UTEL previo al envío."""
+
+    if not is_leads_deploy and _is_temporary_access_block(result):
+        return "chromium"
+    return "chrome"
+
+
 def _is_balanceador_url(url: str) -> bool:
     """Clasifica una URL de origen lead sin depender del nombre de la columna."""
 
@@ -588,7 +607,7 @@ async def _reserve_lead_for_case(
     ai_service = AIService(settings)
     us_aliases = {"usa", "united states", "estados unidos", "global"}
 
-    for attempt in range(1, 7):
+    for attempt in range(1, 3):
         with get_connection(settings.database_path) as connection:
             used = {
                 str(row[0])
@@ -603,7 +622,7 @@ async def _reserve_lead_for_case(
         )
 
         try:
-            completion = await ai_service.generate(
+            completion = await asyncio.wait_for(ai_service.generate(
                 "ollama",
                 prompt,
                 system_instruction=(
@@ -613,7 +632,7 @@ async def _reserve_lead_for_case(
                 ),
                 model=settings.ollama_local_model,
                 local=True,
-            )
+            ), timeout=15)
             phone = _extract_ai_phone_candidate(completion.text)
         except Exception as error:
             logger.warning(
@@ -622,7 +641,7 @@ async def _reserve_lead_for_case(
                 attempt,
                 error,
             )
-            continue
+            break
 
         if normalized_country in us_aliases:
             structurally_valid = _is_safe_us_synthetic_phone(phone)
@@ -750,8 +769,12 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 if is_leads_deploy
                 else "No se encontraron filas con Programa/Nivel y URL usando las columnas seleccionadas."
             )
-        needs_inconcert = any(
-            not _is_balanceador_url(row.get("lead_origin_url", ""))
+        requested_destination = str(
+            raw_config.get("lead_search_destination", "auto")
+        ).strip().casefold()
+        needs_inconcert = requested_destination != "balanceador" and any(
+            requested_destination in {"inconcert", "both"}
+            or not _is_balanceador_url(row.get("lead_origin_url", ""))
             for row in rows
         )
         if not batch_dry_run and needs_inconcert:
@@ -826,8 +849,23 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     navigation["modality"],
                     settings.database_path,
                 )
-            lead_origin_url = row.get("lead_origin_url", "")
+            original_lead_origin_url = row.get("lead_origin_url", "")
+            lead_origin_url = original_lead_origin_url
+            if requested_destination == "balanceador":
+                lead_origin_url = settings.lead_balancer_url
+            elif requested_destination in {"inconcert", "both"}:
+                lead_origin_url = ""
             uses_balanceador = _is_balanceador_url(lead_origin_url)
+            row_inconcert_url = row.get("inconcert_url", "")
+            if _is_balanceador_url(row_inconcert_url):
+                row_inconcert_url = ""
+            inconcert_hint_url = (
+                original_lead_origin_url
+                if original_lead_origin_url
+                and not _is_balanceador_url(original_lead_origin_url)
+                else ""
+            )
+            case_label = row.get("test_case") or row["program_name"] or row["level"]
             row_config.update({
                 "utel_url": catalog_program["url"] if catalog_program else row["utel_url"],
                 "program_name": catalog_program["text"] if catalog_program else row["program_name"],
@@ -844,14 +882,26 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     or "lateral"
                 ),
                 "lead_origin_url": lead_origin_url,
+                "lead_search_destination": requested_destination,
                 # El país de esta fila manda: nunca heredar el CRM de otra fila.
                 "inconcert_url": (
-                    row.get("lead_origin_url")
-                    or service.default_inconcert_url(row_country)
-                    or row["inconcert_url"]
+                    lead_origin_url
+                    if uses_balanceador
+                    else (
+                        inconcert_hint_url
+                        or service.default_inconcert_url(row_country)
+                        or row_inconcert_url
+                    )
                 ),
                 "workflow_mode": row.get("workflow_mode", "product_release"),
-                "name": f"{raw_config.get('name', 'QA UTEL')} - {row.get('test_case') or row['program_name'] or row['level']}",
+                "name": (
+                    f"{raw_config.get('name', 'QA UTEL')} - {case_label}"
+                    if is_leads_deploy
+                    else _new_products_case_name(
+                        str(raw_config.get("name", "QA UTEL")),
+                        str(case_label),
+                    )
+                ),
                 "defer_crm_verification": False,
                 "verification_only": False,
                 "skip_preselected_fields": skip_preselected_fields,
@@ -888,7 +938,10 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             for row, preflight_config in prepared_rows:
                 if job.get("cancel_requested"):
                     break
-                if _is_balanceador_url(preflight_config.lead_origin_url):
+                if preflight_config.lead_search_destination == "balanceador" or (
+                    preflight_config.lead_search_destination == "auto"
+                    and _is_balanceador_url(preflight_config.lead_origin_url)
+                ):
                     # El Balanceador se valida al consultar el lead; no se
                     # intenta abrir InConcert cuando el Excel ya indicó el origen.
                     continue
@@ -1154,7 +1207,13 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 # Chrome para reducir bloqueos repetidos del sitio.
                 await asyncio.sleep(20)
                 retry_config = blocked_config.model_copy(
-                    update={"browser": "chrome", "headless": False}
+                    update={
+                        "browser": _new_products_retry_browser(
+                            results[result_index]["result"],
+                            is_leads_deploy=is_leads_deploy,
+                        ),
+                        "headless": False,
+                    }
                 )
                 retry_result = await runner_cls(settings).run(retry_config)
                 serializable_retry = {

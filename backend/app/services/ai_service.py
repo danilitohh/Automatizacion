@@ -282,7 +282,11 @@ class AIService:
     def _provider_error_message(response: httpx.Response) -> str:
         try:
             detail = response.json()
-            message = detail.get("error", {}).get("message") or detail.get("message") or detail.get("error")
+            if isinstance(detail, dict):
+                error = detail.get("error")
+                message = (error.get("message") if isinstance(error, dict) else error) or detail.get("message")
+            else:
+                message = str(detail)
         except ValueError:
             message = ""
         suffix = f" ({response.status_code})"
