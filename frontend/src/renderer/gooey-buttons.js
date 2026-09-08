@@ -95,6 +95,11 @@ export function initializeGooeyButtons() {
     .then(({ initializeNewProductsVisuals }) => initializeNewProductsVisuals())
     .catch((error) => console.warn("No se pudo cargar el tema de Nuevos productos.", error));
 
+  // Tema independiente de Leads Deploy; no cambia su controlador ni sus llamadas API.
+  import("../modules/bot_leads_deploy/visual.js?v=reference-1")
+    .then(({ initializeLeadsDeployVisuals }) => initializeLeadsDeployVisuals())
+    .catch((error) => console.warn("No se pudo cargar el tema de Leads Deploy.", error));
+
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   document.addEventListener("click", (event) => {
