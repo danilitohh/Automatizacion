@@ -64,6 +64,21 @@ export const api = {
   runWeeklyAuto: (config) => request("/api/weekly-auto/run", { method: "POST", body: JSON.stringify(config) }),
   weeklyAutoStatus: (jobId) => request(`/api/weekly-auto/runs/${jobId}`),
   cancelWeeklyAuto: (jobId) => request(`/api/weekly-auto/runs/${jobId}/cancel`, { method: "POST" }),
+  strapiProductCountries: () => request("/api/strapi/products/countries"),
+  runStrapiProducts: (file, country, dryRun = true) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (country) formData.append("country", country);
+    formData.append("dry_run", String(dryRun));
+    return request("/api/strapi/products/run", { method: "POST", body: formData });
+  },
+  strapiProductStatus: (jobId) => request(`/api/strapi/products/jobs/${jobId}`),
+  runStrapiDescriptions: (file, dryRun = true) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("dry_run", String(dryRun));
+    return request("/api/strapi/products/descriptions/run", { method: "POST", body: formData });
+  },
   aiProviders: () => request("/api/ai/providers"),
   aiGenerate: (payload) => request("/api/ai/generate", { method: "POST", body: JSON.stringify(payload) }),
   validatePdp: (excelFile, docxFile) => {

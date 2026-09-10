@@ -15,6 +15,9 @@
   --purple: #6366f1;
 }
 
+/* El panel Excel ahora contiene la automatizacion funcional de Strapi. */
+#view-excel > .coming-card { display: none; }
+
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 0; min-height: 100vh; background: var(--background); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 button { font: inherit; }

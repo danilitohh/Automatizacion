@@ -14,6 +14,7 @@ from .automations.generic_bot.recorder import RecorderManager
 from .automations.utel_inconcert.runner import UtelInconcertRunner
 from .api.routes import router
 from .api.leads_deploy_routes import router as leads_deploy_router
+from .api.strapi_product_routes import router as strapi_product_router
 from .config.settings import Settings, get_settings
 from .database.connection import initialize_database
 from .services.logging_service import configure_logging, get_logger
@@ -88,9 +89,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.utel_inconcert_jobs = {}
     application.state.utel_batch_jobs = {}
     application.state.weekly_auto_jobs = {}
+    application.state.strapi_product_jobs = {}
     application.state.bot_tasks = {}
     application.include_router(router)
     application.include_router(leads_deploy_router)
+    application.include_router(strapi_product_router)
     # Las capturas se guardan bajo storage y deben ser accesibles desde los
     # enlaces que devuelve Weekly Auto y los demás runners.
     application.state.settings.ensure_directories()

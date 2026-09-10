@@ -28,7 +28,16 @@ class Settings(BaseSettings):
 
     # Estas variables se reservan para las fases que integrarán servicios externos.
     strapi_url: str = ""
-    strapi_token: str = ""
+    strapi_token: SecretStr = SecretStr("")
+    strapi_product_endpoint: str = "/api/products"
+    strapi_program_field: str = "title"
+    strapi_seo_field: str = "seo"
+    strapi_canonical_field: str = "LinkCanonical"
+    strapi_short_description_field: str = "shortDescription"
+    strapi_long_description_field: str = "longDescription"
+    strapi_expected_host: str = "utel.edu.mx"
+    strapi_timeout_seconds: float = 30.0
+    strapi_countries_json: str = '{"argentina":{"label":"Argentina","locale":"es-AR","slug":"argentina"},"mexico":{"label":"Mexico","locale":"es-MX","slug":"mexico"},"el-salvador":{"label":"El Salvador","locale":"es-SV","slug":"elsalvador"},"usa":{"label":"USA","locale":"es-US","slug":"usa"},"republica-dominicana":{"label":"Republica Dominicana","locale":"es-DO","slug":"dominicana"},"panama":{"label":"Panama","locale":"es-PA","slug":"panama"},"bolivia":{"label":"Bolivia","locale":"es-BO","slug":"bolivia"},"chile":{"label":"Chile","locale":"es-CL","slug":"chile"},"colombia":{"label":"Colombia","locale":"es-CO","slug":"colombia"},"ecuador":{"label":"Ecuador","locale":"es-EC","slug":"ecuador"},"peru":{"label":"Peru","locale":"es-PE","slug":"peru"},"paraguay":{"label":"Paraguay","locale":"es-PY","slug":"paraguay"}}'
     crm_url: str = ""
     crm_username: str = ""
     crm_password: str = ""

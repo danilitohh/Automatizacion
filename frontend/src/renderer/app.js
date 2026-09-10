@@ -6,6 +6,7 @@ import { leadsDeployApi } from "../services/leads-deploy-api.js";
 import { initializeBotModule } from "./bot-module.js?v=new-products-lead-destination-1";
 import { initializeLeadsDeployModule } from "./leads-deploy-module.js?v=leads-deploy-isolated-4";
 import { initializePdpModule } from "./pdp-module.js";
+import { initializeStrapiProductsModule } from "./strapi-products-module.js";
 import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
 import { initializeGooeyButtons } from "./gooey-buttons.js";
 
@@ -249,5 +250,6 @@ initializeWeeklyAutoModule({
   cancelWeeklyAuto: api.cancelWeeklyAuto,
 });
 initializePdpModule({ showToast, validatePdp: api.validatePdp, validatePdpSemantic: api.validatePdpSemantic });
+initializeStrapiProductsModule({ api, showToast });
 refreshDashboard();
 window.setInterval(refreshDashboard, 30000);

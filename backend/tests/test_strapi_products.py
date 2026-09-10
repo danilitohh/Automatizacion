@@ -1,0 +1,178 @@
+import io
+import asyncio
+
+import httpx
+import pytest
+from openpyxl import Workbook
+from docx import Document
+
+from backend.app.modules.strapi_products.canonical import add_country_to_canonical
+from backend.app.modules.strapi_products.country import detect_country_from_filename
+from backend.app.modules.strapi_products.description_runner import StrapiDescriptionRunner
+from backend.app.modules.strapi_products.pdp_description import extract_description
+from backend.app.modules.strapi_products.models import ProductRow
+from backend.app.modules.strapi_products.runner import StrapiProductRunner
+from backend.app.modules.strapi_products.spreadsheet import read_product_rows
+from backend.app.services.strapi_client import StrapiClient
+
+
+COUNTRIES = {"mexico": "mexico", "peru": "peru"}
+
+
+def test_canonical_is_safe_and_idempotent():
+    original = "https://utel.edu.mx/programa?x=1#seo"
+    expected = "https://utel.edu.mx/mexico/programa?x=1#seo"
+    assert add_country_to_canonical(original, "México", COUNTRIES) == expected
+    assert add_country_to_canonical(expected, "México", COUNTRIES) == expected
+
+
+def test_canonical_rejects_invalid_host_or_empty_value():
+    with pytest.raises(ValueError):
+        add_country_to_canonical("https://example.com/programa", "México", COUNTRIES)
+    with pytest.raises(ValueError):
+        add_country_to_canonical("", "México", COUNTRIES)
+
+
+def test_country_is_detected_from_filename():
+    country = detect_country_from_filename("[AR] Nuevos Productos.xlsx")
+    assert country.label == "Argentina"
+    assert country.locale == "es-AR"
+    assert country.slug == "argentina"
+
+
+def test_country_filename_requires_supported_code():
+    with pytest.raises(ValueError, match="codigo de pais"):
+        detect_country_from_filename("Nuevos Productos.xlsx")
+    with pytest.raises(ValueError, match="no esta configurado"):
+        detect_country_from_filename("[ZZ] Nuevos Productos.xlsx")
+
+
+def test_extracts_only_text_immediately_after_program_title():
+    workbook = Document()
+    workbook.add_paragraph("Licenciatura en Sistemas", style="Title")
+    workbook.add_paragraph("Esta es la descripción original del programa.")
+    workbook.add_paragraph("PERFIL PROFESIONAL", style="Heading 1")
+    workbook.add_paragraph("Este texto no debe extraerse.")
+    output = io.BytesIO()
+    workbook.save(output)
+    assert extract_description("Licenciatura en Sistemas", "pdp.docx", output.getvalue()) == "Esta es la descripción original del programa."
+
+
+def test_description_runner_updates_only_two_description_fields(tmp_path):
+    document = Document()
+    document.add_paragraph("Programa A", style="Title")
+    document.add_paragraph("Descripcion PDP original.")
+    output = io.BytesIO(); document.save(output)
+    calls = []
+
+    class FakeClient:
+        async def find_product(self, *args, **kwargs):
+            return {"id": 12, "attributes": {"title": "Programa A", "shortDescription": "old", "longDescription": "old", "seo": {"LinkCanonical": "unchanged"}}}
+
+        async def update_product(self, *args, **kwargs):
+            calls.append((args, kwargs))
+
+    source = tmp_path / "programa-a.docx"
+    source.write_bytes(output.getvalue())
+    results, summary = asyncio.run(StrapiDescriptionRunner(FakeClient(), "Argentina", "es-AR", dry_run=False).run([ProductRow("Sheet", 2, "Programa A", str(source))]))
+    assert results[0].status == "UPDATED"
+    assert summary.updated == 1
+    assert calls == [((12, {"shortDescription": "Descripcion PDP original.", "longDescription": "Descripcion PDP original."}), {})]
+
+
+def test_spreadsheet_reads_program_and_skips_blank_rows():
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Programa", "tabs"])
+    sheet.append(["Programa A", "x"])
+    sheet.append([None, None])
+    content = io.BytesIO()
+    workbook.save(content)
+    rows = read_product_rows(content.getvalue())
+    assert [(row.sheet, row.row_number, row.program) for row in rows] == [("Sheet", 2, "Programa A")]
+
+
+def test_spreadsheet_requires_program_column():
+    workbook = Workbook()
+    workbook.active.append(["URL"])
+    content = io.BytesIO()
+    workbook.save(content)
+    with pytest.raises(ValueError, match="Programa"):
+        read_product_rows(content.getvalue())
+
+
+def test_spreadsheet_finds_header_after_blank_row_and_strips_excel_apostrophe():
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append([])
+    sheet.append([None, "'Programa", "'Tabs"])
+    sheet.append([None, "'Programa A", "'Ok"])
+    content = io.BytesIO()
+    workbook.save(content)
+    rows = read_product_rows(content.getvalue())
+    assert rows[0].row_number == 3
+    assert rows[0].program == "Programa A"
+
+
+def test_spreadsheet_prefers_document_hyperlink_over_visible_name():
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Programa", "Documento PDP"])
+    sheet.append(["Programa A", "Programa A_PDP_Argentina"])
+    sheet["B2"].hyperlink = "https://docs.google.com/document/d/example/edit?usp=sharing"
+    content = io.BytesIO()
+    workbook.save(content)
+    rows = read_product_rows(content.getvalue())
+    assert rows[0].document == "https://docs.google.com/document/d/example/edit?usp=sharing"
+
+
+def test_runner_dry_run_does_not_update():
+    calls = []
+
+    class FakeClient:
+        async def find_product(self, *args, **kwargs):
+            return {"id": 7, "attributes": {"seo": {"LinkCanonical": "https://utel.edu.mx/programa"}}}
+
+        async def update_product(self, *args, **kwargs):
+            calls.append((args, kwargs))
+
+    results, summary = asyncio.run(StrapiProductRunner(FakeClient(), "México", "es-MX", COUNTRIES, dry_run=True).run([ProductRow("Sheet", 2, "Programa")]))
+    assert results[0].status == "DRY_RUN"
+    assert summary.dry_run == 1
+    assert calls == []
+
+
+def test_runner_updates_only_seo_and_supports_id():
+    calls = []
+
+    class FakeClient:
+        async def find_product(self, *args, **kwargs):
+            return {"id": 7, "attributes": {"title": "Programa", "seo": {"id": 9, "LinkCanonical": "https://utel.edu.mx/programa", "MetaTitle": "keep"}}}
+
+        async def update_product(self, *args, **kwargs):
+            calls.append((args, kwargs))
+
+    results, _ = asyncio.run(StrapiProductRunner(FakeClient(), "México", "es-MX", COUNTRIES, dry_run=False).run([ProductRow("Sheet", 2, "Programa")]))
+    assert results[0].status == "UPDATED"
+    assert calls == [((7, {"seo": {"id": 9, "LinkCanonical": "https://utel.edu.mx/mexico/programa", "MetaTitle": "keep"}}), {})]
+
+
+def test_client_retries_transient_error():
+    attempts = 0
+
+    async def handler(request):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            return httpx.Response(503, request=request)
+        return httpx.Response(200, request=request, json={"data": [{"id": 1, "attributes": {}}]})
+
+    transport = httpx.MockTransport(handler)
+    http_client = httpx.AsyncClient(transport=transport, base_url="https://example.test")
+    client = StrapiClient("https://example.test", "secret", client=http_client)
+    try:
+        result = asyncio.run(client.find_product("Programa", "es-MX"))
+        assert result["id"] == 1
+        assert attempts == 2
+    finally:
+        asyncio.run(http_client.aclose())
