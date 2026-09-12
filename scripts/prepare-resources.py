@@ -22,8 +22,7 @@ def inspect(root):
         if 'xl/workbook.xml' not in workbook.namelist() or workbook.testzip():
             raise ValueError('El catalogo de programas esta danado.')
     for relative in (
-        'backend/app/modules/weekly_auto/default_urls.txt',
-        'backend/app/automations/weekly_auto/default_urls.txt',
+        'backend/app/modules/weekly_auto/weekly_photos/default_urls.txt',
         'backend/app/modules/bot_leads_deploy/data/utel_programas1.xlsx',
         'backend/app/modules/bot_nuevos_productos/data/utel_programas1.xlsx',
     ):

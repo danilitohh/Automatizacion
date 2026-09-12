@@ -49,6 +49,11 @@ export const api = {
     formData.append("file", file);
     return request("/api/bots/utel-inconcert/spreadsheet-preview", { method: "POST", body: formData });
   },
+  previewWeeklyFormsSpreadsheet: (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request("/api/weekly-auto/forms/spreadsheet-preview", { method: "POST", body: formData });
+  },
   runUtelBatch: (file, config, mapping) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -58,6 +63,7 @@ export const api = {
   },
   utelBatchStatus: (jobId) => request(`/api/bots/utel-inconcert/batch/${jobId}`),
   cancelUtelBatch: (jobId) => request(`/api/bots/utel-inconcert/batch/${jobId}/cancel`, { method: "POST" }),
+  weeklyFormsDownloadUrl: (jobId) => `${API_BASE_URL}/api/bots/utel-inconcert/batch/${jobId}/download`,
   startBotRecorder: (config) => request("/api/bots/recorder/start", { method: "POST", body: JSON.stringify(config) }),
   botRecorderEvents: (sessionId) => request(`/api/bots/recorder/${sessionId}/events`),
   stopBotRecorder: (sessionId) => request(`/api/bots/recorder/${sessionId}/stop`, { method: "POST" }),

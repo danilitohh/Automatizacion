@@ -4,7 +4,14 @@ import asyncio
 
 import pytest
 
+from backend.app.automations.weekly_auto.weekly_photos.runner import (
+    WeeklyAutoRunner as AutomationWeeklyPhotosRunner,
+)
 from backend.app.modules.weekly_auto.runner import WeeklyAutoError, WeeklyAutoRunner
+from backend.app.modules.weekly_auto.weekly_photos.runner import (
+    WeeklyAutoError as WeeklyPhotosError,
+    WeeklyAutoRunner as WeeklyPhotosRunner,
+)
 
 
 class _Settings:
@@ -34,6 +41,11 @@ class _InfiniteScrollPage:
 
     async def wait_for_timeout(self, pause_ms):
         return None
+
+
+def test_public_runner_points_to_weekly_photos_submodule():
+    assert WeeklyAutoRunner is WeeklyPhotosRunner is AutomationWeeklyPhotosRunner
+    assert WeeklyAutoError is WeeklyPhotosError
 
 
 def test_url_validation_only_accepts_http_and_https(tmp_path):

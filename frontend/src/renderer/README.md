@@ -6,7 +6,7 @@ Los archivos de esta carpeta controlan la interfaz que se ejecuta en el navegado
 | --- | --- |
 | `app.js` | Estado global mínimo, navegación, dashboard e historial. |
 | `bot-module.js` | Constructor, validación y ejecución del bot de verificaciones. |
-| `weekly-auto-module.js` | Configuración, estado y resultados de la automatización semanal. |
+| `weekly-auto-module.js` | Adaptador hacia los submódulos organizados en `src/modules/weekly_auto/`. |
 | `pdp-module.js` | Carga de documentos y presentación de comparaciones PDP. |
 | `styles.css` | Diseño visual compartido por todas las vistas. |
 

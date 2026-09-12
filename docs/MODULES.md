@@ -17,6 +17,12 @@ Backend: `backend/app/modules/generic_bot/`
 Backend: `backend/app/modules/weekly_auto/`
 Frontend: `frontend/src/modules/weekly_auto/`
 
+Submódulos:
+
+- `weekly_photos/`: automatización actual.
+- `weekly_forms/`: automatización de formularios y verificación de leads.
+- `weekly_performance/`: automatización de rendimiento por implementar.
+
 ## PDP Validation
 Backend: `backend/app/modules/pdp_validation/`
 Frontend: `frontend/src/modules/pdp_validation/`

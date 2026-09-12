@@ -7,6 +7,8 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .codex-tmp-*/
+.codex_tmp/
+graphify-out/
 .coverage
 
 # Los archivos de ejecución pueden contener información sensible.

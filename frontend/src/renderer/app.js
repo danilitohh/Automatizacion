@@ -247,6 +247,11 @@ initializeWeeklyAutoModule({
   runWeeklyAuto: api.runWeeklyAuto,
   weeklyAutoStatus: api.weeklyAutoStatus,
   cancelWeeklyAuto: api.cancelWeeklyAuto,
+  previewWeeklyFormsSpreadsheet: api.previewWeeklyFormsSpreadsheet,
+  runWeeklyFormsBatch: api.runUtelBatch,
+  weeklyFormsStatus: api.utelBatchStatus,
+  cancelWeeklyForms: api.cancelUtelBatch,
+  weeklyFormsDownloadUrl: api.weeklyFormsDownloadUrl,
 });
 initializePdpModule({ showToast, validatePdp: api.validatePdp, validatePdpSemantic: api.validatePdpSemantic });
 refreshDashboard();

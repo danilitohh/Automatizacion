@@ -50,6 +50,11 @@ from ..services.bot_spreadsheet_service import BotSpreadsheetService
 from ..services.leads_deploy_spreadsheet_service import LeadsDeploySpreadsheetService
 from ..services.bot_report_service import BotReportService
 from ..services.test_lead_service import TestLeadService
+from ..modules.weekly_auto.weekly_forms import (
+    WeeklyFormsCaseConfig,
+    WeeklyFormsRunner,
+    WeeklyFormsSpreadsheetService,
+)
 
 
 router = APIRouter(prefix="/api")
@@ -730,13 +735,40 @@ async def preview_bot_spreadsheet(file: UploadFile = File(...)) -> dict:
         raise HTTPException(status_code=400, detail=f"No fue posible analizar el Excel: {error}") from error
 
 
+@router.post("/weekly-auto/forms/spreadsheet-preview")
+async def preview_weekly_forms_spreadsheet(file: UploadFile = File(...)) -> dict:
+    """Analiza Country/Nivel/Activo de Test/Location/Lead para Weekly Forms."""
+
+    if not (file.filename or "").lower().endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="Comparte un archivo Excel con extensión .xlsx.")
+    try:
+        return WeeklyFormsSpreadsheetService().preview(
+            await file.read(),
+            file.filename or "weekly-forms.xlsx",
+        )
+    except Exception as error:  # noqa: BLE001
+        raise HTTPException(
+            status_code=400,
+            detail=f"No fue posible analizar Weekly Forms: {error}",
+        ) from error
+
+
 async def _run_utel_batch_job(application, job_id: str, content: bytes, filename: str, raw_config: dict, mapping: dict[str, str]) -> None:
     """Ejecuta las filas seleccionadas y escribe URL LEAD en una copia del Excel."""
 
     settings = application.state.settings
     job = application.state.utel_batch_jobs[job_id]
-    batch_size = max(1, int(settings.batch_size))
-    batch_pause_seconds = max(0, int(settings.batch_delay_seconds))
+    is_weekly_forms = raw_config.get("automation_module") == "weekly_forms"
+    batch_size = (
+        WeeklyFormsSpreadsheetService.BATCH_SIZE
+        if is_weekly_forms
+        else max(1, int(settings.batch_size))
+    )
+    batch_pause_seconds = (
+        WeeklyFormsSpreadsheetService.BATCH_PAUSE_SECONDS
+        if is_weekly_forms
+        else max(0, int(settings.batch_delay_seconds))
+    )
     results: list[dict[str, Any]] = []
     logger.info(
         "Lote %s en tandas de %s filas, sin pausa interna y con %ss entre tandas",
@@ -745,10 +777,22 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
         batch_pause_seconds,
     )
     try:
-        batch_dry_run = _batch_dry_run(raw_config)
+        batch_dry_run = False if is_weekly_forms else _batch_dry_run(raw_config)
         is_leads_deploy = raw_config.get("automation_module") == "leads_deploy"
-        service_cls = LeadsDeploySpreadsheetService if is_leads_deploy else BotSpreadsheetService
-        runner_cls = LeadsDeployRunner if is_leads_deploy else UtelInconcertRunner
+        service_cls = (
+            WeeklyFormsSpreadsheetService
+            if is_weekly_forms
+            else LeadsDeploySpreadsheetService
+            if is_leads_deploy
+            else BotSpreadsheetService
+        )
+        runner_cls = (
+            WeeklyFormsRunner
+            if is_weekly_forms
+            else LeadsDeployRunner
+            if is_leads_deploy
+            else UtelInconcertRunner
+        )
         service = service_cls(settings.program_catalog_path)
         rows = service.rows_for_mapping(content, mapping)
         selected_rows = {
@@ -763,12 +807,21 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
         elif selected_sheet and selected_row_number is not None:
             rows = [row for row in rows if row["sheet"] == selected_sheet and row["row_number"] == int(selected_row_number)]
         if not rows:
-            raise ValueError(
-                "No se encontraron casos Leads Deploy con País, Nivel y Formulario. "
-                "La columna Activo de Test no es obligatoria; las URLs se toman del catálogo interno."
-                if is_leads_deploy
-                else "No se encontraron filas con Programa/Nivel y URL usando las columnas seleccionadas."
-            )
+            if is_weekly_forms:
+                message = (
+                    "No se encontraron filas pendientes con Country, Activo de Test, "
+                    "Location y Lead. Las filas que ya tienen Lead se omiten."
+                )
+            elif is_leads_deploy:
+                message = (
+                    "No se encontraron casos Leads Deploy con País, Nivel y Formulario. "
+                    "La columna Activo de Test no es obligatoria; las URLs se toman del catálogo interno."
+                )
+            else:
+                message = (
+                    "No se encontraron filas con Programa/Nivel y URL usando las columnas seleccionadas."
+                )
+            raise ValueError(message)
         requested_destination = str(
             raw_config.get("lead_search_destination", "auto")
         ).strip().casefold()
@@ -905,13 +958,16 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "defer_crm_verification": False,
                 "verification_only": False,
                 "skip_preselected_fields": skip_preselected_fields,
+                "weekly_form_type": row.get("weekly_form_type", "form_lp"),
+                "client": row.get("client", ""),
                 # Cloudflare reconoce mejor el perfil persistente de Chrome que
                 # un Chromium aislado nuevo. Balanceador se abre visible para
                 # permitir completar un desafío legítimo si vuelve a solicitarlo.
                 "browser": "chrome" if (uses_balanceador and not batch_dry_run) else row_config.get("browser", "chromium"),
                 "headless": False if (uses_balanceador and not batch_dry_run) else row_config.get("headless", True),
             })
-            prepared_rows.append((row, UtelQaConfig.model_validate(row_config)))
+            config_model = WeeklyFormsCaseConfig if is_weekly_forms else UtelQaConfig
+            prepared_rows.append((row, config_model.model_validate(row_config)))
 
         lead_service = TestLeadService(
             settings.database_path,
@@ -1210,7 +1266,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     update={
                         "browser": _new_products_retry_browser(
                             results[result_index]["result"],
-                            is_leads_deploy=is_leads_deploy,
+                            is_leads_deploy=(is_leads_deploy or is_weekly_forms),
                         ),
                         "headless": False,
                     }
@@ -1340,10 +1396,18 @@ async def run_utel_batch(request: Request, file: UploadFile = File(...), config:
         raise HTTPException(status_code=400, detail="Comparte un archivo Excel con extensión .xlsx.")
     try:
         raw_config = json.loads(config)
-        batch_dry_run = _batch_dry_run(raw_config)
+        is_weekly_forms = raw_config.get("automation_module") == "weekly_forms"
+        batch_dry_run = False if is_weekly_forms else _batch_dry_run(raw_config)
         selected_mapping = json.loads(mapping)
         is_leads_deploy = raw_config.get("automation_module") == "leads_deploy"
-        if is_leads_deploy:
+        if is_weekly_forms:
+            required_mapping = ("country", "utel_url", "form_type", "lead_url")
+            if not all(selected_mapping.get(key) for key in required_mapping):
+                raise ValueError(
+                    "Weekly Forms requiere Country, Activo de Test, Location y la columna Lead de salida."
+                )
+            preview_service = WeeklyFormsSpreadsheetService()
+        elif is_leads_deploy:
             if not all(selected_mapping.get(key) for key in ("country", "level", "form_type")):
                 raise ValueError(
                     "Leads Deploy requiere las columnas País, Nivel y Formulario. "
@@ -1381,7 +1445,11 @@ async def run_utel_batch(request: Request, file: UploadFile = File(...), config:
         "failed": 0,
         "pending": 0,
         "phase": "UTEL: preparando envíos",
-        "batch_size": max(1, int(request.app.state.settings.batch_size)),
+        "batch_size": (
+            WeeklyFormsSpreadsheetService.BATCH_SIZE
+            if is_weekly_forms
+            else max(1, int(request.app.state.settings.batch_size))
+        ),
         "completed_batches": 0,
         "last_checkpoint_rows": 0,
         "download_url": None,

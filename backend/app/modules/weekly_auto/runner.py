@@ -1,4 +1,4 @@
-"""Adaptador compatible con la ruta histórica de Weekly Auto."""
+"""Compatibilidad pública para la automatización existente de Weekly Photos."""
 
 from .weekly_photos.runner import WeeklyAutoError, WeeklyAutoRunner
 

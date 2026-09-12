@@ -1,4 +1,4 @@
-"""Adaptadores de compatibilidad para las automatizaciones semanales."""
+"""Adaptador de Weekly Photos hacia su módulo canónico."""
 
 from .runner import WeeklyAutoError, WeeklyAutoRunner
 

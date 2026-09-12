@@ -1,4 +1,4 @@
-"""Adaptadores de compatibilidad para las automatizaciones semanales."""
+"""Captura y validación semanal de páginas."""
 
 from .runner import WeeklyAutoError, WeeklyAutoRunner
 

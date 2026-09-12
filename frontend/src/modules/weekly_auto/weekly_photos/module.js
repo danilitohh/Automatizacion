@@ -1,6 +1,6 @@
 "use strict";
 
-// Controlador de Weekly Auto: configuración, sondeo de estado y resultados por URL.
+// Controlador de Weekly Photos: configuración, sondeo de estado y resultados por URL.
 const CONFIG_KEY = "qa-automation.weekly-auto-config";
 const JOB_KEY = "qa-automation.weekly-auto-active-job";
 const LAST_JOB_KEY = "qa-automation.weekly-auto-last-job";
@@ -322,6 +322,6 @@ function setupEvents({ showToast, runWeeklyAuto, weeklyAutoStatus, cancelWeeklyA
   toggleUrlMode();
 }
 
-export function initializeWeeklyAutoModule({ showToast, runWeeklyAuto, weeklyAutoStatus, cancelWeeklyAuto }) {
+export function initializeWeeklyPhotosModule({ showToast, runWeeklyAuto, weeklyAutoStatus, cancelWeeklyAuto }) {
   setupEvents({ showToast, runWeeklyAuto, weeklyAutoStatus, cancelWeeklyAuto });
 }
