@@ -158,6 +158,12 @@ docs/                     Decisiones de arquitectura.
 
 `.env.example` documenta las variables esperadas. `.env` está ignorado por Git y nunca debe subirse. El token de Strapi y la contraseña del CRM nunca se expondrán al frontend: FastAPI será el único componente que hablará con esos servicios.
 
+### Carga de descripciones PDP desde Google Drive
+
+Para leer documentos PDP privados, el backend necesita OAuth de Google Drive con permiso de solo lectura. En Google Cloud habilita Google Drive API, crea un cliente OAuth de tipo **Desktop app** y descarga su JSON. Ejecuta `python scripts/configure_google_drive_oauth.py "RUTA\AL\CLIENTE_OAUTH.json"` y autoriza la cuenta que tiene acceso a los documentos. El asistente guarda `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET` y `GOOGLE_DRIVE_REFRESH_TOKEN` directamente en `.env`; después reinicia FastAPI. No envíes estas credenciales por chat ni las subas a Git.
+
+El backend renueva el access token automáticamente y solo exporta los Google Docs a DOCX para extraer la descripción. Solicita el alcance `https://www.googleapis.com/auth/drive.readonly`; no requiere permiso para editar Drive. Si el proyecto OAuth es externo y sigue en modo de pruebas, Google puede hacer expirar el refresh token a los 7 días para alcances de Drive; para uso continuo configura la audiencia interna de Workspace si aplica o completa la publicación/verificación correspondiente.
+
 ## Cómo añadir una automatización después
 
 Cada automatización tendrá su propio módulo dentro de `backend/app/automations/`, sus esquemas y su servicio. El servicio guardará una fila en `executions` y la interfaz podrá consumir su resultado mediante un endpoint específico. La Fase 2 comenzará con `forms/`; la Fase 3 con `visual_monitoring/`; la Fase 4 con `excel_strapi/`.

@@ -16,6 +16,7 @@ from ..modules.strapi_products.country import COUNTRIES, detect_country_from_fil
 from ..modules.strapi_products.runner import StrapiProductRunner
 from ..modules.strapi_products.spreadsheet import read_product_rows
 from ..services.strapi_client import StrapiClient
+from ..services.google_drive_client import GoogleDriveClient
 
 
 router = APIRouter(prefix="/api/strapi/products", tags=["strapi-products"])
@@ -149,10 +150,16 @@ async def _run_description_job(application, job_id: str, content: bytes, filenam
     settings: Settings = application.state.settings
     job = application.state.strapi_product_jobs[job_id]
     client = None
+    drive_client = None
     try:
         rows = read_product_rows(content)
         client = StrapiClient(settings.strapi_url, _token(settings), settings.strapi_product_endpoint, settings.strapi_timeout_seconds)
-        runner = StrapiDescriptionRunner(client, country_config.label, country_config.locale, dry_run=job["dry_run"], short_field=settings.strapi_short_description_field, long_field=settings.strapi_long_description_field, title_field=settings.strapi_program_field)
+        drive_client = GoogleDriveClient(
+            settings.google_drive_client_id.get_secret_value(),
+            settings.google_drive_client_secret.get_secret_value(),
+            settings.google_drive_refresh_token.get_secret_value(),
+        )
+        runner = StrapiDescriptionRunner(client, country_config.label, country_config.locale, dry_run=job["dry_run"], short_field=settings.strapi_short_description_field, long_field=settings.strapi_long_description_field, title_field=settings.strapi_program_field, google_drive_client=drive_client)
         results, summary = await runner.run(rows)
         report_dir = settings.storage_dir / "reports" / "strapi"
         report_dir.mkdir(parents=True, exist_ok=True)
@@ -164,3 +171,5 @@ async def _run_description_job(application, job_id: str, content: bytes, filenam
     finally:
         if client:
             await client.close()
+        if drive_client:
+            await drive_client.close()

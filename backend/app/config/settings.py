@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     strapi_long_description_field: str = "longDescription"
     strapi_expected_host: str = "utel.edu.mx"
     strapi_timeout_seconds: float = 30.0
+    google_drive_client_id: SecretStr = SecretStr("")
+    google_drive_client_secret: SecretStr = SecretStr("")
+    google_drive_refresh_token: SecretStr = SecretStr("")
     strapi_countries_json: str = '{"argentina":{"label":"Argentina","locale":"es-AR","slug":"argentina"},"mexico":{"label":"Mexico","locale":"es-MX","slug":"mexico"},"el-salvador":{"label":"El Salvador","locale":"es-SV","slug":"elsalvador"},"usa":{"label":"USA","locale":"es-US","slug":"usa"},"republica-dominicana":{"label":"Republica Dominicana","locale":"es-DO","slug":"dominicana"},"panama":{"label":"Panama","locale":"es-PA","slug":"panama"},"bolivia":{"label":"Bolivia","locale":"es-BO","slug":"bolivia"},"chile":{"label":"Chile","locale":"es-CL","slug":"chile"},"colombia":{"label":"Colombia","locale":"es-CO","slug":"colombia"},"ecuador":{"label":"Ecuador","locale":"es-EC","slug":"ecuador"},"peru":{"label":"Peru","locale":"es-PE","slug":"peru"},"paraguay":{"label":"Paraguay","locale":"es-PY","slug":"paraguay"}}'
     crm_url: str = ""
     crm_username: str = ""

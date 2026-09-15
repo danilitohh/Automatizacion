@@ -7,13 +7,14 @@ from urllib.parse import urlparse
 import httpx
 
 from ...services.logging_service import get_logger
+from ...services.google_drive_client import GoogleDriveClient, GoogleDriveClientError, google_document_id
 from ...services.strapi_client import StrapiAmbiguousError, StrapiClient, StrapiClientError, StrapiNotFoundError
 from .models import ProductResult, ProductRow, ProductSummary
 from .pdp_description import extract_description
 
 
 class StrapiDescriptionRunner:
-    def __init__(self, client: StrapiClient, country: str, locale: str, *, dry_run: bool = True, short_field: str = "shortDescription", long_field: str = "longDescription", title_field: str = "title") -> None:
+    def __init__(self, client: StrapiClient, country: str, locale: str, *, dry_run: bool = True, short_field: str = "shortDescription", long_field: str = "longDescription", title_field: str = "title", google_drive_client: GoogleDriveClient | None = None) -> None:
         self.client = client
         self.country = country
         self.locale = locale
@@ -21,6 +22,7 @@ class StrapiDescriptionRunner:
         self.short_field = short_field
         self.long_field = long_field
         self.title_field = title_field
+        self.google_drive_client = google_drive_client
         self.logger = get_logger()
 
     async def _document_content(self, source: str) -> tuple[str, bytes]:
@@ -28,11 +30,27 @@ class StrapiDescriptionRunner:
             raise ValueError("La fila no tiene Documento PDP.")
         parsed = urlparse(source)
         if parsed.scheme in {"http", "https"} and parsed.netloc:
+            document_id = google_document_id(source)
+            if document_id and self.google_drive_client and self.google_drive_client.has_any_configuration and not self.google_drive_client.is_configured:
+                raise GoogleDriveClientError(
+                    "La configuración OAuth de Google Drive está incompleta. Define las tres variables "
+                    "GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET y GOOGLE_DRIVE_REFRESH_TOKEN."
+                )
+            if document_id and self.google_drive_client and self.google_drive_client.is_configured:
+                return "google-drive-document.docx", await self.google_drive_client.export_docx(document_id)
             request_url = self._google_doc_export_url(source)
             async with httpx.AsyncClient(follow_redirects=True, timeout=35) as client:
-                response = await client.get(request_url)
-                response.raise_for_status()
-                return request_url, response.content
+                try:
+                    response = await client.get(request_url)
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as error:
+                    if document_id and error.response.status_code in {401, 403}:
+                        raise GoogleDriveClientError(
+                            "El documento de Google Drive es privado. Configura las credenciales OAuth "
+                            "de Google Drive en .env para leerlo desde el backend."
+                        ) from error
+                    raise
+                return "google-drive-document.docx", response.content
         path = Path(source.strip('\\"'))
         if not path.is_file():
             raise ValueError(f"No se encontro el Documento PDP: {source}")
@@ -74,6 +92,8 @@ class StrapiDescriptionRunner:
             self.logger.warning("Strapi descriptions invalid row=%s program=%s error=%s", row.row_number, row.program, error)
             return ProductResult(row.sheet, row.row_number, row.program, self.country, "INVALID_DATA", message=str(error))
         except StrapiClientError as error:
+            return ProductResult(row.sheet, row.row_number, row.program, self.country, "FAILED", message=str(error))
+        except GoogleDriveClientError as error:
             return ProductResult(row.sheet, row.row_number, row.program, self.country, "FAILED", message=str(error))
 
     async def run(self, rows: list[ProductRow]) -> tuple[list[ProductResult], ProductSummary]:

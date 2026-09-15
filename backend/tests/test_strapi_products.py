@@ -13,6 +13,7 @@ from backend.app.modules.strapi_products.pdp_description import extract_descript
 from backend.app.modules.strapi_products.models import ProductRow
 from backend.app.modules.strapi_products.runner import StrapiProductRunner
 from backend.app.modules.strapi_products.spreadsheet import read_product_rows
+from backend.app.services.google_drive_client import GoogleDriveClient, google_document_id
 from backend.app.services.strapi_client import StrapiClient
 
 
@@ -80,6 +81,36 @@ def test_description_runner_updates_only_two_description_fields(tmp_path):
     assert calls == [((12, {"shortDescription": "Descripcion PDP original.", "longDescription": "Descripcion PDP original."}), {})]
 
 
+def test_description_runner_exports_private_google_doc_with_drive_client():
+    document = Document()
+    document.add_paragraph("Programa A", style="Title")
+    document.add_paragraph("Descripcion PDP original.")
+    output = io.BytesIO()
+    document.save(output)
+
+    class FakeDriveClient:
+        is_configured = True
+        has_any_configuration = True
+
+        async def export_docx(self, document_id):
+            assert document_id == "google-doc-id"
+            return output.getvalue()
+
+    class FakeStrapiClient:
+        async def find_product(self, *args, **kwargs):
+            return {"id": 12, "attributes": {"title": "Programa A"}}
+
+    row = ProductRow("Bloque 1 Staging", 3, "Programa A", "https://docs.google.com/document/d/google-doc-id/edit")
+    results, summary = asyncio.run(
+        StrapiDescriptionRunner(
+            FakeStrapiClient(), "Argentina", "es-AR", dry_run=True, google_drive_client=FakeDriveClient()
+        ).run([row])
+    )
+    assert results[0].status == "DRY_RUN"
+    assert results[0].description == "Descripcion PDP original."
+    assert summary.dry_run == 1
+
+
 def test_spreadsheet_reads_program_and_skips_blank_rows():
     workbook = Workbook()
     sheet = workbook.active
@@ -124,6 +155,38 @@ def test_spreadsheet_prefers_document_hyperlink_over_visible_name():
     workbook.save(content)
     rows = read_product_rows(content.getvalue())
     assert rows[0].document == "https://docs.google.com/document/d/example/edit?usp=sharing"
+
+
+def test_google_document_id_supports_docs_and_drive_links():
+    assert google_document_id("https://docs.google.com/document/d/doc-123/edit") == "doc-123"
+    assert google_document_id("https://drive.google.com/file/d/file-456/view") == "file-456"
+    assert google_document_id("https://drive.google.com/open?id=file-789") == "file-789"
+    assert google_document_id("https://example.com/document/d/nope") is None
+
+
+def test_google_drive_client_refreshes_token_and_exports_docx():
+    requests = []
+
+    async def handler(request):
+        requests.append(request)
+        if request.url.host == "oauth2.googleapis.com":
+            return httpx.Response(200, request=request, json={"access_token": "temporary-token", "expires_in": 3600})
+        assert request.headers["Authorization"] == "Bearer temporary-token"
+        assert request.url.path.endswith("/files/doc-123/export")
+        assert request.url.params["mimeType"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        return httpx.Response(200, request=request, content=b"docx-bytes")
+
+    async def run():
+        http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        drive = GoogleDriveClient("client-id", "client-secret", "refresh-token", client=http_client)
+        try:
+            assert await drive.export_docx("doc-123") == b"docx-bytes"
+            assert await drive.export_docx("doc-123") == b"docx-bytes"
+            assert len(requests) == 3  # one token refresh, two document exports
+        finally:
+            await http_client.aclose()
+
+    asyncio.run(run())
 
 
 def test_runner_dry_run_does_not_update():
