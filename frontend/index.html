@@ -57,11 +57,28 @@
             <span>Bot Leads Deploy</span>
             <span class="nav-phase">NUEVO</span>
           </button>
-          <button class="nav-item" data-view="weekly-auto">
+          <button class="nav-item" data-view="weekly-leads">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h5M8 16h3"/><path class="nav-icon-dot" d="M17 16h.01"/></svg></span>
+            <span>Form Validation</span>
+            <span class="nav-phase">NUEVO</span>
+          </button>
+          <button class="nav-item nav-parent" data-view="weekly-auto" data-weekly-parent="true" aria-expanded="false" aria-controls="weekly-auto-subnav">
             <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2.1 4.8-4.9 2.2 2.1-4.9z"/><path d="M12 3v2M21 12h-2M12 21v-2M3 12h2"/></svg></span>
             <span>Weekly Auto</span>
             <span class="nav-phase">NUEVO</span>
+            <span class="nav-chevron" aria-hidden="true">⌄</span>
           </button>
+          <div class="nav-submenu" id="weekly-auto-subnav" hidden>
+            <button class="nav-subitem" type="button" data-view="weekly-photos">
+              <span class="nav-subitem-mark" aria-hidden="true">◈</span><span>Weekly Photos</span>
+            </button>
+            <button class="nav-subitem" type="button" data-view="weekly-forms">
+              <span class="nav-subitem-mark" aria-hidden="true">▣</span><span>Weekly Forms</span>
+            </button>
+            <button class="nav-subitem" type="button" data-view="weekly-performance">
+              <span class="nav-subitem-mark" aria-hidden="true">◌</span><span>Weekly Performance</span>
+            </button>
+          </div>
           <button class="nav-item" data-view="pdp">
             <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>
             <span>PDP vs documentos</span>
@@ -289,7 +306,16 @@
         <section class="view" id="view-leads-deploy" data-view-panel="leads-deploy"></section>
 
         <section class="view" id="view-weekly-auto" data-view-panel="weekly-auto">
-          <div class="section-intro"><p class="eyebrow accent">Nuevo módulo</p><h2>Weekly Auto</h2><p class="muted">Ejecuta un ciclo de apertura y captura de URLs en lote con pausa anti-bloqueo.</p></div>
+          <div class="section-intro"><p class="eyebrow accent">Espacio de trabajo</p><h2>Weekly Auto</h2><p class="muted">Selecciona una automatización para abrir su panel de trabajo.</p></div>
+          <div class="weekly-module-launcher" aria-label="Módulos de Weekly Auto">
+            <button class="weekly-module-card" type="button" data-view="weekly-photos"><span class="weekly-module-card-icon">◈</span><span><strong>Weekly Photos</strong><small>Captura automática de páginas y evidencias.</small></span><span class="weekly-module-card-arrow">→</span></button>
+            <button class="weekly-module-card" type="button" data-view="weekly-forms"><span class="weekly-module-card-icon">▣</span><span><strong>Weekly Forms</strong><small>Envío y verificación de leads de la matriz QA.</small></span><span class="weekly-module-card-arrow">→</span></button>
+            <button class="weekly-module-card" type="button" data-view="weekly-performance"><span class="weekly-module-card-icon">◌</span><span><strong>Weekly Performance</strong><small>Medición PageSpeed desde Excel.</small></span><span class="weekly-module-card-arrow">→</span></button>
+          </div>
+        </section>
+
+        <section class="view" id="view-weekly-photos" data-view-panel="weekly-photos">
+          <div class="section-intro"><p class="eyebrow accent">Weekly Photos</p><h2>Captura automática de páginas</h2><p class="muted">Ejecuta un ciclo de apertura y captura de URLs en lote con pausa anti-bloqueo.</p></div>
           <article class="panel">
             <div class="panel-header"><div><p class="eyebrow">Configuración semanal</p><h3>Captura automática de páginas</h3><p class="panel-subtitle">Usa URLs manuales o la lista por defecto para revisar disponibilidad y generar evidencia.</p></div><span class="status-badge success">AUTOMÁTICO</span></div>
             <div class="bot-fields">
@@ -325,6 +351,18 @@
             <div id="weekly-auto-stats" class="pdp-summary" style="margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;"></div>
             <div class="bot-steps-list" id="weekly-auto-results"></div>
           </article>
+        </section>
+
+        <section class="view" id="view-weekly-forms" data-view-panel="weekly-forms">
+          <div class="section-intro"><p class="eyebrow accent">Weekly Forms</p><h2>Envío y verificación de leads</h2><p class="muted">Procesa la matriz QA en tandas controladas y consulta los leads generados.</p></div>
+        </section>
+
+        <section class="view" id="view-weekly-performance" data-view-panel="weekly-performance">
+          <div class="section-intro"><p class="eyebrow accent">Weekly Performance</p><h2>Medición PageSpeed</h2><p class="muted">Procesa las URLs de tu Excel y conserva los resultados de escritorio y móvil.</p></div>
+        </section>
+
+        <section class="view" id="view-weekly-leads" data-view-panel="weekly-leads">
+          <div class="section-intro"><p class="eyebrow accent">Form Validation</p><h2>Envío y validación de leads</h2><p class="muted">Pega URLs QA o carga un Excel; el flujo actual detecta, envía y concilia cada landing.</p></div>
         </section>
 
         <section class="view" id="view-pdp" data-view-panel="pdp">

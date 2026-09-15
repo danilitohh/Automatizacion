@@ -21,7 +21,8 @@ Submódulos:
 
 - `weekly_photos/`: automatización actual.
 - `weekly_forms/`: automatización de formularios y verificación de leads.
-- `weekly_performance/`: automatización de rendimiento por implementar.
+- `weekly_leads/`: envíos generales de leads con el mismo flujo de formularios y CRM.
+- `weekly_performance/`: PageSpeed desde Excel, con progreso, cancelación y descarga del resultado.
 
 ## PDP Validation
 Backend: `backend/app/modules/pdp_validation/`

@@ -87,10 +87,22 @@ class BotReportService:
                 row = item["row"]["row_number"]
                 failure = next((s for s in result.get("stages", []) if s["status"] == "FAIL"), None)
                 dry_run = result.get("dry_run", False)
-                link = None if dry_run else result.get("lead_url")
+                fill_only = result.get("fill_only", False)
+                link = None if dry_run or fill_only else result.get("lead_url")
                 status = "ERROR"
                 if result["status"] == "PASS":
-                    status = "DRY RUN - NO ENVIADO" if dry_run else "EXITOSO" if link else "SIN LINK VERIFICADO"
+                    # Form Validation tiene un modo de inspección que valida
+                    # el llenado sin crear un lead; no debe parecer un fallo
+                    # solo porque deliberadamente no existe un enlace CRM.
+                    status = (
+                        "DRY RUN - NO ENVIADO"
+                        if dry_run
+                        else "RELLENADO - NO ENVIADO"
+                        if fill_only
+                        else "EXITOSO"
+                        if link
+                        else "SIN LINK VERIFICADO"
+                    )
                 elif link and failure and failure.get("stage") == "inconcert_manage":
                     status = "LEAD LOCALIZADO - VALIDACION PENDIENTE"
                 sheet.cell(row, status_col).value = status

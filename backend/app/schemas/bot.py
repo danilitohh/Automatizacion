@@ -116,6 +116,10 @@ class UtelQaConfig(BaseModel):
     name: str = Field(default="QA UTEL + InConcert", min_length=1, max_length=120)
     environment: Literal["sandbox", "production"] = "sandbox"
     dry_run: bool = True
+    # Modo de inspección segura: llena y valida la landing, pero no hace clic
+    # en Enviar ni abre ningún CRM. No cambia el dry_run histórico de otros
+    # módulos y por defecto permanece desactivado.
+    fill_only: bool = False
     country: str = Field(min_length=1, max_length=80)
     utel_url: str = Field(min_length=1, max_length=2000)
     inconcert_url: str = Field(default="", max_length=2000)
@@ -123,6 +127,11 @@ class UtelQaConfig(BaseModel):
     lead_origin_url: str = Field(default="", max_length=2000)
     # ``auto`` conserva el comportamiento histórico de los demás módulos.
     lead_search_destination: Literal["auto", "inconcert", "balanceador", "both"] = "auto"
+    # Form Validation puede consultar ambos CRM simultáneamente sin alterar el
+    # comportamiento histórico de los módulos que no activan este flag.
+    parallel_crm_search: bool = False
+    crm_search_timeout_seconds: int = Field(default=90, ge=15, le=600)
+    randomize_academic_selections: bool = False
     modality: str = Field(min_length=1, max_length=100)
     level: str = Field(min_length=1, max_length=120)
     form_type: Literal["lateral", "tarjeta", "footer"] = "lateral"
@@ -179,8 +188,16 @@ class UtelQaRunResponse(BaseModel):
     selected_program_name: str = ""
     program_selection_notice: str = ""
     lead_url: str | None = None
+    inconcert_lead_url: str | None = None
+    balancer_lead_url: str | None = None
+    found_inconcert: bool = False
+    found_balancer: bool = False
+    source_final: str = ""
+    search_duration_seconds: float = 0.0
+    error: str = ""
     environment: str
     dry_run: bool
+    fill_only: bool = False
     workflow_mode: Literal["product_release", "form_validation"] = "product_release"
     # Permite distinguir fallos seguros para reintentar de cualquier resultado
     # ocurrido después del clic, donde un segundo envío podría duplicar el lead.

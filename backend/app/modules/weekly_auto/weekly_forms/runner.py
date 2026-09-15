@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import secrets
 from contextlib import suppress
 from time import perf_counter
 from typing import Any, Callable
@@ -125,6 +126,9 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                     self.selected_program_name = selected
             elif re.search(r"area|nivel|level|grado|interes", descriptor):
                 await self._select_semantic_option(field, config.level, "level")
+                # React suele cargar el catálogo de programas de forma
+                # asíncrona después del cambio de nivel.
+                await asyncio.sleep(0.8)
             elif re.search(r"codigo.*pais|country.*code|indicativo|lada|prefix", descriptor):
                 await self._select_semantic_option(field, config.country, "country")
             elif re.search(r"estado|state|ciudad|city|provincia|residencia", descriptor):
@@ -172,7 +176,10 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         if config.form_type != "tarjeta":
             level = form.locator('[data-cy="educationLevelInput"]').first
             if await level.count() and not await self._has_academic_selection(level):
-                await self._set_dynamic_field(form, '[data-cy="educationLevelInput"]', config.level)
+                if getattr(config, "randomize_academic_selections", False):
+                    await self._select_random_level(level)
+                else:
+                    await self._set_dynamic_field(form, '[data-cy="educationLevelInput"]', config.level)
             await self._select_random_program(page, form, '[data-cy="productsInput"]', config)
 
         await self._select_optional_bachillerato(form)
@@ -193,6 +200,35 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             'input[placeholder*="phone" i]',
         ], config.lead.phone)
         await self._check_privacy(form)
+
+    async def _select_random_level(self, field: Any) -> str:
+        """Elige un nivel real en BLC y espera a que React cargue programas."""
+
+        tag_name = await field.evaluate("element => element.tagName.toLowerCase()")
+        if tag_name != "select":
+            await self._set_dynamic_field(
+                field.locator("xpath=.."),
+                '[data-cy="educationLevelInput"]',
+                getattr(getattr(self, "_rotation_config", None), "level", "Licenciatura"),
+            )
+            return ""
+        await field.wait_for(state="visible", timeout=12000)
+        await self._wait_for_select_options(field)
+        options = await field.locator("option").evaluate_all(
+            """items => items.map(item => ({value: item.value || '', text: (item.textContent || '').trim(), disabled: item.disabled}))"""
+        )
+        real = [
+            item for item in options
+            if item["value"] and not item["disabled"]
+            and not re.search(r"seleccion|select|opcion|option|cargando|loading", self._normalize(item["text"]))
+        ]
+        if not real:
+            raise UtelQaError("utel_fill", "El formulario no contiene niveles disponibles.", '[data-cy="educationLevelInput"]')
+        selected = secrets.choice(real)
+        await field.select_option(value=selected["value"])
+        await field.dispatch_event("change")
+        await asyncio.sleep(0.8)
+        return selected["text"]
 
     async def _fill_semantic_input(self, form: Any, pattern: str, value: str, *, required: bool) -> None:
         controls = form.locator('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea')
@@ -309,10 +345,16 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                 "filipinas": ("philippines", "+63"), "indonesia": ("indonesia", "+62"),
             }
             aliases += list(country_codes.get(normalized_expected, ()))
-        chosen = next(
-            (item for item in real if any(alias and alias in self._normalize(item["text"]) for alias in aliases)),
-            real[0],
-        )
+        matching = [
+            item for item in real
+            if any(alias and alias in self._normalize(item["text"]) for alias in aliases)
+        ]
+        # Form Validation puede probar opciones reales distintas entre URLs; si
+        # no se solicita aleatoriedad se conserva la selección histórica exacta.
+        if getattr(getattr(self, "_rotation_config", None), "randomize_academic_selections", False) and kind in {"level", "program"}:
+            chosen = secrets.choice(matching or real)
+        else:
+            chosen = matching[0] if matching else real[0]
         await field.select_option(value=chosen["value"])
         await field.dispatch_event("change")
         await asyncio.sleep(0.35)

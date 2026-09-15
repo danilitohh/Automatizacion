@@ -2,6 +2,7 @@
 
 import json
 import asyncio
+import io
 import os
 import re
 from datetime import date, datetime
@@ -55,6 +56,13 @@ from ..modules.weekly_auto.weekly_forms import (
     WeeklyFormsRunner,
     WeeklyFormsSpreadsheetService,
 )
+from ..modules.weekly_auto.weekly_leads import (
+    WeeklyLeadsCaseConfig,
+    WeeklyLeadsRunner,
+    WeeklyLeadsSpreadsheetService,
+)
+from ..modules.form_validation.input_service import FormValidationInputService
+from ..modules.form_validation.report_service import FormValidationReportService
 
 
 router = APIRouter(prefix="/api")
@@ -66,6 +74,15 @@ def _batch_dry_run(raw_config: dict[str, Any]) -> bool:
     value = raw_config.get("dry_run", True)
     if not isinstance(value, bool):
         raise ValueError("El campo dry_run debe ser booleano (true o false).")
+    return value
+
+
+def _batch_fill_only(raw_config: dict[str, Any]) -> bool:
+    """Valida el modo de inspección sin aceptar cadenas ambiguas."""
+
+    value = raw_config.get("fill_only", False)
+    if not isinstance(value, bool):
+        raise ValueError("El campo fill_only debe ser booleano (true o false).")
     return value
 
 
@@ -107,7 +124,12 @@ def _save_utel_batch_report(
         # El ZIP de Excel se escribe completo en el mismo volumen y solo luego
         # reemplaza el checkpoint anterior. Un cierre forzado nunca trunca el
         # último reporte válido.
-        BotReportService().build(content, mapping, results).save(temporary_path)
+        report_service = (
+            FormValidationReportService()
+            if any(item.get("result", {}).get("workflow_mode") == "form_validation" for item in results)
+            else BotReportService()
+        )
+        report_service.build(content, mapping, results).save(temporary_path)
         os.replace(temporary_path, output_path)
     finally:
         temporary_path.unlink(missing_ok=True)
@@ -165,6 +187,33 @@ def _merge_utel_and_crm_results(
             )
         ),
     }
+    # Una conciliación secundaria puede encontrar el CRM alterno; conserva los
+    # dos enlaces para que Form Validation no reduzca el resultado a una sola
+    # fuente.
+    for field in (
+        "inconcert_lead_url",
+        "balancer_lead_url",
+        "found_inconcert",
+        "found_balancer",
+        "source_final",
+        "search_duration_seconds",
+    ):
+        merged[field] = verification.get(field) or submission.get(field)
+    merged["found_inconcert"] = bool(
+        merged.get("found_inconcert") or merged.get("inconcert_lead_url")
+    )
+    merged["found_balancer"] = bool(
+        merged.get("found_balancer") or merged.get("balancer_lead_url")
+    )
+    merged["source_final"] = (
+        "inconcert y balancer"
+        if merged["found_inconcert"] and merged["found_balancer"]
+        else "inconcert"
+        if merged["found_inconcert"]
+        else "balancer"
+        if merged["found_balancer"]
+        else ""
+    )
 
     notice_suffix = f" Aviso original de UTEL: {original_notice}" if original_notice else ""
     if crm_confirmed:
@@ -234,6 +283,10 @@ def _utel_batch_counts(results: list[dict[str, Any]]) -> dict[str, int]:
             failed += 1
         elif result.get("dry_run") and result.get("status") == "PASS":
             # El dry run termina en UTEL y no necesita una conciliación posterior.
+            success += 1
+        elif result.get("fill_only") and result.get("status") == "PASS":
+            # El modo solo llenado también termina antes de crear un lead;
+            # cuenta como éxito de inspección, no como lead encontrado.
             success += 1
         elif (
             result.get("status") == "PASS"
@@ -714,6 +767,36 @@ async def _reserve_lead_for_case(
     return lead_service.reserve(country, require_authorized_phone=False)
 
 
+def _preview_lead_for_case(
+    lead_service: TestLeadService,
+    country: str,
+    sequence: int,
+    used_phones: set[str],
+) -> dict[str, Any]:
+    """Genera datos efímeros para llenar un formulario sin escribir en SQLite.
+
+    El modo de inspección no crea leads ni consume el banco autorizado. Aun
+    así, los datos respetan la misma estructura de nombre, correo y teléfono
+    que usa el flujo real para que las validaciones del portal sean relevantes.
+    """
+
+    normalized_country = lead_service._normalize(country)
+    phone = lead_service._generated_phone(
+        normalized_country,
+        country.strip(),
+        max(1, sequence),
+        used_phones,
+    )
+    used_phones.add(phone)
+    return {
+        "name": f"Danilo Form Preview {lead_service._alphabetic_sequence(max(1, sequence))}",
+        "email": f"Preview{date.today().isoformat()}N{max(1, sequence)}@testingUtel.com",
+        "phone": phone,
+        "country": country.strip(),
+        "sequence": max(1, sequence),
+    }
+
+
 @router.get("/runtime")
 def backend_runtime() -> dict:
     """Permite a Electron reconocer su proceso, sin exponer secretos."""
@@ -753,12 +836,45 @@ async def preview_weekly_forms_spreadsheet(file: UploadFile = File(...)) -> dict
         ) from error
 
 
+@router.post("/weekly-auto/leads/spreadsheet-preview")
+async def preview_weekly_leads_spreadsheet(file: UploadFile = File(...)) -> dict:
+    """Analiza la misma matriz para el módulo independiente Weekly Leads."""
+
+    if not (file.filename or "").lower().endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="Comparte un archivo Excel con extensión .xlsx.")
+    try:
+        return WeeklyLeadsSpreadsheetService().preview(
+            await file.read(),
+            file.filename or "weekly-leads.xlsx",
+        )
+    except Exception as error:  # noqa: BLE001 - el endpoint convierte el error a 400
+        raise HTTPException(
+            status_code=400,
+            detail=f"No fue posible analizar Weekly Leads: {error}",
+        ) from error
+
+
+@router.post("/form-validation/urls/preview")
+async def preview_form_validation_urls(payload: dict[str, Any]) -> dict:
+    """Valida URLs pegadas manualmente usando el mismo parser del Excel."""
+
+    urls = payload.get("urls") if isinstance(payload, dict) else None
+    if not isinstance(urls, list):
+        raise HTTPException(status_code=400, detail="Envía una lista de URLs, una por línea.")
+    cleaned = [str(url).strip() for url in urls if str(url or "").strip()]
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Debes indicar al menos una URL.")
+    content = FormValidationInputService.workbook_bytes(cleaned, str(payload.get("country") or ""))
+    return WeeklyLeadsSpreadsheetService().preview(content, "form-validation-urls.xlsx")
+
+
 async def _run_utel_batch_job(application, job_id: str, content: bytes, filename: str, raw_config: dict, mapping: dict[str, str]) -> None:
     """Ejecuta las filas seleccionadas y escribe URL LEAD en una copia del Excel."""
 
     settings = application.state.settings
     job = application.state.utel_batch_jobs[job_id]
-    is_weekly_forms = raw_config.get("automation_module") == "weekly_forms"
+    is_weekly_leads = raw_config.get("automation_module") == "weekly_leads"
+    is_weekly_forms = raw_config.get("automation_module") in {"weekly_forms", "weekly_leads"}
     batch_size = (
         WeeklyFormsSpreadsheetService.BATCH_SIZE
         if is_weekly_forms
@@ -778,16 +894,21 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
     )
     try:
         batch_dry_run = False if is_weekly_forms else _batch_dry_run(raw_config)
+        fill_only = _batch_fill_only(raw_config)
         is_leads_deploy = raw_config.get("automation_module") == "leads_deploy"
         service_cls = (
-            WeeklyFormsSpreadsheetService
+            WeeklyLeadsSpreadsheetService
+            if is_weekly_leads
+            else WeeklyFormsSpreadsheetService
             if is_weekly_forms
             else LeadsDeploySpreadsheetService
             if is_leads_deploy
             else BotSpreadsheetService
         )
         runner_cls = (
-            WeeklyFormsRunner
+            WeeklyLeadsRunner
+            if is_weekly_leads
+            else WeeklyFormsRunner
             if is_weekly_forms
             else LeadsDeployRunner
             if is_leads_deploy
@@ -809,8 +930,13 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
         if not rows:
             if is_weekly_forms:
                 message = (
-                    "No se encontraron filas pendientes con Country, Activo de Test, "
-                    "Location y Lead. Las filas que ya tienen Lead se omiten."
+                    (
+                        "No se encontraron URLs pendientes para Form Validation. "
+                        "Las filas con un Lead existente o dominios no permitidos se omiten."
+                        if is_weekly_leads
+                        else "No se encontraron filas pendientes para Weekly Forms con Country, Activo de Test, Location y Lead. "
+                        "Las filas que ya tienen Lead se omiten."
+                    )
                 )
             elif is_leads_deploy:
                 message = (
@@ -830,7 +956,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             or not _is_balanceador_url(row.get("lead_origin_url", ""))
             for row in rows
         )
-        if not batch_dry_run and needs_inconcert:
+        if not batch_dry_run and not fill_only and needs_inconcert:
             # InConcert se valida antes del primer clic. Los lotes cuyo origen
             # es exclusivamente Balanceador reutilizan la sesión chrome-qa y no
             # deben exigir credenciales de un CRM que nunca van a consultar.
@@ -847,8 +973,12 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             "utel_url": rows[0]["utel_url"],
             "program_name": rows[0]["program_name"],
             "dry_run": batch_dry_run,
+            "fill_only": fill_only,
             "workflow_mode": workflow_mode,
             "source_filename": filename,
+            # El teléfono real se reserva justo antes de cada fila; el modelo
+            # necesita una estructura temporal válida durante la preparación.
+            "lead": {"name": "pending", "email": "pending@testingUtel.com", "phone": "900000000"},
         })
         # Prepara y valida todas las configuraciones antes de reservar datos o
         # abrir formularios. Los flags internos nunca se heredan del cliente.
@@ -966,26 +1096,32 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "browser": "chrome" if (uses_balanceador and not batch_dry_run) else row_config.get("browser", "chromium"),
                 "headless": False if (uses_balanceador and not batch_dry_run) else row_config.get("headless", True),
             })
-            config_model = WeeklyFormsCaseConfig if is_weekly_forms else UtelQaConfig
+            config_model = (
+                WeeklyLeadsCaseConfig
+                if is_weekly_leads
+                else WeeklyFormsCaseConfig
+                if is_weekly_forms
+                else UtelQaConfig
+            )
             prepared_rows.append((row, config_model.model_validate(row_config)))
 
         lead_service = TestLeadService(
             settings.database_path,
             settings.authorized_test_phones()
-            if not batch_dry_run and not settings.utel_allow_synthetic_real_phones
+            if not batch_dry_run and not fill_only and not settings.utel_allow_synthetic_real_phones
             else {},
             allow_synthetic_real_phones=(
-                not batch_dry_run and settings.utel_allow_synthetic_real_phones
+                not batch_dry_run and not fill_only and settings.utel_allow_synthetic_real_phones
             ),
         )
-        if not batch_dry_run and not settings.utel_allow_synthetic_real_phones:
+        if not batch_dry_run and not fill_only and not settings.utel_allow_synthetic_real_phones:
             # Primero se valida localmente que cada fila tenga un número real,
             # válido y disponible. No se abre CRM ni UTEL con un banco incompleto.
             lead_service.validate_authorized_capacity(
                 [config.country for _, config in prepared_rows]
             )
 
-        if not batch_dry_run:
+        if not batch_dry_run and not fill_only:
             # Se valida login y acceso a Contactos para cada CRM distinto antes
             # del primer clic. Así una contraseña vencida o una caída regional
             # no deja un lote entero sin posibilidad de conciliación.
@@ -1012,7 +1148,20 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
 
         verification_queue = []
         temporary_block_queue = []
-        job["phase"] = "UTEL: enviando formularios"
+        preview_phone_used: set[str] = set()
+        if fill_only:
+            # Solo se consulta el banco para evitar repetir un teléfono dentro
+            # de esta inspección; no se inserta ni se reserva ningún registro.
+            with get_connection(settings.database_path) as connection:
+                preview_phone_used = {
+                    str(row[0])
+                    for row in connection.execute("SELECT phone FROM test_leads")
+                }
+        job["phase"] = (
+            "UTEL: llenando formularios (sin envío)"
+            if fill_only
+            else "UTEL: enviando formularios"
+        )
         for index, (row, prepared_config) in enumerate(prepared_rows, 1):
             # La detención es cooperativa: no inicia otra fila, pero jamás
             # interrumpe una fila que pudiera estar justo después del clic.
@@ -1027,20 +1176,31 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             })
 
             try:
-                lead = await _reserve_lead_for_case(
-                    settings,
-                    lead_service,
-                    prepared_config.country,
-                    require_authorized_phone=(
-                        not batch_dry_run
-                        and not settings.utel_allow_synthetic_real_phones
-                    ),
+                lead = (
+                    _preview_lead_for_case(
+                        lead_service,
+                        prepared_config.country,
+                        index,
+                        preview_phone_used,
+                    )
+                    if fill_only
+                    else await _reserve_lead_for_case(
+                        settings,
+                        lead_service,
+                        prepared_config.country,
+                        require_authorized_phone=(
+                            not batch_dry_run
+                            and not settings.utel_allow_synthetic_real_phones
+                        ),
+                    )
                 )
             except ValueError as error:
                 failed_result = {
                     "status": "FAIL",
                     "summary": str(error),
                     "dry_run": batch_dry_run,
+                    "fill_only": fill_only,
+                    "workflow_mode": prepared_config.workflow_mode,
                     "country": prepared_config.country,
                     "level": prepared_config.level,
                     "modality": prepared_config.modality,
@@ -1099,7 +1259,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 "last_error": "",
             })
             result_index: int | None = None
-            if not config.dry_run:
+            if not config.dry_run and not config.fill_only:
                 # Checkpoint preventivo: si el proceso se cierra en la ventana
                 # del clic, el Excel conserva el email para buscarlo en CRM y
                 # la fila queda bloqueada para reintento automático.
@@ -1396,17 +1556,29 @@ async def run_utel_batch(request: Request, file: UploadFile = File(...), config:
         raise HTTPException(status_code=400, detail="Comparte un archivo Excel con extensión .xlsx.")
     try:
         raw_config = json.loads(config)
-        is_weekly_forms = raw_config.get("automation_module") == "weekly_forms"
+        is_weekly_leads = raw_config.get("automation_module") == "weekly_leads"
+        is_weekly_forms = raw_config.get("automation_module") in {"weekly_forms", "weekly_leads"}
         batch_dry_run = False if is_weekly_forms else _batch_dry_run(raw_config)
+        fill_only = _batch_fill_only(raw_config)
         selected_mapping = json.loads(mapping)
         is_leads_deploy = raw_config.get("automation_module") == "leads_deploy"
         if is_weekly_forms:
-            required_mapping = ("country", "utel_url", "form_type", "lead_url")
+            # Form Validation admite una matriz mínima: solo URL es obligatoria;
+            # país, formulario y Lead se infieren o se agregan al reporte.
+            required_mapping = ("utel_url",) if is_weekly_leads else ("country", "utel_url", "form_type", "lead_url")
             if not all(selected_mapping.get(key) for key in required_mapping):
                 raise ValueError(
-                    "Weekly Forms requiere Country, Activo de Test, Location y la columna Lead de salida."
+                    (
+                        "Form Validation requiere al menos una columna URL; Country y Lead son opcionales."
+                        if is_weekly_leads
+                        else "Weekly Forms requiere Country, Activo de Test, Location y la columna Lead de salida."
+                    )
                 )
-            preview_service = WeeklyFormsSpreadsheetService()
+            preview_service = (
+                WeeklyLeadsSpreadsheetService()
+                if is_weekly_leads
+                else WeeklyFormsSpreadsheetService()
+            )
         elif is_leads_deploy:
             if not all(selected_mapping.get(key) for key in ("country", "level", "form_type")):
                 raise ValueError(
@@ -1455,12 +1627,58 @@ async def run_utel_batch(request: Request, file: UploadFile = File(...), config:
         "download_url": None,
         "workflow_mode": preview_rows[0].get("workflow_mode", "product_release"),
         "dry_run": batch_dry_run,
+        "fill_only": fill_only,
         "cancel_requested": False,
     }
     task = asyncio.create_task(_run_utel_batch_job(request.app, job_id, content, file.filename or "resultado.xlsx", raw_config, selected_mapping))
     request.app.state.bot_tasks[job_id] = task
     task.add_done_callback(lambda _: request.app.state.bot_tasks.pop(job_id, None))
     return request.app.state.utel_batch_jobs[job_id]
+
+
+@router.post("/weekly-auto/leads/run", status_code=202)
+async def run_weekly_leads(
+    request: Request,
+    file: UploadFile = File(...),
+    config: str = Form(...),
+    mapping: str = Form(...),
+) -> dict:
+    """Inicia Weekly Leads con una ruta propia y el motor de lotes estable."""
+
+    try:
+        raw_config = json.loads(config)
+    except (TypeError, json.JSONDecodeError) as error:
+        raise HTTPException(status_code=400, detail="La configuración de Weekly Leads no es válida.") from error
+    raw_config["automation_module"] = "weekly_leads"
+    return await run_utel_batch(request, file, json.dumps(raw_config), mapping)
+
+
+@router.post("/form-validation/urls/run", status_code=202)
+async def run_form_validation_urls(request: Request, payload: dict[str, Any]) -> dict:
+    """Inicia Form Validation para URLs pegadas sin duplicar el motor de lotes."""
+
+    urls = payload.get("urls") if isinstance(payload, dict) else None
+    if not isinstance(urls, list):
+        raise HTTPException(status_code=400, detail="Envía una lista de URLs, una por línea.")
+    cleaned = [str(url).strip() for url in urls if str(url or "").strip()]
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Debes indicar al menos una URL.")
+    content = FormValidationInputService.workbook_bytes(
+        cleaned,
+        str(payload.get("country") or ""),
+    )
+    config = payload.get("config") if isinstance(payload.get("config"), dict) else {}
+    config = {**config, "automation_module": "weekly_leads", "workflow_mode": "form_validation"}
+    upload = UploadFile(
+        filename="form-validation-urls.xlsx",
+        file=io.BytesIO(content),
+    )
+    return await run_utel_batch(
+        request,
+        upload,
+        json.dumps(config),
+        json.dumps(FormValidationInputService.mapping()),
+    )
 
 
 @router.get("/bots/utel-inconcert/batch/{job_id}")

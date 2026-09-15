@@ -393,6 +393,10 @@ class LeadsDeployDualCrmRunner(UtelInconcertRunner):
         """Usa Url Origen Lead como prioridad y el otro CRM como respaldo."""
 
         primary = await super().run(config, should_stop)
+        if config.parallel_crm_search:
+            # Form Validation ya consultó ambos CRM en paralelo; no se debe
+            # repetir una segunda búsqueda secuencial si ninguno confirmó.
+            return primary
         secondary_config = self._secondary_verification_config(config, primary)
         if secondary_config is None:
             return primary

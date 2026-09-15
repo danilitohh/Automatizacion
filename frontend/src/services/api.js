@@ -54,6 +54,15 @@ export const api = {
     formData.append("file", file);
     return request("/api/weekly-auto/forms/spreadsheet-preview", { method: "POST", body: formData });
   },
+  previewWeeklyLeadsSpreadsheet: (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request("/api/weekly-auto/leads/spreadsheet-preview", { method: "POST", body: formData });
+  },
+  previewFormValidationUrls: (urls, country = "") => request("/api/form-validation/urls/preview", {
+    method: "POST",
+    body: JSON.stringify({ urls, country }),
+  }),
   runUtelBatch: (file, config, mapping) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -61,9 +70,33 @@ export const api = {
     formData.append("mapping", JSON.stringify(mapping));
     return request("/api/bots/utel-inconcert/batch-run", { method: "POST", body: formData });
   },
+  runWeeklyLeadsBatch: (file, config, mapping) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("config", JSON.stringify({ ...config, automation_module: "weekly_leads" }));
+    formData.append("mapping", JSON.stringify(mapping));
+    return request("/api/weekly-auto/leads/run", { method: "POST", body: formData });
+  },
+  runFormValidationUrls: (urls, config, country = "") => request("/api/form-validation/urls/run", {
+    method: "POST",
+    body: JSON.stringify({ urls, country, config }),
+  }),
   utelBatchStatus: (jobId) => request(`/api/bots/utel-inconcert/batch/${jobId}`),
+  weeklyLeadsStatus: (jobId) => request(`/api/bots/utel-inconcert/batch/${jobId}`),
   cancelUtelBatch: (jobId) => request(`/api/bots/utel-inconcert/batch/${jobId}/cancel`, { method: "POST" }),
+  cancelWeeklyLeads: (jobId) => request(`/api/bots/utel-inconcert/batch/${jobId}/cancel`, { method: "POST" }),
   weeklyFormsDownloadUrl: (jobId) => `${API_BASE_URL}/api/bots/utel-inconcert/batch/${jobId}/download`,
+  weeklyLeadsDownloadUrl: (jobId) => `${API_BASE_URL}/api/bots/utel-inconcert/batch/${jobId}/download`,
+  runWeeklyPerformance: (file, sheetName = "Hoja 1", maxWorkers = 8) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("sheet_name", sheetName);
+    formData.append("max_workers", String(maxWorkers));
+    return request("/api/weekly-auto/performance/run", { method: "POST", body: formData });
+  },
+  weeklyPerformanceStatus: (jobId) => request(`/api/weekly-auto/performance/runs/${jobId}`),
+  cancelWeeklyPerformance: (jobId) => request(`/api/weekly-auto/performance/runs/${jobId}/cancel`, { method: "POST" }),
+  weeklyPerformanceDownloadUrl: (jobId) => `${API_BASE_URL}/api/weekly-auto/performance/runs/${jobId}/download`,
   startBotRecorder: (config) => request("/api/bots/recorder/start", { method: "POST", body: JSON.stringify(config) }),
   botRecorderEvents: (sessionId) => request(`/api/bots/recorder/${sessionId}/events`),
   stopBotRecorder: (sessionId) => request(`/api/bots/recorder/${sessionId}/stop`, { method: "POST" }),

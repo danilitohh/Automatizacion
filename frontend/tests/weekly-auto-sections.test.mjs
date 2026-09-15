@@ -8,11 +8,12 @@ const photosScript = fs.readFileSync(new URL("../src/modules/weekly_auto/weekly_
 const rendererAdapter = fs.readFileSync(new URL("../src/renderer/weekly-auto-module.js", import.meta.url), "utf8");
 
 test("cada automatización tiene una subcarpeta de código independiente", () => {
-  for (const section of ["weekly_photos", "weekly_forms", "weekly_performance"]) {
+  for (const section of ["weekly_photos", "weekly_forms", "weekly_leads", "weekly_performance"]) {
     assert.ok(fs.existsSync(new URL(`../src/modules/weekly_auto/${section}/module.js`, import.meta.url)));
   }
   assert.match(shellScript, /\.\/weekly_photos\/module\.js/);
   assert.match(shellScript, /\.\/weekly_forms\/module\.js/);
+  assert.match(shellScript, /\.\/weekly_leads\/module\.js/);
   assert.match(shellScript, /\.\/weekly_performance\/module\.js/);
 });
 

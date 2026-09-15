@@ -55,6 +55,8 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.3-70b-versatile"
     gemini_api_key: SecretStr = SecretStr("")
     gemini_model: str = "gemini-2.5-flash"
+    # PageSpeed Insights: opcional, pero recomendado para ampliar la cuota.
+    pagespeed_api_key: SecretStr = SecretStr("")
     # El lote procesa filas consecutivas sin pausa. Al completar cada tanda,
     # publica un Excel acumulado y descansa antes de iniciar la siguiente.
     batch_size: int = 10
