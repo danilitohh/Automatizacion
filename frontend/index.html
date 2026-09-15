@@ -11,6 +11,7 @@
     <meta name="description" content="Centro de automatización y validación para el equipo QA de UTEL." />
     <link rel="stylesheet" href="./src/renderer/styles.css" />
     <link rel="stylesheet" href="./src/renderer/module-skin.css" />
+    <link rel="stylesheet" href="./src/renderer/automation-module-scale.css" />
     <link rel="stylesheet" href="./src/renderer/gooey-buttons.css" />
     <title>UTEL QA Automation</title>
   </head>
@@ -33,16 +34,6 @@
           </button>
 
           <p class="navigation-label">Automatizaciones</p>
-          <button class="nav-item" data-view="forms">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h5M8 16h3"/><path class="nav-icon-dot" d="M17 16h.01"/></svg></span>
-            <span>Formularios</span>
-            <span class="nav-phase">F2</span>
-          </button>
-          <button class="nav-item" data-view="visual">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></span>
-            <span>Monitoreo visual</span>
-            <span class="nav-phase">F3</span>
-          </button>
           <button class="nav-item" data-view="excel">
             <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h2m2 0h4M8 16h2m2 0h4"/></svg></span>
             <span>Excel vs Web</span>
@@ -251,16 +242,6 @@
             </article>
             <article class="panel recent-panel"><div class="panel-header"><div><p class="eyebrow">Actividad reciente</p><h3>Eventos del sistema</h3></div><button class="text-button" data-view="history">Ver todo →</button></div><div id="recent-activity" class="recent-activity"><div class="recent-item recent-item-empty"><i class="health-dot online"></i><span><b>Sin actividad reciente</b><small>Los eventos aparecerán aquí.</small></span><small>Ahora</small></div></div></article>
           </div>
-        </section>
-
-        <section class="view" id="view-forms" data-view-panel="forms">
-          <div class="section-intro"><p class="eyebrow accent">Fase 2</p><h2>Validación de formularios</h2><p class="muted">Configura y ejecuta pruebas de formularios y verificación de leads.</p></div>
-          <div class="coming-card"><div class="coming-icon">▣</div><h3>Módulo preparado para la siguiente fase</h3><p>La estructura de configuración, Playwright y evidencias se incorporará aquí sin afectar el dashboard.</p><span class="status-badge pending">PRÓXIMAMENTE</span></div>
-        </section>
-
-        <section class="view" id="view-visual" data-view-panel="visual">
-          <div class="section-intro"><p class="eyebrow accent">Fase 3</p><h2>Monitoreo visual</h2><p class="muted">Compara screenshots de tu homepage y detecta cambios relevantes.</p></div>
-          <div class="coming-card"><div class="coming-icon">◉</div><h3>Módulo preparado para la siguiente fase</h3><p>La comparación visual, el threshold configurable y el historial se añadirán en este espacio.</p><span class="status-badge pending">PRÓXIMAMENTE</span></div>
         </section>
 
         <section class="view" id="view-excel" data-view-panel="excel">

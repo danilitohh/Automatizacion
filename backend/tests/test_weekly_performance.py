@@ -3,6 +3,7 @@
 import asyncio
 import io
 import time
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 from fastapi.testclient import TestClient
@@ -28,6 +29,24 @@ def _workbook_bytes(*urls: str, sheet_name: str = "Hoja 1") -> bytes:
         sheet.cell(row, 4, url)
     output = io.BytesIO()
     workbook.save(output)
+    return output.getvalue()
+
+
+def _unsized_workbook_bytes(*urls: str) -> bytes:
+    """Quita la dimensión XML para reproducir exportaciones sin max_row."""
+
+    source = _workbook_bytes(*urls)
+    output = io.BytesIO()
+    with ZipFile(io.BytesIO(source), "r") as workbook_zip, ZipFile(
+        output, "w", compression=ZIP_DEFLATED
+    ) as patched_zip:
+        for entry in workbook_zip.infolist():
+            content = workbook_zip.read(entry.filename)
+            if entry.filename == "xl/worksheets/sheet1.xml":
+                content = content.replace(
+                    b'<dimension ref="D1:M2"/>', b""
+                )
+            patched_zip.writestr(entry, content)
     return output.getvalue()
 
 
@@ -90,6 +109,14 @@ def test_inspect_rejects_missing_sheet_and_workbook_without_urls(tmp_path):
         runner.inspect(_workbook_bytes("https://example.com", sheet_name="Datos"), "Hoja 1")
     with pytest.raises(WeeklyPerformanceError, match="columna D"):
         runner.inspect(_workbook_bytes("texto"), "Hoja 1")
+
+
+def test_inspect_accepts_excel_without_dimension_metadata(tmp_path):
+    """La columna D se puede leer aunque la hoja no declare su dimensión."""
+
+    runner = WeeklyPerformanceRunner(Settings(storage_dir=tmp_path / "storage"))
+    inspected = runner.inspect(_unsized_workbook_bytes("https://example.com"), "Hoja 1")
+    assert inspected["rows"] == [2]
 
 
 def test_pagespeed_key_is_only_loaded_from_settings(tmp_path):

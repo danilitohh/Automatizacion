@@ -60,10 +60,22 @@ class WeeklyPerformanceRunner:
                     f"No existe la pestaña '{sheet_name}'. Disponibles: {available}."
                 )
             worksheet = workbook[sheet_name]
+            # Algunos Excel exportados por Google Sheets u otras herramientas
+            # omiten <dimension> en el XML. En modo read_only, openpyxl deja
+            # ``max_row`` en None para esas hojas; iterar la columna evita el
+            # TypeError y además conserva el bajo consumo de memoria.
             rows = [
-                row
-                for row in range(self.FIRST_ROW, worksheet.max_row + 1)
-                if self._valid_url(worksheet.cell(row=row, column=self.URL_COLUMN).value)
+                row_number
+                for row_number, (value,) in enumerate(
+                    worksheet.iter_rows(
+                        min_row=self.FIRST_ROW,
+                        min_col=self.URL_COLUMN,
+                        max_col=self.URL_COLUMN,
+                        values_only=True,
+                    ),
+                    start=self.FIRST_ROW,
+                )
+                if self._valid_url(value)
             ]
             if not rows:
                 raise WeeklyPerformanceError(

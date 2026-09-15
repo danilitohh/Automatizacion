@@ -196,6 +196,7 @@ def _merge_utel_and_crm_results(
         "found_inconcert",
         "found_balancer",
         "source_final",
+        "first_crm_source",
         "search_duration_seconds",
     ):
         merged[field] = verification.get(field) or submission.get(field)
@@ -205,7 +206,9 @@ def _merge_utel_and_crm_results(
     merged["found_balancer"] = bool(
         merged.get("found_balancer") or merged.get("balancer_lead_url")
     )
-    merged["source_final"] = (
+    # Si la verificación paralela registró un ganador, se conserva aunque el
+    # otro CRM también haya devuelto un enlace durante la misma fase.
+    merged["source_final"] = merged.get("first_crm_source") or (
         "inconcert y balancer"
         if merged["found_inconcert"] and merged["found_balancer"]
         else "inconcert"

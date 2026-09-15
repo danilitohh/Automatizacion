@@ -18,8 +18,6 @@ const runtimeMode = window.desktop ? "desktop" : "web";
 
 const viewMeta = {
   dashboard: { title: "Dashboard", description: "Resumen operativo" },
-  forms: { title: "Validación de formularios", description: "Automatizaciones" },
-  visual: { title: "Monitoreo visual", description: "Automatizaciones" },
   excel: { title: "Excel vs Web / Strapi", description: "Automatizaciones" },
   bot: { title: "Bot de nuevos productos", description: "Automatizaciones" },
   "leads-deploy": { title: "Bot Leads Deploy", description: "Automatizaciones" },
@@ -251,7 +249,11 @@ function bindEvents() {
 
 bindEvents();
 initializeGooeyButtons();
-state.activeView = localStorage.getItem(LAST_VIEW_KEY) || state.activeView;
+// Descarta una vista guardada que ya no existe para evitar una pantalla vacía
+// cuando se retiran módulos del menú en una actualización de la interfaz.
+const persistedView = localStorage.getItem(LAST_VIEW_KEY);
+state.activeView = persistedView && viewMeta[persistedView] ? persistedView : "dashboard";
+if (state.activeView !== persistedView) localStorage.setItem(LAST_VIEW_KEY, state.activeView);
 state.weeklyAutoExpanded = localStorage.getItem(WEEKLY_AUTO_EXPANDED_KEY) === "true" || WEEKLY_AUTO_VIEWS.has(state.activeView);
 setWeeklyAutoExpanded(state.weeklyAutoExpanded);
 navigate(state.activeView);

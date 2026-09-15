@@ -24,7 +24,7 @@ from .service import LeadsDeploySpreadsheetService
 
 
 class LeadsDeployDualCrmRunner(UtelInconcertRunner):
-    """Busca el lead en InConcert y Balanceador de forma segura y secuencial."""
+    """Busca el lead en InConcert y Balanceador de forma segura y en paralelo."""
 
     def _can_retry_footer_submit(self, error: UtelQaError) -> bool:
         """Autoriza un segundo mecanismo solo si NO hubo ningún envío observado.

@@ -1,6 +1,7 @@
 import asyncio
 import io
 from pathlib import Path
+from unittest.mock import AsyncMock, Mock
 
 from openpyxl import Workbook, load_workbook
 
@@ -188,5 +189,75 @@ def test_custom_privacy_checkbox_is_activated(tmp_path: Path):
             await runner._ensure_checkbox_checked(checkbox)
             assert await checkbox.is_checked()
             await browser.close()
+
+    asyncio.run(scenario())
+
+
+def test_parallel_crm_uses_the_first_detail_as_primary_result(tmp_path: Path):
+    """Weekly Forms conserva como enlace principal el CRM que responde primero."""
+
+    async def scenario():
+        runner = WeeklyFormsRunner(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage"))
+        runner._submission_attempted = True
+        inconcert_url = "https://crm.test/inconcert/contact/1"
+        balancer_url = "https://lead-balancer.scalahed.com/leads/detail/2"
+
+        # Las páginas aisladas representan las dos pestañas que usa el flujo
+        # paralelo. El detalle del Balanceador termina antes que InConcert.
+        inconcert_page = Mock(url="https://crm.test/inconcert/contacts")
+        balancer_page = Mock(url="https://lead-balancer.scalahed.com/leads/")
+        inconcert_page.set_default_timeout = Mock()
+        balancer_page.set_default_timeout = Mock()
+        context = Mock(new_page=AsyncMock(side_effect=[inconcert_page, balancer_page]))
+
+        async def run_stage(_number, _stage, _message, _page, action, _screenshot=None):
+            return await action()
+
+        async def search_inconcert(_page, _email, _name):
+            await asyncio.sleep(0.04)
+
+        async def search_balancer(_page, _email, _name):
+            await asyncio.sleep(0.01)
+            runner.lead_url = balancer_url
+
+        async def open_manage(_page, _name, _email):
+            await asyncio.sleep(0.02)
+            runner.lead_url = inconcert_url
+            return Mock(url=inconcert_url)
+
+        runner._run_stage = run_stage
+        runner._open_inconcert = AsyncMock()
+        runner._login_inconcert = AsyncMock()
+        runner._open_contacts = AsyncMock()
+        runner._search_lead = search_inconcert
+        runner._search_lead_balancer = search_balancer
+        runner._open_manage = open_manage
+
+        config = WeeklyFormsCaseConfig.model_validate({
+            "name": "Weekly Forms first CRM",
+            "environment": "sandbox",
+            "country": "Mexico",
+            "utel_url": "https://utel.edu.mx/programa",
+            "inconcert_url": "https://crm.test",
+            "modality": "En linea",
+            "level": "Licenciatura",
+            "workflow_mode": "form_validation",
+            "lead": {"name": "Persona QA", "email": "persona@example.test", "phone": "5551234567"},
+        })
+
+        result = await runner._verify_crm_parallel(
+            context,
+            config,
+            None,
+            "2026-09-15T10:00:00",
+            0.0,
+        )
+
+        assert result["inconcert_lead_url"] == inconcert_url
+        assert result["balancer_lead_url"] == balancer_url
+        assert result["lead_url"] == balancer_url
+        assert result["lead_source"] == "balanceador"
+        assert result["source_final"] == "balanceador"
+        assert result["first_crm_source"] == "balanceador"
 
     asyncio.run(scenario())
