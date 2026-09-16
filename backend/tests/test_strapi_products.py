@@ -9,12 +9,12 @@ from docx import Document
 from backend.app.modules.strapi_products.canonical import add_country_to_canonical
 from backend.app.modules.strapi_products.country import detect_country_from_filename
 from backend.app.modules.strapi_products.description_runner import StrapiDescriptionRunner
-from backend.app.modules.strapi_products.pdp_description import extract_description
+from backend.app.modules.strapi_products.pdp_description import extract_content_description, extract_description
 from backend.app.modules.strapi_products.models import ProductRow
 from backend.app.modules.strapi_products.runner import StrapiProductRunner
 from backend.app.modules.strapi_products.spreadsheet import read_product_rows
 from backend.app.services.google_drive_client import GoogleDriveClient, google_document_id
-from backend.app.services.strapi_client import StrapiClient
+from backend.app.services.strapi_client import StrapiClient, searchable_program_name
 
 
 COUNTRIES = {"mexico": "mexico", "peru": "peru"}
@@ -59,10 +59,25 @@ def test_extracts_only_text_immediately_after_program_title():
     assert extract_description("Licenciatura en Sistemas", "pdp.docx", output.getvalue()) == "Esta es la descripción original del programa."
 
 
+def test_extracts_content_description_before_first_subject_block():
+    document = Document()
+    document.add_paragraph("Asignaturas", style="Heading 1")
+    document.add_paragraph("¿Qué materias se estudian?")
+    document.add_paragraph("El plan de estudios brinda una formación integral.")
+    document.add_paragraph("1° cuatrimestre", style="Heading 2")
+    document.add_paragraph("Materia que no debe incluirse")
+    output = io.BytesIO(); document.save(output)
+    assert extract_content_description("pdp.docx", output.getvalue()) == "¿Qué materias se estudian?\n\nEl plan de estudios brinda una formación integral."
+
+
 def test_description_runner_updates_only_two_description_fields(tmp_path):
     document = Document()
     document.add_paragraph("Programa A", style="Title")
     document.add_paragraph("Descripcion PDP original.")
+    document.add_paragraph("Asignaturas")
+    document.add_paragraph("¿Qué materias se estudian?")
+    document.add_paragraph("Contenido de asignaturas.")
+    document.add_paragraph("1° cuatrimestre")
     output = io.BytesIO(); document.save(output)
     calls = []
 
@@ -78,13 +93,17 @@ def test_description_runner_updates_only_two_description_fields(tmp_path):
     results, summary = asyncio.run(StrapiDescriptionRunner(FakeClient(), "Argentina", "es-AR", dry_run=False).run([ProductRow("Sheet", 2, "Programa A", str(source))]))
     assert results[0].status == "UPDATED"
     assert summary.updated == 1
-    assert calls == [((12, {"shortDescription": "Descripcion PDP original.", "longDescription": "Descripcion PDP original."}), {})]
+    assert calls == [((12, {"shortDescription": "Descripcion PDP original.", "longDescription": "Descripcion PDP original.", "contentDescription": "¿Qué materias se estudian?\n\nContenido de asignaturas."}), {})]
 
 
 def test_description_runner_exports_private_google_doc_with_drive_client():
     document = Document()
     document.add_paragraph("Programa A", style="Title")
     document.add_paragraph("Descripcion PDP original.")
+    document.add_paragraph("Asignaturas")
+    document.add_paragraph("¿Qué materias se estudian?")
+    document.add_paragraph("Contenido de asignaturas.")
+    document.add_paragraph("1° cuatrimestre")
     output = io.BytesIO()
     document.save(output)
 
@@ -183,6 +202,58 @@ def test_google_drive_client_refreshes_token_and_exports_docx():
             assert await drive.export_docx("doc-123") == b"docx-bytes"
             assert await drive.export_docx("doc-123") == b"docx-bytes"
             assert len(requests) == 3  # one token refresh, two document exports
+        finally:
+            await http_client.aclose()
+
+    asyncio.run(run())
+
+
+def test_client_update_product_descriptions_sends_only_description_fields():
+    requests = []
+
+    async def handler(request):
+        requests.append(request)
+        return httpx.Response(200, request=request, json={"data": {"id": 1571}})
+
+    async def run():
+        http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="https://example.test")
+        client = StrapiClient("https://example.test", "secret", client=http_client)
+        try:
+            result = await client.update_product_descriptions(1571, "Texto corto", "Texto largo")
+            assert result["data"]["id"] == 1571
+            assert requests[0].method == "PUT"
+            assert requests[0].url.path.endswith("/api/products/1571")
+            assert requests[0].read() == b'{"data":{"shortDescription":"Texto corto","longDescription":"Texto largo"}}'
+        finally:
+            await http_client.aclose()
+
+    asyncio.run(run())
+
+
+def test_searchable_program_name_removes_degree_prefix_only():
+    assert searchable_program_name("Licenciatura en Ingeniería Robótica") == "Ingeniería Robótica"
+    assert searchable_program_name("Maestría Administración") == "Administración"
+    assert searchable_program_name("Doctorado en Educación") == "Educación"
+    assert searchable_program_name("Ingeniería Robótica") == "Ingeniería Robótica"
+
+
+def test_client_falls_back_without_locale_for_available_draft():
+    requests = []
+
+    async def handler(request):
+        requests.append(dict(request.url.params))
+        if "locale" in request.url.params:
+            return httpx.Response(200, request=request, json={"data": []})
+        return httpx.Response(200, request=request, json={"data": [{"id": 1571, "attributes": {"title": "Licenciatura en Ingeniería en Ciencia de Datos e Inteligencia Analítica", "locale": "es-MX"}}]})
+
+    async def run():
+        http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="https://example.test")
+        client = StrapiClient("https://example.test", "secret", client=http_client)
+        try:
+            result = await client.find_product("Licenciatura en Ingeniería en Ciencia de Datos e Inteligencia Analítica", "es-AR")
+            assert result["id"] == 1571
+            assert requests[0]["filters[title][$eq]"] == "Ingeniería en Ciencia de Datos e Inteligencia Analítica"
+            assert "locale" not in requests[1]
         finally:
             await http_client.aclose()
 

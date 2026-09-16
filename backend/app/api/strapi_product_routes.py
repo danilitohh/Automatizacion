@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 
 from ..config.settings import Settings
 from ..modules.strapi_products.description_runner import StrapiDescriptionRunner
+from ..modules.strapi_products.fichas import FichasLookup
 from ..modules.strapi_products.report import build_description_report, build_report
 from ..modules.strapi_products.country import COUNTRIES, detect_country_from_filename
 from ..modules.strapi_products.runner import StrapiProductRunner
@@ -132,7 +133,7 @@ async def _run_job(application, job_id: str, content: bytes, filename: str, coun
         slug_map = {key: value["slug"] for key, value in _countries(settings).items() if value.get("slug")}
         slug_map.update({item.label.casefold(): item.slug for item in COUNTRIES.values()})
         client = StrapiClient(settings.strapi_url, _token(settings), settings.strapi_product_endpoint, settings.strapi_timeout_seconds)
-        runner = StrapiProductRunner(client, country_config["label"], country_config["locale"], slug_map, dry_run=job["dry_run"], expected_host=settings.strapi_expected_host, title_field=settings.strapi_program_field, seo_field=settings.strapi_seo_field, canonical_field=settings.strapi_canonical_field)
+        runner = StrapiProductRunner(client, country_config["label"], country_config["locale"], slug_map, dry_run=job["dry_run"], expected_host=settings.strapi_expected_host, title_field=settings.strapi_program_field, seo_field=settings.strapi_seo_field, canonical_field=settings.strapi_canonical_field, status=settings.strapi_content_status)
         results, summary = await runner.run(rows)
         report_dir = settings.storage_dir / "reports" / "strapi"
         report_dir.mkdir(parents=True, exist_ok=True)
@@ -159,7 +160,12 @@ async def _run_description_job(application, job_id: str, content: bytes, filenam
             settings.google_drive_client_secret.get_secret_value(),
             settings.google_drive_refresh_token.get_secret_value(),
         )
-        runner = StrapiDescriptionRunner(client, country_config.label, country_config.locale, dry_run=job["dry_run"], short_field=settings.strapi_short_description_field, long_field=settings.strapi_long_description_field, title_field=settings.strapi_program_field, google_drive_client=drive_client)
+        fichas_path = settings.fichas_path
+        if not fichas_path.is_file():
+            downloads_path = Path.home() / "Downloads" / "fichas.xlsx"
+            fichas_path = downloads_path if downloads_path.is_file() else fichas_path
+        fichas = FichasLookup(fichas_path) if fichas_path.is_file() else None
+        runner = StrapiDescriptionRunner(client, country_config.label, country_config.locale, dry_run=job["dry_run"], short_field=settings.strapi_short_description_field, long_field=settings.strapi_long_description_field, content_field=settings.strapi_content_description_field, programs_field=settings.strapi_programs_field, download_program_field=settings.strapi_download_program_field, experience_field=settings.strapi_experience_field, subjects_field=settings.strapi_subjects_field, fichas_lookup=fichas, title_field=settings.strapi_program_field, status=settings.strapi_content_status, google_drive_client=drive_client)
         results, summary = await runner.run(rows)
         report_dir = settings.storage_dir / "reports" / "strapi"
         report_dir.mkdir(parents=True, exist_ok=True)

@@ -35,8 +35,17 @@ class Settings(BaseSettings):
     strapi_canonical_field: str = "LinkCanonical"
     strapi_short_description_field: str = "shortDescription"
     strapi_long_description_field: str = "longDescription"
+    strapi_content_description_field: str = "contentDescription"
+    strapi_programs_field: str = "programs"
+    strapi_download_program_field: str = "downloadProgram"
+    strapi_experience_field: str = "modalities"
+    strapi_subjects_field: str = "subjects"
+    fichas_path: Path = PROJECT_ROOT / "fichas.xlsx"
     strapi_expected_host: str = "utel.edu.mx"
     strapi_timeout_seconds: float = 30.0
+    # Strapi v5 devuelve publicados por defecto; el flujo PDP trabaja sobre
+    # borradores para que también se puedan editar productos aún no publicados.
+    strapi_content_status: str = "draft"
     google_drive_client_id: SecretStr = SecretStr("")
     google_drive_client_secret: SecretStr = SecretStr("")
     google_drive_refresh_token: SecretStr = SecretStr("")

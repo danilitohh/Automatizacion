@@ -10,7 +10,7 @@ from .models import ProductResult, ProductRow, ProductSummary
 
 
 class StrapiProductRunner:
-    def __init__(self, client: StrapiClient, country: str, locale: str, country_slugs: dict[str, str], *, dry_run: bool = True, expected_host: str = "utel.edu.mx", title_field: str = "title", seo_field: str = "seo", canonical_field: str = "LinkCanonical") -> None:
+    def __init__(self, client: StrapiClient, country: str, locale: str, country_slugs: dict[str, str], *, dry_run: bool = True, expected_host: str = "utel.edu.mx", title_field: str = "title", seo_field: str = "seo", canonical_field: str = "LinkCanonical", status: str = "draft") -> None:
         self.client = client
         self.country = country
         self.locale = locale
@@ -20,12 +20,13 @@ class StrapiProductRunner:
         self.title_field = title_field
         self.seo_field = seo_field
         self.canonical_field = canonical_field
+        self.status = status
         self.logger = get_logger()
 
     async def process(self, row: ProductRow) -> ProductResult:
         context = {"sheet": row.sheet, "row": row.row_number, "program": row.program, "country": self.country}
         try:
-            product = await self.client.find_product(row.program, self.locale, title_field=self.title_field, seo_field=self.seo_field)
+            product = await self.client.find_product(row.program, self.locale, title_field=self.title_field, seo_field=self.seo_field, status=self.status)
             attributes = product.get("attributes") or {}
             seo = attributes.get(self.seo_field)
             if not isinstance(seo, dict):

@@ -164,6 +164,8 @@ Para leer documentos PDP privados, el backend necesita OAuth de Google Drive con
 
 El backend renueva el access token automáticamente y solo exporta los Google Docs a DOCX para extraer la descripción. Solicita el alcance `https://www.googleapis.com/auth/drive.readonly`; no requiere permiso para editar Drive. Si el proyecto OAuth es externo y sigue en modo de pruebas, Google puede hacer expirar el refresh token a los 7 días para alcances de Drive; para uso continuo configura la audiencia interna de Workspace si aplica o completa la publicación/verificación correspondiente.
 
+La búsqueda de productos en Strapi elimina el prefijo académico inicial (`Licenciatura en`, `Maestría en` o `Doctorado en`) para encontrar el nombre base de la carrera. Los reportes mantienen el nombre completo que viene en el Excel y las actualizaciones se hacen sobre el registro encontrado, incluso si está en estado `draft`.
+
 ## Cómo añadir una automatización después
 
 Cada automatización tendrá su propio módulo dentro de `backend/app/automations/`, sus esquemas y su servicio. El servicio guardará una fila en `executions` y la interfaz podrá consumir su resultado mediante un endpoint específico. La Fase 2 comenzará con `forms/`; la Fase 3 con `visual_monitoring/`; la Fase 4 con `excel_strapi/`.
