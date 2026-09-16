@@ -7,12 +7,14 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0"
     />
-    <meta name="theme-color" content="#0b1220" />
+    <meta name="theme-color" content="#1c2d1a" />
     <meta name="description" content="Centro de automatización y validación para el equipo QA de UTEL." />
     <link rel="stylesheet" href="./src/renderer/styles.css" />
     <link rel="stylesheet" href="./src/renderer/module-skin.css" />
     <link rel="stylesheet" href="./src/renderer/automation-module-scale.css" />
     <link rel="stylesheet" href="./src/renderer/gooey-buttons.css" />
+    <link rel="stylesheet" href="./src/renderer/option-wheel.css?v=option-wheel-2" />
+    <link rel="stylesheet" href="./src/renderer/liquid-buttons.css?v=liquid-button-1" />
     <title>UTEL QA Automation</title>
   </head>
   <body>
@@ -29,61 +31,50 @@
         <nav class="navigation" aria-label="Navegación principal">
           <p class="navigation-label">Principal</p>
           <button class="nav-item active" data-view="dashboard">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-6h6v6"/></svg></span>
+            <span class="nav-icon"><img class="nav-icon-image" src="./src/renderer/assets/module-icons/dashboard.png" alt="" aria-hidden="true" /></span>
             <span>Dashboard</span>
           </button>
 
           <p class="navigation-label">Automatizaciones</p>
-          <button class="nav-item" data-view="excel">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h2m2 0h4M8 16h2m2 0h4"/></svg></span>
-            <span>Excel vs Web</span>
-            <span class="nav-phase">F4</span>
-          </button>
           <button class="nav-item" data-view="bot">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 5v8l-8 5-8-5V8z"/><path d="m8 12 2.5 2.5L16 9"/></svg></span>
+            <span class="nav-icon"><img class="nav-icon-image" src="./src/renderer/assets/module-icons/bot-nuevos-productos.png" alt="" aria-hidden="true" /></span>
             <span>Bot de nuevos productos</span>
             <span class="nav-phase">NUEVO</span>
           </button>
           <button class="nav-item" data-view="leads-deploy">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 5v8l-8 5-8-5V8z"/><path d="M8 9h8M8 12h8M8 15h5"/></svg></span>
+            <span class="nav-icon"><img class="nav-icon-image" src="./src/renderer/assets/module-icons/bot-leads-deploy.png" alt="" aria-hidden="true" /></span>
             <span>Bot Leads Deploy</span>
             <span class="nav-phase">NUEVO</span>
           </button>
           <button class="nav-item" data-view="weekly-leads">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h5M8 16h3"/><path class="nav-icon-dot" d="M17 16h.01"/></svg></span>
+            <span class="nav-icon"><img class="nav-icon-image" src="./src/renderer/assets/module-icons/form-validation.png" alt="" aria-hidden="true" /></span>
             <span>Form Validation</span>
             <span class="nav-phase">NUEVO</span>
           </button>
           <button class="nav-item nav-parent" data-view="weekly-auto" data-weekly-parent="true" aria-expanded="false" aria-controls="weekly-auto-subnav">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2.1 4.8-4.9 2.2 2.1-4.9z"/><path d="M12 3v2M21 12h-2M12 21v-2M3 12h2"/></svg></span>
+            <span class="nav-icon"><img class="nav-icon-image" src="./src/renderer/assets/module-icons/weekly-auto.png" alt="" aria-hidden="true" /></span>
             <span>Weekly Auto</span>
             <span class="nav-phase">NUEVO</span>
             <span class="nav-chevron" aria-hidden="true">⌄</span>
           </button>
           <div class="nav-submenu" id="weekly-auto-subnav" hidden>
             <button class="nav-subitem" type="button" data-view="weekly-photos">
-              <span class="nav-subitem-mark" aria-hidden="true">◈</span><span>Weekly Photos</span>
+              <span class="nav-subitem-mark" aria-hidden="true"><img class="nav-subitem-icon" src="./src/renderer/assets/module-icons/weekly-photos.png" alt="" aria-hidden="true" /></span><span>Weekly Photos</span>
             </button>
             <button class="nav-subitem" type="button" data-view="weekly-forms">
-              <span class="nav-subitem-mark" aria-hidden="true">▣</span><span>Weekly Forms</span>
+              <span class="nav-subitem-mark" aria-hidden="true"><img class="nav-subitem-icon" src="./src/renderer/assets/module-icons/weekly-forms.png" alt="" aria-hidden="true" /></span><span>Weekly Forms</span>
             </button>
             <button class="nav-subitem" type="button" data-view="weekly-performance">
-              <span class="nav-subitem-mark" aria-hidden="true">◌</span><span>Weekly Performance</span>
+              <span class="nav-subitem-mark" aria-hidden="true"><img class="nav-subitem-icon" src="./src/renderer/assets/module-icons/weekly-performance.png" alt="" aria-hidden="true" /></span><span>Weekly Performance</span>
             </button>
           </div>
-          <button class="nav-item" data-view="pdp">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>
-            <span>PDP vs documentos</span>
-            <span class="nav-phase">NUEVO</span>
-          </button>
-
           <p class="navigation-label">Administración</p>
           <button class="nav-item" data-view="history">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/><path d="M12 7v5l3 2"/></svg></span>
+            <span class="nav-icon"><img class="nav-icon-image" src="./src/renderer/assets/module-icons/history.png" alt="" aria-hidden="true" /></span>
             <span>Historial</span>
           </button>
           <button class="nav-item" data-view="settings">
-            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.1 2.1-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-3v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2.1-2.1.1-.1A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.5-1H5.3v-3h.2A1.7 1.7 0 0 0 7 10a1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.1-2.1.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h3v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.1 2.1-.1.1A1.7 1.7 0 0 0 19.4 10a1.7 1.7 0 0 0 1.5 1h.2v3h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+            <span class="nav-icon"><img class="nav-icon-image" src="./src/renderer/assets/module-icons/settings.png" alt="" aria-hidden="true" /></span>
             <span>Configuración</span>
           </button>
         </nav>
@@ -244,11 +235,6 @@
           </div>
         </section>
 
-        <section class="view" id="view-excel" data-view-panel="excel">
-          <div class="section-intro"><p class="eyebrow accent">Fase 4</p><h2>Excel vs Web / Strapi</h2><p class="muted">Analiza diferencias y prepara sincronizaciones controladas con Strapi.</p></div>
-          <div class="coming-card"><div class="coming-icon">▤</div><h3>Módulo preparado para la siguiente fase</h3><p>La importación configurable, el dry-run y las confirmaciones de cambios se añadirán más adelante.</p><span class="status-badge pending">PRÓXIMAMENTE</span></div>
-        </section>
-
         <section class="view" id="view-bot" data-view-panel="bot">
           <div class="section-intro"><p class="eyebrow accent">Nuevo módulo</p><h2>Bot de nuevos productos</h2><p class="muted">Construye un flujo de acciones y validaciones que después ejecutará Playwright.</p></div>
           <div class="bot-layout">
@@ -347,39 +333,6 @@
           <div class="section-intro"><p class="eyebrow accent">Form Validation</p><h2>Envío y validación de leads</h2><p class="muted">Pega URLs QA o carga un Excel; el flujo actual detecta, envía y concilia cada landing.</p></div>
         </section>
 
-        <section class="view" id="view-pdp" data-view-panel="pdp">
-          <div class="section-intro"><p class="eyebrow accent">Nuevo módulo</p><h2>Validación PDP vs DOCX</h2><p class="muted">Compara el contenido de las páginas de producto con la matriz Excel y su documento de referencia.</p></div>
-          <article class="panel pdp-semantic-panel">
-            <div class="panel-header"><div><p class="eyebrow">MVP genérico</p><h3>Cualquier documento vs una página</h3></div><span class="status-badge success">DOCUMENTO = VERDAD</span></div>
-            <p class="pdp-help">Carga un documento nuevo y escribe la URL. El sistema detectará títulos, secciones, listas, tablas, preguntas, relaciones y contenido visible sin depender de nombres fijos.</p>
-            <div class="pdp-semantic-form">
-              <label class="pdp-file-field"><span>Documento fuente</span><input id="pdp-source-file" type="file" accept=".pdf,.docx,.xlsx,.txt,.md,.csv" /><small id="pdp-source-name">Aún no has seleccionado un documento.</small></label>
-              <label class="pdp-file-field"><span>URL de la página</span><input id="pdp-page-url" type="url" placeholder="https://ejemplo.com/pagina" /><small>Se analiza el contenido visible y relevante.</small></label>
-              <label class="pdp-ai-option"><input id="pdp-use-ai" type="checkbox" checked /><span>Usar IA para posibles equivalencias y ambigüedades (Gemini + Groq + Ollama).</span></label>
-              <button class="primary-button pdp-run-button" id="pdp-semantic-run" type="button">Analizar y comparar <span>→</span></button>
-            </div>
-            <div class="pdp-run-status" id="pdp-semantic-status">Selecciona un documento y una URL para iniciar la verificación.</div>
-            <div class="pdp-summary" id="pdp-semantic-summary"></div>
-            <div class="pdp-results-list" id="pdp-semantic-results"><div class="bot-empty"><div class="empty-icon">▤</div><strong>No hay reporte todavía</strong><span>Los hallazgos aparecerán agrupados por sección.</span></div></div>
-          </article>
-          <div class="pdp-layout">
-            <article class="panel pdp-upload-panel">
-              <div class="panel-header"><div><p class="eyebrow">Fuentes</p><h3>Archivos a revisar</h3></div><span class="status-badge pending">LOCAL</span></div>
-              <p class="pdp-help">El Excel debe tener una columna de <strong>Programa</strong>, <strong>Carrera</strong> o <strong>Nombre</strong>, y otra de <strong>URL</strong>, <strong>Link</strong>, <strong>Enlace</strong> o <strong>PDP</strong>.</p>
-              <label class="pdp-file-field"><span>1. Matriz de programas (.xlsx)</span><input id="pdp-excel-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" /><small id="pdp-excel-name">Aún no has seleccionado un Excel.</small></label>
-              <label class="pdp-file-field"><span>2. Documento de contenido (.docx)</span><input id="pdp-docx-file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" /><small id="pdp-docx-name">Aún no has seleccionado un DOCX.</small></label>
-              <div class="pdp-guide"><strong>Qué se valida</strong><span>Título, descripción, asignaturas y preguntas frecuentes. El DOCX puede contener varios programas; cada bloque debe iniciar con el nombre del programa.</span></div>
-              <button class="primary-button pdp-run-button" id="pdp-run" type="button">Comparar PDPs <span>→</span></button>
-            </article>
-            <article class="panel pdp-results-panel">
-              <div class="panel-header"><div><p class="eyebrow">Resultado</p><h3>Reporte de comparación</h3></div><span class="step-count" id="pdp-result-count">Sin ejecutar</span></div>
-              <div class="pdp-run-status" id="pdp-run-status">Comparte los dos archivos para iniciar una validación.</div>
-              <div class="pdp-summary" id="pdp-summary"></div>
-              <div class="pdp-results-list" id="pdp-results-list"><div class="bot-empty"><div class="empty-icon">▤</div><strong>No hay resultados todavía</strong><span>Al ejecutar se mostrará una PDP por programa y sus diferencias.</span></div></div>
-            </article>
-          </div>
-        </section>
-
         <section class="view" id="view-history" data-view-panel="history">
           <div class="section-intro"><p class="eyebrow accent">Trazabilidad</p><h2>Historial de ejecuciones</h2><p class="muted">Consulta los resultados almacenados por el backend local.</p></div>
           <article class="panel history-panel standalone-history"><div class="table-wrapper"><table><thead><tr><th>Automatización</th><th>Tipo</th><th>Fecha</th><th>Duración</th><th>Estado</th></tr></thead><tbody id="full-history-body"><tr><td colspan="5" class="table-empty">No hay ejecuciones registradas todavía.</td></tr></tbody></table></div></article>
@@ -392,6 +345,6 @@
       </main>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="./src/renderer/app.js?v=new-products-lead-destination-1"></script>
+    <script type="module" src="./src/renderer/app.js?v=liquid-button-1"></script>
   </body>
 </html>

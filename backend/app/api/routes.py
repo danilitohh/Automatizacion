@@ -45,8 +45,6 @@ from ..schemas.execution import (
 from ..services.dashboard_service import DashboardService
 from ..services.ai_service import AIService
 from ..services.logging_service import get_logger
-from ..services.pdp_validation_service import PdpValidationService
-from ..services.generic_pdp_validation_service import GenericPdpValidationService
 from ..services.bot_spreadsheet_service import BotSpreadsheetService
 from ..services.leads_deploy_spreadsheet_service import LeadsDeploySpreadsheetService
 from ..services.bot_report_service import BotReportService
@@ -2267,88 +2265,6 @@ async def cancel_utel_run(request: Request, job_id: str) -> dict:
     task.cancel()
     await asyncio.sleep(0)
     return job
-
-
-@router.post("/pdp/validate")
-async def validate_pdp(
-    request: Request,
-    excel_file: UploadFile = File(...),
-    docx_file: UploadFile = File(...),
-) -> dict:
-    """Compara información de PDP en Excel/DOCX contra sus páginas web."""
-
-    if not (excel_file.filename or "").lower().endswith(".xlsx"):
-        raise HTTPException(status_code=400, detail="Comparte un archivo Excel con extensión .xlsx.")
-    if not (docx_file.filename or "").lower().endswith(".docx"):
-        raise HTTPException(status_code=400, detail="Comparte un documento Word con extensión .docx.")
-
-    settings = request.app.state.settings
-    try:
-        result = await PdpValidationService(settings).validate(
-            await excel_file.read(),
-            await docx_file.read(),
-        )
-    except (ValueError, RuntimeError) as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-
-    ExecutionRepository(settings.database_path).create_execution(
-        {
-            "automation_type": "pdp_document_validation",
-            "name": f"PDP vs DOCX ({result['summary']['programs']} programas)",
-            "status": "SUCCESS" if result["status"] == "PASS" else "WARNING",
-            "started_at": result["started_at"],
-            "finished_at": result["finished_at"],
-            "duration_seconds": result["duration_seconds"],
-            "summary": (
-                f"{result['summary']['programs']} PDP revisadas · "
-                f"{result['summary']['failed']} secciones con diferencias."
-            ),
-            "error_message": None,
-            "evidence_json": json.dumps(result, ensure_ascii=False),
-            "created_at": result["finished_at"],
-        }
-    )
-    return result
-
-
-@router.post("/pdp/semantic-validate")
-async def validate_pdp_semantic(
-    request: Request,
-    source_file: UploadFile = File(...),
-    url: str = Form(...),
-    use_ai: bool = Form(True),
-) -> dict:
-    """Compara cualquier documento admitido contra una única pÃ¡gina PDP."""
-
-    settings = request.app.state.settings
-    try:
-        result = await GenericPdpValidationService(settings).validate(
-            source_file.filename or "fuente",
-            await source_file.read(),
-            url.strip(),
-            use_ai,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-    except RuntimeError as error:
-        raise HTTPException(status_code=502, detail=str(error)) from error
-
-    summary = result["summary"]
-    ExecutionRepository(settings.database_path).create_execution(
-        {
-            "automation_type": "pdp_semantic_validation",
-            "name": f"PDP vs {result['source_filename']}",
-            "status": "SUCCESS" if result["status"] == "PASS" else "WARNING",
-            "started_at": result["started_at"],
-            "finished_at": result["finished_at"],
-            "duration_seconds": result["duration_seconds"],
-            "summary": f"{summary['exact_matches'] + summary['normalized_matches']} coincidentes Â· {summary['missing']} faltantes Â· {summary['different']} diferentes.",
-            "error_message": None,
-            "evidence_json": json.dumps(result, ensure_ascii=False),
-            "created_at": result["finished_at"],
-        }
-    )
-    return result
 
 
 @router.post("/bots/recorder/start", response_model=RecorderStartResponse)

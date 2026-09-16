@@ -1,18 +1,27 @@
 "use strict";
 
-import { HOLLOW_GLOBE_LAND_TEXTURE } from "./dashboard-globe-land.js?v=hollow-arcs-2";
-import { HOLLOW_GLOBE_ROUTES, HOLLOW_GLOBE_HUBS } from "./dashboard-globe-data.js?v=hollow-arcs-2";
+import { HOLLOW_GLOBE_LAND_TEXTURE } from "./dashboard-globe-land.js?v=hollow-arcs-4";
+import { HOLLOW_GLOBE_ROUTES, HOLLOW_GLOBE_HUBS } from "./dashboard-globe-data.js?v=hollow-arcs-4";
+import { loadThree } from "./three-runtime.js?v=utel-scenes-1";
 
-const THREE_MODULE_URL = "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
 const STYLE_ID = "dashboard-globe-three-style";
 let activeGlobe = null;
+
+// Renderiza el canvas con una densidad superior a la del layout CSS. El
+// canvas se amplía ligeramente para que el planeta sobresalga del panel, por
+// eso una resolución interna mayor evita el pixelado sin alterar su tamaño.
+const GLOBE_RENDER_SCALE = 1.5;
+function getGlobePixelRatio() {
+  const deviceRatio = Math.max(window.devicePixelRatio || 1, 1);
+  return Math.min(deviceRatio * GLOBE_RENDER_SCALE, 3);
+}
 
 function installStylesheet() {
   if (document.getElementById(STYLE_ID)) return;
   const link = document.createElement("link");
   link.id = STYLE_ID;
   link.rel = "stylesheet";
-  link.href = new URL("./dashboard-globe.css?v=hollow-arcs-2", import.meta.url).href;
+  link.href = new URL("./dashboard-globe.css?v=hollow-arcs-4", import.meta.url).href;
   document.head.appendChild(link);
 }
 
@@ -37,7 +46,7 @@ function makeGlowTexture(THREE) {
 function createDashboardGlobe(THREE, container) {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x031320, 7.5, 13.5);
+  scene.fog = new THREE.Fog(0x122315, 7.5, 13.5);
 
   const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 100);
   camera.position.set(0.7, 0.4, 5.45);
@@ -49,8 +58,10 @@ function createDashboardGlobe(THREE, container) {
     powerPreference: "high-performance",
   });
   renderer.setClearColor(0x000000, 0);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(getGlobePixelRatio());
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.08;
   renderer.domElement.setAttribute("aria-hidden", "true");
   renderer.domElement.tabIndex = -1;
   container.appendChild(renderer.domElement);
@@ -59,14 +70,14 @@ function createDashboardGlobe(THREE, container) {
   globeGroup.rotation.set(-0.035, -0.34, -0.02);
   scene.add(globeGroup);
 
-  scene.add(new THREE.AmbientLight(0x67f1ff, 0.68));
-  const dir1 = new THREE.DirectionalLight(0x7af4ff, 1.5);
+  scene.add(new THREE.AmbientLight(0x9fe770, 0.72));
+  const dir1 = new THREE.DirectionalLight(0x06b706, 1.45);
   dir1.position.set(5, 2, 5);
   scene.add(dir1);
-  const dir2 = new THREE.DirectionalLight(0xff58ad, 0.9);
+  const dir2 = new THREE.DirectionalLight(0x4000bc, 0.78);
   dir2.position.set(-4, -1, 3);
   scene.add(dir2);
-  const dir3 = new THREE.DirectionalLight(0xffffff, 0.45);
+  const dir3 = new THREE.DirectionalLight(0xffb937, 0.36);
   dir3.position.set(0, 5, -4);
   scene.add(dir3);
 
@@ -88,6 +99,22 @@ function createDashboardGlobe(THREE, container) {
 
   const globeRadius = 1.55;
 
+  // Retícula espacial: hace perceptible la curvatura de la esfera incluso
+  // cuando el mapa de continentes está girando o queda en sombra.
+  const gridGeometry = new THREE.WireframeGeometry(new THREE.SphereGeometry(globeRadius * 1.008, 36, 18));
+  const grid = new THREE.LineSegments(
+    gridGeometry,
+    new THREE.LineBasicMaterial({
+      color: 0x9fe770,
+      transparent: true,
+      opacity: 0.13,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: false,
+    }),
+  );
+  globeGroup.add(grid);
+
   globeGroup.add(new THREE.Mesh(
     new THREE.SphereGeometry(globeRadius, 112, 112),
     new THREE.MeshPhysicalMaterial({
@@ -106,8 +133,8 @@ function createDashboardGlobe(THREE, container) {
     uniforms: {
       uMap: { value: landTexture },
       uCameraPos: { value: new THREE.Vector3() },
-      uCyan: { value: new THREE.Color(0x37efff) },
-      uPink: { value: new THREE.Color(0xff4fa7) },
+      uGreen: { value: new THREE.Color(0x9fe770) },
+      uPurple: { value: new THREE.Color(0x4000bc) },
     },
     transparent: true,
     side: THREE.DoubleSide,
@@ -127,8 +154,8 @@ function createDashboardGlobe(THREE, container) {
     fragmentShader: `
       uniform sampler2D uMap;
       uniform vec3 uCameraPos;
-      uniform vec3 uCyan;
-      uniform vec3 uPink;
+      uniform vec3 uGreen;
+      uniform vec3 uPurple;
       varying vec2 vUv;
       varying vec3 vNormalW;
       varying vec3 vWorldPos;
@@ -139,9 +166,9 @@ function createDashboardGlobe(THREE, container) {
         if (mask < 0.12) discard;
         vec3 V = normalize(uCameraPos - vWorldPos);
         float fres = pow(1.0 - max(dot(normalize(vNormalW), V), 0.0), 2.6);
-        float pinkBand = smoothstep(0.15, 0.9, sin(vUv.y * 12.0 + vUv.x * 3.0) * 0.5 + 0.5) * 0.18;
-        vec3 base = mix(vec3(0.04, 0.13, 0.18), uCyan, 0.35 + fres * 0.55);
-        base = mix(base, uPink, pinkBand * fres);
+        float purpleBand = smoothstep(0.15, 0.9, sin(vUv.y * 12.0 + vUv.x * 3.0) * 0.5 + 0.5) * 0.18;
+        vec3 base = mix(vec3(0.05, 0.13, 0.06), uGreen, 0.30 + fres * 0.52);
+        base = mix(base, uPurple, purpleBand * fres);
         gl_FragColor = vec4(base * (0.55 + fres * 1.15), 0.88);
       }
     `,
@@ -153,8 +180,8 @@ function createDashboardGlobe(THREE, container) {
 
   const shellMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      uColor: { value: new THREE.Color(0x31ebff) },
-      uPink: { value: new THREE.Color(0xff4fa7) },
+      uColor: { value: new THREE.Color(0x06b706) },
+      uGold: { value: new THREE.Color(0xffb937) },
       uCameraPos: { value: new THREE.Vector3() },
     },
     transparent: true,
@@ -173,7 +200,7 @@ function createDashboardGlobe(THREE, container) {
     `,
     fragmentShader: `
       uniform vec3 uColor;
-      uniform vec3 uPink;
+      uniform vec3 uGold;
       uniform vec3 uCameraPos;
       varying vec3 vNormalW;
       varying vec3 vWorldPos;
@@ -181,7 +208,7 @@ function createDashboardGlobe(THREE, container) {
         vec3 V = normalize(uCameraPos - vWorldPos);
         float fres = pow(1.0 - max(dot(-normalize(vNormalW), V), 0.0), 3.0);
         float band = smoothstep(0.2, 0.8, vWorldPos.y * 0.2 + 0.5);
-        vec3 col = mix(uPink, uColor, band);
+        vec3 col = mix(uGold, uColor, band);
         gl_FragColor = vec4(col, fres * 0.45);
       }
     `,
@@ -189,6 +216,20 @@ function createDashboardGlobe(THREE, container) {
   globeGroup.add(new THREE.Mesh(
     new THREE.SphereGeometry(globeRadius * 1.04, 88, 88),
     shellMaterial,
+  ));
+
+  // Segunda capa de atmósfera: aporta volumen alrededor de los nodos sin
+  // competir con las rutas que deben permanecer en primer plano.
+  globeGroup.add(new THREE.Mesh(
+    new THREE.SphereGeometry(globeRadius * 1.075, 72, 72),
+    new THREE.MeshBasicMaterial({
+      color: 0x06b706,
+      transparent: true,
+      opacity: 0.08,
+      side: THREE.BackSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
   ));
 
   function latLngToVec3(lat, lng, radius) {
@@ -232,7 +273,7 @@ function createDashboardGlobe(THREE, container) {
       new THREE.LineBasicMaterial({
         color: new THREE.Color(route.c),
         transparent: true,
-        opacity: route.c === "#ff4fa7" ? 0.85 : 0.72,
+        opacity: route.c === "#4000bc" ? 0.85 : 0.72,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       }),
@@ -240,7 +281,7 @@ function createDashboardGlobe(THREE, container) {
     arcGroup.add(new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(points),
       new THREE.LineBasicMaterial({
-        color: 0x6aefff,
+        color: 0x9fe770,
         transparent: true,
         opacity: 0.12,
         blending: THREE.AdditiveBlending,
@@ -251,25 +292,23 @@ function createDashboardGlobe(THREE, container) {
     createNode(start, route.c, 0.09);
     createNode(end, route.c, 0.09);
 
-    const pulse = createNode(start.clone(), route.c, route.c === "#ff4fa7" ? 0.16 : 0.13);
-    pulse.userData = {
-      curve,
-      speed: 0.08 + Math.random() * 0.12,
-      t: Math.random(),
-      scaleBase: route.c === "#ff4fa7" ? 0.16 : 0.13,
-    };
-    movingPulses.push(pulse);
-
-    if (index % 4 === 0) {
-      const pulse2 = createNode(start.clone(), "#d9fcff", 0.08);
-      pulse2.userData = {
+    // Dos pulsos por ruta generan la lectura de tráfico continuo sin llenar
+    // la escena de partículas estáticas: uno principal y otro de seguimiento.
+    const pulseColor = route.c;
+    const pulseSize = route.c === "#4000bc" ? 0.16 : 0.13;
+    const createPulse = (color, size, baseOpacity, phaseOffset) => {
+      const pulse = createNode(start.clone(), color, size);
+      pulse.userData = {
         curve,
-        speed: 0.06 + Math.random() * 0.08,
-        t: Math.random(),
-        scaleBase: 0.08,
+        speed: 0.22 + Math.random() * 0.18,
+        t: (Math.random() + phaseOffset) % 1,
+        scaleBase: size,
+        baseOpacity,
       };
-      movingPulses.push(pulse2);
-    }
+      movingPulses.push(pulse);
+    };
+    createPulse(pulseColor, pulseSize, 0.98, 0);
+    createPulse("#9fe770", 0.072, 0.58, 0.38 + index * 0.017);
   }
 
   HOLLOW_GLOBE_ROUTES.forEach(createArc);
@@ -281,7 +320,7 @@ function createDashboardGlobe(THREE, container) {
   const ring = new THREE.Mesh(
     ringGeometry,
     new THREE.MeshBasicMaterial({
-      color: 0x0bd5e9,
+      color: 0x06b706,
       transparent: true,
       opacity: 0.18,
       blending: THREE.AdditiveBlending,
@@ -295,7 +334,7 @@ function createDashboardGlobe(THREE, container) {
   const ring2 = new THREE.Mesh(
     ringGeometry.clone(),
     new THREE.MeshBasicMaterial({
-      color: 0xff4fa7,
+      color: 0x4000bc,
       transparent: true,
       opacity: 0.11,
       blending: THREE.AdditiveBlending,
@@ -306,6 +345,21 @@ function createDashboardGlobe(THREE, container) {
   ring2.rotation.x = -Math.PI * 0.4;
   ring2.rotation.y = Math.PI * 0.48;
   globeGroup.add(ring2);
+
+  const ring3 = new THREE.Mesh(
+    ringGeometry.clone(),
+    new THREE.MeshBasicMaterial({
+      color: 0xffb937,
+      transparent: true,
+      opacity: 0.11,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
+  );
+  ring3.scale.set(1.09, 1.09, 1.09);
+  ring3.rotation.x = Math.PI * 0.48;
+  ring3.rotation.y = -Math.PI * 0.28;
+  globeGroup.add(ring3);
 
   let autoRotate = !reducedMotion;
   let dragging = false;
@@ -354,7 +408,7 @@ function createDashboardGlobe(THREE, container) {
     const width = Math.max(rect.width, 1);
     const height = Math.max(rect.height, 1);
     renderer.setSize(width, height, false);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(getGlobePixelRatio());
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
   };
@@ -387,13 +441,14 @@ function createDashboardGlobe(THREE, container) {
       if (autoRotate && !dragging) globeGroup.rotation.y += 0.108 * delta;
       ring.rotation.z += 0.09 * delta;
       ring2.rotation.z -= 0.066 * delta;
+      ring3.rotation.z += 0.045 * delta;
 
       movingPulses.forEach((sprite, index) => {
-        sprite.userData.t = (sprite.userData.t + sprite.userData.speed * delta * 0.15) % 1;
+        sprite.userData.t = (sprite.userData.t + sprite.userData.speed * delta * 0.62) % 1;
         sprite.position.copy(sprite.userData.curve.getPoint(sprite.userData.t));
         const scale = sprite.userData.scaleBase * (1 + Math.sin(elapsed * 4 + index) * 0.18);
         sprite.scale.set(scale, scale, scale);
-        sprite.material.opacity = 0.72 + 0.28 * Math.sin(elapsed * 5 + index * 0.7);
+        sprite.material.opacity = sprite.userData.baseOpacity * (0.70 + 0.30 * Math.sin(elapsed * 5 + index * 0.7));
       });
 
       hubSprites.forEach((hub, index) => {
@@ -437,9 +492,9 @@ export async function initializeDashboardGlobe() {
   if (!container || activeGlobe) return;
 
   const legacyMarkup = container.innerHTML;
+  installStylesheet();
   try {
-    const THREE = await import(THREE_MODULE_URL);
-    installStylesheet();
+    const THREE = await loadThree();
     container.classList.add("three-globe-active", "hollow-arcs-active");
     container.replaceChildren();
     activeGlobe = createDashboardGlobe(THREE, container);

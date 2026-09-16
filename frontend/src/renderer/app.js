@@ -5,9 +5,10 @@ import { api } from "../services/api.js";
 import { leadsDeployApi } from "../services/leads-deploy-api.js";
 import { initializeBotModule } from "./bot-module.js?v=new-products-lead-destination-1";
 import { initializeLeadsDeployModule } from "./leads-deploy-module.js?v=leads-deploy-isolated-4";
-import { initializePdpModule } from "./pdp-module.js";
 import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
 import { initializeGooeyButtons } from "./gooey-buttons.js";
+import { initializeOptionWheel } from "./option-wheel.js";
+import { initializeLiquidButtons } from "./liquid-buttons.js";
 
 // Estado mínimo persistido para restaurar la última pantalla abierta.
 const LAST_VIEW_KEY = "qa-automation.last-view";
@@ -18,7 +19,6 @@ const runtimeMode = window.desktop ? "desktop" : "web";
 
 const viewMeta = {
   dashboard: { title: "Dashboard", description: "Resumen operativo" },
-  excel: { title: "Excel vs Web / Strapi", description: "Automatizaciones" },
   bot: { title: "Bot de nuevos productos", description: "Automatizaciones" },
   "leads-deploy": { title: "Bot Leads Deploy", description: "Automatizaciones" },
   "weekly-auto": { title: "Weekly Auto", description: "Automatizaciones" },
@@ -26,7 +26,6 @@ const viewMeta = {
   "weekly-forms": { title: "Weekly Forms", description: "Weekly Auto" },
   "weekly-performance": { title: "Weekly Performance", description: "Weekly Auto" },
   "weekly-leads": { title: "Form Validation", description: "Automatizaciones" },
-  pdp: { title: "Validación PDP vs DOCX", description: "Automatizaciones" },
   history: { title: "Historial", description: "Trazabilidad" },
   settings: { title: "Configuración", description: "Administración" },
 };
@@ -248,6 +247,13 @@ function bindEvents() {
 }
 
 bindEvents();
+initializeOptionWheel({
+  navigation: document.querySelector(".navigation"),
+  sourceItems: [...document.querySelectorAll(".navigation > .nav-item, .navigation > .nav-submenu > .nav-subitem")],
+  // La rueda es una capa visual; la navegación real sigue pasando por los
+  // botones originales y, por tanto, conserva sus rutas y estados actuales.
+  onChange: (_index, source) => source?.click(),
+});
 initializeGooeyButtons();
 // Descarta una vista guardada que ya no existe para evitar una pantalla vacía
 // cuando se retiran módulos del menú en una actualización de la interfaz.
@@ -299,6 +305,6 @@ initializeWeeklyAutoModule({
   cancelWeeklyLeads: api.cancelWeeklyLeads,
   weeklyLeadsDownloadUrl: api.weeklyLeadsDownloadUrl,
 });
-initializePdpModule({ showToast, validatePdp: api.validatePdp, validatePdpSemantic: api.validatePdpSemantic });
+initializeLiquidButtons();
 refreshDashboard();
 window.setInterval(refreshDashboard, 30000);

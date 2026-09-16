@@ -24,10 +24,6 @@ Submódulos:
 - `weekly_leads/`: envíos generales de leads con el mismo flujo de formularios y CRM.
 - `weekly_performance/`: PageSpeed desde Excel, con progreso, cancelación y descarga del resultado.
 
-## PDP Validation
-Backend: `backend/app/modules/pdp_validation/`
-Frontend: `frontend/src/modules/pdp_validation/`
-
 ## Archivos compartidos
 `backend/app/config`, `backend/app/database`, `backend/app/schemas`, logging, IA, `frontend/src/renderer/app.js` y los estilos generales siguen siendo infraestructura común.
 
