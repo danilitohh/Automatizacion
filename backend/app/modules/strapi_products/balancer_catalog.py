@@ -137,23 +137,28 @@ class BalancerProgramCatalog:
         search = self.page.locator("input[type='search']:visible").first
         await search.wait_for(state="visible", timeout=30000)
         table_id = await search.get_attribute("aria-controls") or "catalog"
-        info = self.page.locator(f"#{table_id}_info")
-        previous_info = await info.inner_text()
         await search.fill(lookup_name)
         # This catalog's DataTables search applies on Enter.
         await search.press("Enter")
         try:
             await self.page.wait_for_function(
-                "([tableId, previousText]) => {"
-                " const current = document.getElementById(`${tableId}_info`);"
-                " return current && current.innerText !== previousText;"
+                "([tableId, query]) => {"
+                " const search = document.querySelector(`input[type=\\\"search\\\"][aria-controls=\\\"${CSS.escape(tableId)}\\\"]`);"
+                " const table = document.getElementById(tableId);"
+                " if (!search || search.value !== query || !table) return false;"
+                " const normalize = value => String(value || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLocaleLowerCase().trim();"
+                " const rows = Array.from(table.querySelectorAll('tbody tr')).filter(row => row.offsetParent !== null);"
+                " if (!rows.length) return false;"
+                " if (rows.every(row => row.querySelector('td.dataTables_empty'))) return true;"
+                " const queryText = normalize(query);"
+                " return rows.some(row => normalize(row.cells[1]?.innerText || row.innerText).includes(queryText));"
                 "}",
-                arg=[table_id, previous_info],
-                timeout=10000,
+                arg=[table_id, lookup_name],
+                timeout=15000,
             )
         except Exception as error:
             raise BalancerCatalogError(
-                "El catálogo no actualizó la tabla después de buscar el nombre del producto."
+                "El catálogo no mostró resultados para el nombre del producto dentro del tiempo permitido."
             ) from error
         rows = await self.page.locator("table tbody tr:visible").evaluate_all(
             "rows => rows.map(row => Array.from(row.cells).map(cell => cell.innerText.trim()))"

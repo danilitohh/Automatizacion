@@ -209,3 +209,74 @@ def test_catalog_search_uses_base_name_and_returns_matching_code():
         return None
 
     asyncio.run(run())
+
+
+def test_consecutive_catalog_searches_wait_for_the_matching_rows_not_the_count():
+    class FakeLocator:
+        first = None
+
+        def __init__(self, page, *, is_search=False):
+            self.page = page
+            self.is_search = is_search
+            self.value = ""
+            self.first = self
+
+        async def get_attribute(self, name):
+            return "catalog" if self.is_search and name == "aria-controls" else None
+
+        async def wait_for(self, **_kwargs):
+            return None
+
+        async def fill(self, value):
+            self.value = value
+
+        async def press(self, _key):
+            return None
+
+        async def evaluate_all(self, _script):
+            return self.page.rows
+
+    class FakePage:
+        url = "https://lead-balancer.scalahed.com/catalog/program-of-interest"
+
+        def __init__(self):
+            self.rows = [["20261591", "Educación para la Sustentabilidad", "LICENCIATURA"]]
+            self.search = FakeLocator(self, is_search=True)
+            self.table = FakeLocator(self)
+            self.info_text = "Mostrando 1 a 1 de 1 entradas (Filtrado de 365 total de entradas)"
+
+        def locator(self, selector):
+            if selector.startswith("input[type='search']"):
+                return self.search
+            return self.table
+
+        async def wait_for_function(self, _expression, *, arg, **_kwargs):
+            # The result count stays 1 for both searches; only the matching row changes.
+            query = arg[1]
+            rows_by_name = {
+                "Educación para la Sustentabilidad": [
+                    ["20261591", "Educación para la Sustentabilidad", "LICENCIATURA"],
+                ],
+                "Finanzas y Estrategia Fiscal": [
+                    ["20261234", "Finanzas y Estrategia Fiscal", "LICENCIATURA"],
+                ],
+            }
+            self.rows = rows_by_name[query]
+
+    async def run():
+        catalog = BalancerProgramCatalog("https://lead-balancer.scalahed.com/leads/")
+        page = FakePage()
+        catalog.page = page
+        catalog.start = async_noop
+
+        first = await catalog.get_siu_key("Licenciatura en Educación para la Sustentabilidad")
+        second = await catalog.get_siu_key("Licenciatura en Finanzas y Estrategia Fiscal")
+
+        assert first == "20261591"
+        assert second == "20261234"
+        assert page.info_text == "Mostrando 1 a 1 de 1 entradas (Filtrado de 365 total de entradas)"
+
+    async def async_noop():
+        return None
+
+    asyncio.run(run())
