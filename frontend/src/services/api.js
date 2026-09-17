@@ -119,11 +119,10 @@ export const api = {
     formData.append("pdp_job_id", pdpJobId);
     return request("/api/strapi/products/combined-report", { method: "POST", body: formData });
   },
-  runStrapiDescriptions: (file, fichasFile, schemaFile, productScope = "2", dryRun = true) => {
+  runStrapiDescriptions: (file, fichasFile, productScope = "2", dryRun = true) => {
     const formData = new FormData();
     formData.append("file", file);
     if (fichasFile) formData.append("fichas_file", fichasFile);
-    if (schemaFile) formData.append("schema_file", schemaFile);
     formData.append("product_scope", productScope);
     formData.append("dry_run", String(dryRun));
     return request("/api/strapi/products/descriptions/run", { method: "POST", body: formData });

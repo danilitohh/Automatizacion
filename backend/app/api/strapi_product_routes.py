@@ -96,32 +96,13 @@ async def run_strapi_product_job(request: Request, file: UploadFile = File(...),
 
 
 @router.post("/descriptions/run", status_code=202)
-async def run_strapi_description_job(request: Request, file: UploadFile = File(...), fichas_file: UploadFile | None = File(None), schema_file: UploadFile | None = File(None), product_scope: str = Form("2"), dry_run: str = Form("true")) -> dict:
+async def run_strapi_description_job(request: Request, file: UploadFile = File(...), fichas_file: UploadFile | None = File(None), product_scope: str = Form("2"), dry_run: str = Form("true")) -> dict:
     settings: Settings = request.app.state.settings
     if not (file.filename or "").lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="Selecciona un archivo .xlsx.")
     if fichas_file and not (fichas_file.filename or "").lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="El archivo de fichas debe ser .xlsx.")
     _validate_product_scope(product_scope)
-    product_schema = None
-    if schema_file:
-        if not (schema_file.filename or "").lower().endswith(".json"):
-            raise HTTPException(status_code=400, detail="El esquema de Strapi debe ser un archivo .json.")
-        schema_content = await schema_file.read()
-        if len(schema_content) > 5 * 1024 * 1024:
-            raise HTTPException(status_code=413, detail="El esquema JSON supera el límite de 5 MB.")
-        try:
-            product_schema = json.loads(schema_content)
-        except (json.JSONDecodeError, UnicodeDecodeError) as error:
-            raise HTTPException(status_code=400, detail="El archivo de esquema no contiene JSON válido.") from error
-        product_definition = product_schema.get("product", {}) if isinstance(product_schema, dict) else {}
-        components = product_schema.get("components") if isinstance(product_schema, dict) else None
-        valid_components = isinstance(components, dict) and all(
-            isinstance(component, dict) and isinstance(component.get("attributes"), dict)
-            for component in components.values()
-        )
-        if not isinstance(product_definition, dict) or product_definition.get("uid") != "api::product.product" or not isinstance(product_definition.get("attributes"), dict) or not valid_components:
-            raise HTTPException(status_code=400, detail="El JSON no tiene el formato de esquema de producto Strapi esperado.")
     if dry_run.casefold() not in {"true", "false"}:
         raise HTTPException(status_code=400, detail="dry_run debe ser true o false.")
     try:
@@ -136,9 +117,9 @@ async def run_strapi_description_job(request: Request, file: UploadFile = File(.
     fichas_content = await fichas_file.read() if fichas_file else None
     request.app.state.strapi_product_jobs[job_id] = {
         "job_id": job_id, "operation": "descriptions", "status": "RUNNING", "country": detected.label, "country_code": detected.code, "locale": detected.locale,
-        "dry_run": dry_run.casefold() == "true", "filename": file.filename, "product_scope": product_scope, "schema_version": product_schema_version(product_schema), "schema_source": "json" if product_schema else "integrado", "started_at": datetime.now(timezone.utc).isoformat(), "completed": 0,
+        "dry_run": dry_run.casefold() == "true", "filename": file.filename, "product_scope": product_scope, "schema_version": product_schema_version(), "schema_source": "integrado", "started_at": datetime.now(timezone.utc).isoformat(), "completed": 0,
     }
-    request.app.state.bot_tasks[job_id] = asyncio.create_task(_run_description_job(request.app, job_id, content, file.filename or "resultado.xlsx", detected, fichas_content, product_schema, product_scope))
+    request.app.state.bot_tasks[job_id] = asyncio.create_task(_run_description_job(request.app, job_id, content, file.filename or "resultado.xlsx", detected, fichas_content, product_scope))
     return request.app.state.strapi_product_jobs[job_id]
 
 
@@ -210,7 +191,7 @@ async def _run_job(application, job_id: str, content: bytes, filename: str, coun
             await client.close()
 
 
-async def _run_description_job(application, job_id: str, content: bytes, filename: str, country_config, fichas_content: bytes | None = None, product_schema: dict | None = None, product_scope: str = "2") -> None:
+async def _run_description_job(application, job_id: str, content: bytes, filename: str, country_config, fichas_content: bytes | None = None, product_scope: str = "2") -> None:
     settings: Settings = application.state.settings
     job = application.state.strapi_product_jobs[job_id]
     client = None
@@ -239,16 +220,26 @@ async def _run_description_job(application, job_id: str, content: bytes, filenam
         username = username.get_secret_value() if hasattr(username, "get_secret_value") else str(username)
         password = password.get_secret_value() if hasattr(password, "get_secret_value") else str(password)
         siu_key_lookup = None
-        if username and password:
-            balancer_catalog = BalancerProgramCatalog(settings.lead_balancer_url, username, password)
-            siu_key_lookup = balancer_catalog.get_siu_key
-        runner = StrapiDescriptionRunner(client, country_config.label, country_config.locale, dry_run=job["dry_run"], short_field=settings.strapi_short_description_field, long_field=settings.strapi_long_description_field, content_field=settings.strapi_content_description_field, programs_field=settings.strapi_programs_field, download_program_field=settings.strapi_download_program_field, experience_field=settings.strapi_experience_field, subjects_field=settings.strapi_subjects_field, siu_key_field=settings.strapi_siu_key_field, banner_key_field=settings.strapi_banner_key_field, siu_key_lookup=siu_key_lookup, fichas_lookup=fichas, title_field=settings.strapi_program_field, status=settings.strapi_content_status, google_drive_client=drive_client, product_schema=product_schema)
+        if not username or not password:
+            raise ValueError("Faltan las credenciales del Balanceador; se cancela PDP para no guardar el producto sin siuKey/bannerKey.")
+        balancer_catalog = BalancerProgramCatalog(
+            settings.lead_balancer_url,
+            username,
+            password,
+            progress_callback=lambda message: job.update({"progress_message": message}),
+        )
+        siu_key_lookup = balancer_catalog.get_siu_key
+        runner = StrapiDescriptionRunner(client, country_config.label, country_config.locale, dry_run=job["dry_run"], short_field=settings.strapi_short_description_field, long_field=settings.strapi_long_description_field, content_field=settings.strapi_content_description_field, programs_field=settings.strapi_programs_field, download_program_field=settings.strapi_download_program_field, experience_field=settings.strapi_experience_field, subjects_field=settings.strapi_subjects_field, siu_key_field=settings.strapi_siu_key_field, banner_key_field=settings.strapi_banner_key_field, siu_key_lookup=siu_key_lookup, fichas_lookup=fichas, title_field=settings.strapi_program_field, status=settings.strapi_content_status, google_drive_client=drive_client)
         results, summary = await runner.run(rows)
+        balancer_blockers = [
+            result.message for result in results
+            if result.status == "FAILED" and result.message and "balanceador" in result.message.casefold()
+        ]
         report_dir = settings.storage_dir / "reports" / "strapi"
         report_dir.mkdir(parents=True, exist_ok=True)
         report_path = report_dir / f"{job_id}_{Path(filename).stem}_descriptions.xlsx"
         report_path.write_bytes(build_description_report(results, summary))
-        job.update({"status": "SUCCESS" if not summary.failed and not summary.invalid_data else "WARNING", "completed": summary.total, "summary": summary.as_dict(), "results": [result.as_dict() for result in results], "report_path": str(report_path), "download_url": f"/api/strapi/products/jobs/{job_id}/download", "finished_at": datetime.now(timezone.utc).isoformat()})
+        job.update({"status": "SUCCESS" if not summary.failed and not summary.invalid_data else "WARNING", "completed": summary.total, "summary": summary.as_dict(), "results": [result.as_dict() for result in results], "blocking_reason": balancer_blockers[0] if balancer_blockers else None, "report_path": str(report_path), "download_url": f"/api/strapi/products/jobs/{job_id}/download", "finished_at": datetime.now(timezone.utc).isoformat()})
     except Exception as error:  # noqa: BLE001
         job.update({"status": "FAILED", "message": str(error), "finished_at": datetime.now(timezone.utc).isoformat()})
     finally:

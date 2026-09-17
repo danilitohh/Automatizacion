@@ -249,11 +249,10 @@
                 <label class="field"><span>Alcance de la ejecución</span><select id="strapi-products-scope"><option value="limit" selected>Solo los primeros…</option><option value="all">Todos los productos del Excel</option></select><span class="strapi-scope-count-row" id="strapi-products-scope-count-row">Procesar primeros <input id="strapi-products-scope-count" type="number" min="1" max="100000" value="2" inputmode="numeric" aria-label="Cantidad de primeros productos" /> productos</span><small>Se conserva el orden del archivo. En modo real solo se actualizarán los productos incluidos en el alcance.</small></label>
                 <label class="field full"><span>Archivo con productos (.xlsx)</span><input id="strapi-products-file" type="file" accept=".xlsx" /><small>Nombre con código de país, por ejemplo [AR]. Debe incluir Programa y Documento PDP; este último puede ser un enlace de Google Drive.</small></label>
                 <label class="field full"><span>Archivo de fichas (.xlsx, opcional)</span><input id="strapi-products-fichas-file" type="file" accept=".xlsx" /><small>Inclúyelo para sincronizar los enlaces de descarga de las fichas. Si no lo cargas, se usará el archivo configurado en el backend, si existe.</small></label>
-                <fieldset class="field full" style="border:0;padding:0;margin:0"><legend>Esquema de validación PDP</legend><div class="bot-fields"><label class="toggle-field"><input type="radio" name="strapi-products-schema-mode" value="integrated" checked /><span><strong>Usar esquema integrado</strong><small>Snapshot incluido en la automatización.</small></span></label><label class="toggle-field"><input type="radio" name="strapi-products-schema-mode" value="json" /><span><strong>Usar esquema del JSON</strong><small>Solo para esta ejecución.</small></span></label></div></fieldset>
-                <label class="field full" id="strapi-products-schema-field" hidden><span>Archivo de esquema Strapi (.json)</span><input id="strapi-products-schema-file" type="file" accept=".json,application/json" /><small>Se utilizará solo para validar el payload de esta ejecución; no reemplaza el esquema integrado ni modifica Strapi.</small></label>
+                <div class="security-note schema-note"><span>✓</span><p>Validación PDP con el esquema Strapi integrado (versión 2026-09-17.1), incluido en el proyecto. No necesitas cargar otro archivo.</p></div>
                 <label class="toggle-field full-toggle"><input id="strapi-products-dry-run" type="checkbox" checked /><span><strong>DRY RUN</strong><small>Calcula cambios sin modificar Strapi.</small></span></label>
               </div>
-              <div class="security-note"><span>i</span><p>La ejecución real puede modificar los campos PDP que aparezcan en el plan. Revisa el plan por producto; el token permanece en el backend. Los documentos PDP se leen desde sus enlaces de Google Drive.</p></div>
+              <div class="security-note"><span>i</span><p>Si Balanceador solicita una verificación, se abrirá una ventana para completarla y el proceso continuará al terminar. PDP se valida primero; canonical solo se ejecuta si PDP no queda bloqueado. En modo real se modificarán los campos que aparezcan en el plan.</p></div>
                 <div class="bot-flow-actions"><button class="primary-button" id="strapi-products-full-run" type="button">Hacer todo el proceso <span>→</span></button><a class="secondary-button" id="strapi-products-report-download" hidden download>Descargar reporte completo</a></div>
             </article>
             <article class="panel bot-flow-panel">
@@ -375,6 +374,6 @@
       </main>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="./src/renderer/app.js?v=main-strapi-sync-3"></script>
+    <script type="module" src="./src/renderer/app.js?v=main-strapi-sync-4"></script>
   </body>
 </html>

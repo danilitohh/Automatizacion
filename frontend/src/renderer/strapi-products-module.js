@@ -38,9 +38,6 @@ export function initializeStrapiProductsModule({ api, showToast }) {
   const status = document.querySelector("#strapi-products-status");
   const dryRun = document.querySelector("#strapi-products-dry-run");
   const fichasFile = document.querySelector("#strapi-products-fichas-file");
-  const schemaModeInputs = [...document.querySelectorAll('input[name="strapi-products-schema-mode"]')];
-  const schemaField = document.querySelector("#strapi-products-schema-field");
-  const schemaFile = document.querySelector("#strapi-products-schema-file");
   const reportDownload = document.querySelector("#strapi-products-report-download");
   if (!country || !file || !fullRun) return;
 
@@ -51,12 +48,6 @@ export function initializeStrapiProductsModule({ api, showToast }) {
     if (scopeCountRow) scopeCountRow.hidden = !limited;
     if (scopeCount) scopeCount.disabled = !limited;
   });
-
-  schemaModeInputs.forEach((input) => input.addEventListener("change", () => {
-    const usesJson = schemaModeInputs.find((item) => item.checked)?.value === "json";
-    if (schemaField) schemaField.hidden = !usesJson;
-    if (!usesJson && schemaFile) schemaFile.value = "";
-  }));
 
   api.strapiProductCountries().then((payload) => {
     country.innerHTML = '<option value="">Selecciona un país</option>';
@@ -84,6 +75,7 @@ export function initializeStrapiProductsModule({ api, showToast }) {
     do {
       await new Promise((resolve) => setTimeout(resolve, 500));
       current = await api.strapiProductStatus(job.job_id);
+      if (current.progress_message) status.textContent = current.progress_message;
     } while (current.status === "RUNNING");
     return current;
   }
@@ -97,11 +89,6 @@ export function initializeStrapiProductsModule({ api, showToast }) {
   async function startProcess(steps) {
     if (!file.files[0]) {
       showToast("Selecciona un archivo Excel.", "error");
-      return;
-    }
-    const schemaMode = schemaModeInputs.find((item) => item.checked)?.value || "integrated";
-    if (steps.includes("descriptions") && schemaMode === "json" && !schemaFile?.files[0]) {
-      showToast("Selecciona el JSON del esquema Strapi.", "error");
       return;
     }
     const scope = selectedScope();
@@ -126,11 +113,12 @@ export function initializeStrapiProductsModule({ api, showToast }) {
         status.textContent = `${dryRun.checked ? "DRY RUN" : "Ejecución real"} · paso ${index + 1}/${steps.length}: ${stepNames[step]}...`;
         const started = step === "canonical"
           ? await api.runStrapiProducts(file.files[0], country.value, scope, dryRun.checked)
-          : await api.runStrapiDescriptions(file.files[0], fichasFile?.files[0] || null, schemaMode === "json" ? schemaFile.files[0] : null, scope, dryRun.checked);
+          : await api.runStrapiDescriptions(file.files[0], fichasFile?.files[0] || null, scope, dryRun.checked);
         const current = await waitForJob(started);
         current.operation_label = step === "canonical" ? "Canonical" : "PDP";
         completedJobs.push(current);
         renderResults(current);
+        if (current.blocking_reason) throw new Error(`${current.blocking_reason} No se ejecutó el paso canonical.`);
         if (current.status === "FAILED") throw new Error(`${stepNames[step]}: ${current.message || "el proceso falló"}`);
       }
 
@@ -152,7 +140,8 @@ export function initializeStrapiProductsModule({ api, showToast }) {
       const inputTotal = finalJob.input_total ?? finalJob.summary?.total ?? 0;
       const selectedTotal = finalJob.selected_total ?? finalJob.summary?.total ?? 0;
       const finalStatus = completedJobs.some((job) => job.status === "WARNING") ? "WARNING" : "SUCCESS";
-      status.textContent = `${finalStatus}: ${selectedTotal} de ${inputTotal} productos procesados en ${completedJobs.length} paso(s)${steps.includes("descriptions") ? ` · esquema ${finalJob.schema_source === "json" ? "JSON" : "integrado"} (${finalJob.schema_version || "sin versión"})` : ""}.`;
+      const pdpJob = completedJobs.find((job) => job.operation_label === "PDP");
+      status.textContent = `${finalStatus}: ${selectedTotal} de ${inputTotal} productos procesados en ${completedJobs.length} paso(s)${pdpJob ? ` · esquema integrado (${pdpJob.schema_version || "sin versión"})` : ""}.`;
       showToast("Proceso de Strapi terminado.", "info");
     } catch (error) {
       status.textContent = error.message;
@@ -162,5 +151,5 @@ export function initializeStrapiProductsModule({ api, showToast }) {
     }
   }
 
-  fullRun.addEventListener("click", () => startProcess(["canonical", "descriptions"]));
+  fullRun.addEventListener("click", () => startProcess(["descriptions", "canonical"]));
 }

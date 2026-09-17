@@ -44,6 +44,7 @@
 .strapi-scope-count-row { display: flex; align-items: center; gap: 8px; min-height: 38px; }
 .strapi-scope-count-row[hidden] { display: none !important; }
 .strapi-scope-count-row input { width: 105px; }
+.schema-note { grid-column: 1 / -1; }
 #view-excel > .coming-card { display: none; }
 
 * { box-sizing: border-box; }

@@ -1,12 +1,12 @@
 "use strict";
 
 // Coordinador de la interfaz: navegación, dashboard e historial compartido.
-import { api } from "../services/api.js";
+import { api } from "../services/api.js?v=pdp-integrated-schema-1";
 import { leadsDeployApi } from "../services/leads-deploy-api.js";
 import { initializeBotModule } from "./bot-module.js?v=new-products-lead-destination-1";
 import { initializeLeadsDeployModule } from "./leads-deploy-module.js?v=leads-deploy-isolated-4";
 import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
-import { initializeStrapiProductsModule } from "./strapi-products-module.js";
+import { initializeStrapiProductsModule } from "./strapi-products-module.js?v=pdp-integrated-schema-1";
 import { initializeGooeyButtons } from "./gooey-buttons.js";
 import { initializeOptionWheel } from "./option-wheel.js";
 import { initializeLiquidButtons } from "./liquid-buttons.js";

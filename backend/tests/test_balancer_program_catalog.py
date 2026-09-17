@@ -57,13 +57,111 @@ def test_manual_challenge_is_detected_without_attempting_to_bypass_it():
     )
 
 
+def test_manual_challenge_waits_for_user_and_reports_progress():
+    class FakeBody:
+        def __init__(self, page):
+            self.page = page
+
+        async def inner_text(self):
+            return self.page.body
+
+    class FakePage:
+        url = "https://lead-balancer.scalahed.com/catalog/program-of-interest?__cf_chl=1"
+
+        def __init__(self):
+            self.body = "Just a moment... Verify you are human"
+            self.fronted = False
+
+        def locator(self, _selector):
+            return FakeBody(self)
+
+        async def title(self):
+            return "Just a moment..."
+
+        async def bring_to_front(self):
+            self.fronted = True
+
+        async def wait_for_function(self, *_args, **_kwargs):
+            # Simulate the user resolving Cloudflare in the visible window.
+            self.url = "https://lead-balancer.scalahed.com/catalog/program-of-interest"
+            self.body = "Catálogo de programas"
+
+    async def run():
+        messages = []
+        catalog = BalancerProgramCatalog(
+            "https://lead-balancer.scalahed.com/leads/",
+            progress_callback=messages.append,
+        )
+        page = FakePage()
+        catalog.page = page
+
+        await catalog._wait_for_manual_challenge()
+
+        assert page.fronted
+        assert len(messages) == 2
+        assert "ventana visible" in messages[0]
+        assert "Verificación completada" in messages[1]
+
+    asyncio.run(run())
+
+
+def test_open_catalog_waits_for_search_without_stale_challenge_method():
+    class FakeLocator:
+        first = None
+
+        def __init__(self, *, count=0):
+            self.count_value = count
+            self.first = self
+
+        async def count(self):
+            return self.count_value
+
+        async def wait_for(self, **_kwargs):
+            return None
+
+        async def inner_text(self):
+            return "Programas de interés"
+
+    class FakePage:
+        url = ""
+
+        async def goto(self, url, **_kwargs):
+            self.url = url
+
+        async def title(self):
+            return "Catálogo de programas"
+
+        def locator(self, selector):
+            if selector == "body":
+                return FakeLocator()
+            if selector.startswith("input[type='password']"):
+                return FakeLocator(count=0)
+            return FakeLocator()
+
+    async def run():
+        catalog = BalancerProgramCatalog("https://lead-balancer.scalahed.com/leads/")
+        catalog.page = FakePage()
+
+        await catalog._open_catalog()
+
+        assert catalog.page.url.endswith("/catalog/program-of-interest")
+
+    asyncio.run(run())
+
+
 def test_catalog_search_uses_base_name_and_returns_matching_code():
     class FakeLocator:
-        def __init__(self, *, rows=None):
+        def __init__(self, *, rows=None, value=""):
             self.rows = rows or []
-            self.value = None
+            self.value = value
             self.pressed = None
             self.first = self
+
+        async def get_attribute(self, name):
+            return "catalog" if name == "aria-controls" else None
+
+        async def inner_text(self):
+            return self.value or "Mostrando 1 a 10 de 365 entradas"
 
         async def wait_for(self, **kwargs):
             return None
@@ -82,6 +180,7 @@ def test_catalog_search_uses_base_name_and_returns_matching_code():
 
         def __init__(self):
             self.search = FakeLocator()
+            self.info = FakeLocator(value="Mostrando 1 a 10 de 365 entradas")
             self.table = FakeLocator(rows=[
                 ["20261591", "Educación para la Sustentabilidad", "LICENCIATURA"],
             ])
@@ -89,7 +188,12 @@ def test_catalog_search_uses_base_name_and_returns_matching_code():
         def locator(self, selector):
             if selector.startswith("input[type='search']"):
                 return self.search
+            if selector == "#catalog_info":
+                return self.info
             return self.table
+
+        async def wait_for_function(self, _expression, *, arg, **_kwargs):
+            self.info.value = "Mostrando 1 a 1 de 1 entradas (Filtrado de 365 total de entradas)"
 
     async def run():
         catalog = BalancerProgramCatalog("https://lead-balancer.scalahed.com/leads/")

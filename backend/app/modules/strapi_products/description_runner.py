@@ -115,6 +115,8 @@ class StrapiDescriptionRunner:
     async def process(self, row: ProductRow) -> ProductResult:
         changes: list[dict] = []
         verification: dict = {"ok": None, "performed": False}
+        description: str | None = None
+        siu_key: str | None = None
         try:
             source, content = await self._document_content(row.document or "")
             description = extract_description(row.program, source, content)
@@ -462,7 +464,7 @@ class StrapiDescriptionRunner:
         except GoogleDriveClientError as error:
             return ProductResult(row.sheet, row.row_number, row.program, self.country, "FAILED", message=str(error), changes=changes, verification=verification)
         except BalancerCatalogError as error:
-            return ProductResult(row.sheet, row.row_number, row.program, self.country, "FAILED", message=str(error), changes=changes, verification=verification)
+            return ProductResult(row.sheet, row.row_number, row.program, self.country, "FAILED", message=str(error), description=description, siu_key=siu_key, banner_key=siu_key, changes=changes, verification=verification)
 
     async def run(self, rows: list[ProductRow]) -> tuple[list[ProductResult], ProductSummary]:
         results = [await self.process(row) for row in rows]

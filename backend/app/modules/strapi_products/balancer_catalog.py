@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Callable
 from urllib.parse import urlparse
 
 from playwright.async_api import async_playwright
@@ -81,34 +82,43 @@ def select_catalog_code(rows: list[list[str]], program: str) -> str:
 class BalancerProgramCatalog:
     """Read SIU keys from the Balanceador program-of-interest catalog."""
 
-    def __init__(self, leads_url: str, username: str = "", password: str = "") -> None:
+    def __init__(self, leads_url: str, username: str = "", password: str = "", *, progress_callback: Callable[[str], None] | None = None, challenge_timeout_seconds: int = 300) -> None:
         parsed = urlparse(leads_url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             raise ValueError("La URL del Balanceador no es válida.")
         self.origin = f"{parsed.scheme}://{parsed.netloc}"
         self.username = username.strip()
         self.password = password
+        self.progress_callback = progress_callback
+        self.challenge_timeout_seconds = challenge_timeout_seconds
         self.playwright = None
         self.browser = None
         self.page = None
+        self.startup_error: BalancerCatalogError | None = None
 
     async def start(self) -> None:
         if self.page is not None:
             return
+        if self.startup_error is not None:
+            raise self.startup_error
         self.playwright = await async_playwright().start()
         try:
-            self.browser = await self.playwright.chromium.launch(headless=True)
+            self.browser = await self.playwright.chromium.launch(headless=False)
             context = await self.browser.new_context()
             self.page = await context.new_page()
             await self._open_catalog()
-        except BalancerCatalogError:
+        except BalancerCatalogError as error:
+            self.startup_error = error
             await self.close()
             raise
         except Exception as error:
-            await self.close()
-            raise BalancerCatalogError(
+            detail = str(error).strip().splitlines()[0]
+            self.startup_error = BalancerCatalogError(
                 "No se pudo abrir o autenticar el catálogo del Balanceador."
-            ) from error
+                + (f" Detalle técnico: {detail[:240]}" if detail else "")
+            )
+            await self.close()
+            raise self.startup_error from error
 
     async def close(self) -> None:
         if self.browser is not None:
@@ -126,10 +136,25 @@ class BalancerProgramCatalog:
         lookup_name, _ = program_lookup_details(program)
         search = self.page.locator("input[type='search']:visible").first
         await search.wait_for(state="visible", timeout=30000)
+        table_id = await search.get_attribute("aria-controls") or "catalog"
+        info = self.page.locator(f"#{table_id}_info")
+        previous_info = await info.inner_text()
         await search.fill(lookup_name)
         # This catalog's DataTables search applies on Enter.
         await search.press("Enter")
-        await self.page.locator("table tbody tr").first.wait_for(state="visible", timeout=30000)
+        try:
+            await self.page.wait_for_function(
+                "([tableId, previousText]) => {"
+                " const current = document.getElementById(`${tableId}_info`);"
+                " return current && current.innerText !== previousText;"
+                "}",
+                arg=[table_id, previous_info],
+                timeout=10000,
+            )
+        except Exception as error:
+            raise BalancerCatalogError(
+                "El catálogo no actualizó la tabla después de buscar el nombre del producto."
+            ) from error
         rows = await self.page.locator("table tbody tr:visible").evaluate_all(
             "rows => rows.map(row => Array.from(row.cells).map(cell => cell.innerText.trim()))"
         )
@@ -138,7 +163,7 @@ class BalancerProgramCatalog:
     async def _open_catalog(self) -> None:
         catalog_url = f"{self.origin}/catalog/program-of-interest"
         await self.page.goto(catalog_url, wait_until="domcontentloaded", timeout=60000)
-        await self._stop_for_challenge()
+        await self._wait_for_manual_challenge()
 
         password = self.page.locator("input[type='password']:visible").first
         login_path = "/login" in self.page.url
@@ -152,7 +177,7 @@ class BalancerProgramCatalog:
                 wait_until="domcontentloaded",
                 timeout=60000,
             )
-            await self._stop_for_challenge()
+            await self._wait_for_manual_challenge()
             username_input = self.page.locator(
                 "input[name='email']:visible, input[name='username']:visible, "
                 "input[name='login']:visible, input[type='email']:visible, "
@@ -166,6 +191,7 @@ class BalancerProgramCatalog:
                 "button:has-text('Ingresar'):visible, button:has-text('Iniciar'):visible, "
                 "button:has-text('Login'):visible"
             ).first.click()
+            await self._wait_for_manual_challenge()
             try:
                 await self.page.wait_for_function(
                     "() => !location.pathname.startsWith('/login')",
@@ -175,17 +201,45 @@ class BalancerProgramCatalog:
                 raise BalancerCatalogError(
                     "No se pudo iniciar sesión en el Balanceador para consultar el catálogo."
                 ) from error
-            await self._stop_for_challenge()
             await self.page.goto(catalog_url, wait_until="domcontentloaded", timeout=60000)
 
-        await self.page.locator("input[type='search']:visible").first.wait_for(
-            state="visible", timeout=30000
-        )
+        await self._wait_for_manual_challenge()
+        try:
+            await self.page.locator("input[type='search']:visible").first.wait_for(
+                state="visible", timeout=30000
+            )
+        except Exception as error:
+            raise BalancerCatalogError(
+                "El catálogo del Balanceador no quedó disponible después del inicio de sesión/verificación."
+            ) from error
 
-    async def _stop_for_challenge(self) -> None:
+    async def _wait_for_manual_challenge(self) -> None:
         title = await self.page.title()
         body = await self.page.locator("body").inner_text()
-        if _is_manual_challenge(self.page.url, title, body):
-            raise BalancerCatalogError(
-                "El Balanceador solicita una verificación manual antes de abrir el catálogo."
+        if not _is_manual_challenge(self.page.url, title, body):
+            return
+        message = (
+            "Completa la verificación de seguridad en la ventana visible del Balanceador. "
+            f"El proceso continuará automáticamente (espera máxima: {self.challenge_timeout_seconds // 60} minutos)."
+        )
+        if self.progress_callback:
+            self.progress_callback(message)
+        try:
+            await self.page.bring_to_front()
+            await self.page.wait_for_function(
+                """() => {
+                    const text = `${document.title} ${document.body?.innerText || ''}`.toLowerCase();
+                    const challengePath = location.pathname.includes('/cdn-cgi/challenge');
+                    const challengeText = ['just a moment', 'verify you are human', 'checking your browser']
+                        .some(marker => text.includes(marker));
+                    return !challengePath && !challengeText;
+                }""",
+                timeout=self.challenge_timeout_seconds * 1000,
+                polling=1000,
             )
+        except Exception as error:
+            raise BalancerCatalogError(
+                "La verificación manual del Balanceador no se completó dentro del tiempo permitido."
+            ) from error
+        if self.progress_callback:
+            self.progress_callback("Verificación completada; consultando el catálogo del Balanceador.")
