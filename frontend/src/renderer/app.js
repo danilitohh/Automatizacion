@@ -3,11 +3,11 @@
 // Coordinador de la interfaz: navegación, dashboard e historial compartido.
 import { api } from "../services/api.js";
 import { leadsDeployApi } from "../services/leads-deploy-api.js";
-import { initializeBotModule } from "./bot-module.js?v=new-products-lead-destination-1";
+import { initializeBotModule } from "./bot-module.js?v=scoped-bot-form-1";
 import { initializeLeadsDeployModule } from "./leads-deploy-module.js?v=leads-deploy-isolated-4";
 import { initializePdpModule } from "./pdp-module.js";
 import { initializeStrapiProductsModule } from "./strapi-products-module.js";
-import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
+import { initializeWeeklyAutoModule } from "../modules/weekly_auto/module.js";
 import { initializeGooeyButtons } from "./gooey-buttons.js";
 
 // Estado mínimo persistido para restaurar la última pantalla abierta.
@@ -15,11 +15,19 @@ const LAST_VIEW_KEY = "qa-automation.last-view";
 const state = { activeView: "dashboard" };
 const runtimeMode = window.desktop ? "desktop" : "web";
 
+function readLastView() {
+  try { return localStorage.getItem(LAST_VIEW_KEY); } catch { return null; }
+}
+
+function saveLastView(viewName) {
+  try { localStorage.setItem(LAST_VIEW_KEY, viewName); } catch { /* Storage may be disabled in embedded browsers. */ }
+}
+
 const viewMeta = {
   dashboard: { title: "Dashboard", description: "Resumen operativo" },
   forms: { title: "Validación de formularios", description: "Automatizaciones" },
   visual: { title: "Monitoreo visual", description: "Automatizaciones" },
-  excel: { title: "Excel vs Web / Strapi", description: "Automatizaciones" },
+  excel: { title: "Strapi productos", description: "Sincronización PDP" },
   bot: { title: "Bot de nuevos productos", description: "Automatizaciones" },
   "leads-deploy": { title: "Bot Leads Deploy", description: "Automatizaciones" },
   "weekly-auto": { title: "Weekly Auto", description: "Automatizaciones" },
@@ -203,7 +211,7 @@ async function refreshDashboard() {
 function navigate(viewName) {
   if (!viewMeta[viewName]) return;
   state.activeView = viewName;
-  localStorage.setItem(LAST_VIEW_KEY, viewName);
+  saveLastView(viewName);
   elements.navigation.forEach((item) => item.classList.toggle("active", item.dataset.view === viewName));
   elements.views.forEach((view) => view.classList.toggle("active", view.dataset.viewPanel === viewName));
   elements.title.textContent = viewMeta[viewName].title;
@@ -221,7 +229,8 @@ function bindEvents() {
 
 bindEvents();
 initializeGooeyButtons();
-state.activeView = localStorage.getItem(LAST_VIEW_KEY) || state.activeView;
+const requestedView = new URLSearchParams(window.location.search).get("view");
+state.activeView = viewMeta[requestedView] ? requestedView : (readLastView() || state.activeView);
 navigate(state.activeView);
 initializeBotModule({
   showToast,

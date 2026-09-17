@@ -163,6 +163,35 @@ def test_existing_tab_without_desktop_image_copies_same_locale_template_media():
     assert template["attributes"]["content"][0]["coverImage"]["desktop"]["id"] == 52
 
 
+def test_existing_tab_normalizes_populated_desktop_media_for_strapi_updates():
+    existing = {
+        "id": 25,
+        "attributes": {
+            "strapiName": "Perfil egreso Programa A",
+            "content": [{
+                "id": 12,
+                "__component": "section.bullets",
+                "coverImage": {
+                    "id": 50,
+                    "desktop": {
+                        "id": 52,
+                        "image": {"data": {"id": 700, "attributes": {"name": "egreso.png"}}},
+                        "objectFit": "cover",
+                    },
+                },
+                "bullets": [],
+            }],
+        },
+    }
+    payload = build_bullet_tab_payload(
+        "Programa A", BulletTabContent("Perfil egreso", "Intro.", ("Viñeta.",)),
+        existing=existing, locale="es-AR",
+    )
+    desktop = payload["content"][0]["coverImage"]["desktop"]
+    assert desktop["id"] == 52
+    assert desktop["image"] == {"id": 700}
+
+
 def test_description_runner_updates_only_product_specific_bullet_tabs(tmp_path):
     source = tmp_path / "programa.docx"
     source.write_bytes(_document())
@@ -187,9 +216,14 @@ def test_description_runner_updates_only_product_specific_bullet_tabs(tmp_path):
         async def get_bullet_tab_by_id(self, identifier):
             return next(entry for entry in self.entries.values() if entry and entry["id"] == identifier)
         async def find_bullet_tab_template(self, prefix, locale): return self.template
-        async def update_bullet_tab(self, identifier, payload): updates.append((identifier, payload)); return {"id": identifier}
+        async def update_bullet_tab(self, identifier, payload):
+            entry = next(item for item in self.entries.values() if item and item["id"] == identifier)
+            entry["attributes"].update(payload)
+            updates.append((identifier, payload))
+            return {"id": identifier}
         async def create_bullet_tab(self, payload):
             created.append(payload)
+            self.entries[payload["strapiName"]] = {"id": 43, "attributes": payload}
             return {"id": 43}
         async def update_product(self, identifier, payload): updates.append(("product", payload)); return {}
 
@@ -197,7 +231,7 @@ def test_description_runner_updates_only_product_specific_bullet_tabs(tmp_path):
     results, summary = asyncio.run(StrapiDescriptionRunner(client, "Argentina", "es-AR", dry_run=False).run([
         ProductRow("Sheet", 2, "Programa de prueba", str(source))
     ]))
-    assert results[0].status == "UPDATED"
+    assert results[0].status == "UPDATED", (results[0].message, results[0].verification)
     assert summary.updated == 1
     assert [item[0] for item in updates[:2]] == [41, 42]
     assert updates[0][1]["content"][0]["bulletsDescription"]["desktop"] == "Texto introductorio de ingreso."

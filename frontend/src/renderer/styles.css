@@ -15,6 +15,17 @@
   --purple: #6366f1;
 }
 
+.strapi-product-result { padding: 12px 14px; border: 1px solid var(--border, rgba(255,255,255,.1)); border-radius: 12px; background: rgba(255,255,255,.025); }
+.strapi-product-result + .strapi-product-result { margin-top: 9px; }
+.strapi-product-result > summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; list-style: none; }
+.strapi-product-result > summary::-webkit-details-marker { display: none; }
+.strapi-product-result > summary span:first-child { display: grid; gap: 4px; }
+.strapi-product-result > summary small, .strapi-product-result > p, .strapi-change-row small { color: var(--muted, #aab0bf); }
+.strapi-product-result > p { margin: 10px 0; font-size: 12px; }
+.strapi-change-list { display: grid; gap: 8px; }
+.strapi-change-row { display: grid; gap: 4px; padding: 9px 10px; border-radius: 8px; background: rgba(0,0,0,.14); overflow-wrap: anywhere; }
+.strapi-change-row > span, .strapi-change-row small { font-size: 11px; }
+
 /* El panel Excel ahora contiene la automatizacion funcional de Strapi. */
 #view-excel > .coming-card { display: none; }
 

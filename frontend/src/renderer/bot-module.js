@@ -143,11 +143,12 @@ function escapeHtml(value) {
 }
 
 function organizeBotForm() {
-  const fields = document.querySelector(".bot-config-panel > .bot-fields");
+  const view = document.querySelector("#view-bot");
+  const fields = view?.querySelector(".bot-config-panel > .bot-fields");
   if (!fields) return;
   // Algunos controles (como el selector de Excel) viven en un div porque
   // contienen un botón adicional; todos deben moverse como un solo campo.
-  const field = (id) => document.querySelector(`#${id}`)?.closest("label, .field") || null;
+  const field = (id) => view.querySelector(`#${id}`)?.closest("label, .field") || null;
   const sections = document.createElement("div");
   sections.className = "bot-form-sections";
   sections.innerHTML = `
@@ -177,7 +178,7 @@ function organizeBotForm() {
   "bot-keep-browser-open",
   "bot-environment",
   ], advanced);
-  const securityNote = document.querySelector(".security-note");
+  const securityNote = view.querySelector(".security-note");
   if (securityNote) advanced.append(securityNote);
   fields.replaceWith(sections);
   ["bot-country", "bot-utel-url", "bot-modality"].forEach((id) => {

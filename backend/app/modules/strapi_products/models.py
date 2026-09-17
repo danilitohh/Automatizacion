@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 
@@ -25,6 +25,8 @@ class ProductResult:
     description: str | None = None
     siu_key: str | None = None
     banner_key: str | None = None
+    changes: list[dict[str, Any]] = field(default_factory=list)
+    verification: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)

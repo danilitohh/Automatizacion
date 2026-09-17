@@ -104,6 +104,19 @@ class StrapiClient:
         response = await self._request("PUT", f"{self.endpoint}/{identifier}", json={"data": attributes})
         return response.json()
 
+    async def get_product_sync_attributes(self, identifier: int | str, locale: str) -> dict[str, Any]:
+        """Read every product field managed by the PDP description synchronizer."""
+        fields = (
+            "commonQuestions", "tabsBulletSection", "programs", "downloadProgram",
+            "modalities", "education_level", "form_education_levels", "relatedProducts",
+            "knowledgeArea", "subjects",
+        )
+        params: dict[str, Any] = {"status": "draft", "locale": locale}
+        params.update({f"populate[{name}][populate]": "*" for name in fields})
+        response = await self._request("GET", f"{self.endpoint}/{identifier}", params=params)
+        data = response.json().get("data", {})
+        return data.get("attributes", data)
+
     async def get_product_programs(self, identifier: int | str) -> list[dict[str, Any]]:
         response = await self._request(
             "GET",
@@ -173,6 +186,15 @@ class StrapiClient:
             if isinstance(item, dict) and item.get("id") is not None
         ]
         return section
+
+    async def get_product_common_questions(self, identifier: int | str, locale: str) -> dict[str, Any] | None:
+        """Fetch the FAQ component and its dropdown components for exact comparison."""
+        response = await self._request("GET", f"{self.endpoint}/{identifier}", params={
+            "status": "draft", "locale": locale, "populate[commonQuestions][populate]": "*",
+        })
+        data = response.json().get("data", {})
+        attributes = data.get("attributes", data)
+        return attributes.get("commonQuestions")
 
     async def find_bullet_tab_by_strapi_name(self, strapi_name: str, locale: str) -> dict[str, Any]:
         for include_locale in (True, False):

@@ -73,9 +73,11 @@ export const api = {
     return request("/api/strapi/products/run", { method: "POST", body: formData });
   },
   strapiProductStatus: (jobId) => request(`/api/strapi/products/jobs/${jobId}`),
-  runStrapiDescriptions: (file, dryRun = true) => {
+  runStrapiDescriptions: (file, fichasFile, schemaFile, dryRun = true) => {
     const formData = new FormData();
     formData.append("file", file);
+    if (fichasFile) formData.append("fichas_file", fichasFile);
+    if (schemaFile) formData.append("schema_file", schemaFile);
     formData.append("dry_run", String(dryRun));
     return request("/api/strapi/products/descriptions/run", { method: "POST", body: formData });
   },

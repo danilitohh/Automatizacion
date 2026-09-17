@@ -5,9 +5,21 @@ function escapeHtml(value) {
 }
 
 function renderResults(job) {
-  const summary = job.summary || {};
-  document.querySelector("#strapi-products-summary").innerHTML = Object.entries(summary).map(([key, value]) => `<div class="pdp-summary-card"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(key)}</span></div>`).join("");
-  document.querySelector("#strapi-products-results").innerHTML = (job.results || []).map((item) => `<div class="recent-item"><span><b>${escapeHtml(item.program)}</b><small>${escapeHtml(item.status)} · ${escapeHtml(item.message || item.new_canonical || "")}</small></span><small>fila ${escapeHtml(item.row_number)}</small></div>`).join("") || "Sin resultados todavía.";
+  const results = job.results || [];
+  const summary = { ...(job.summary || {}) };
+  if (results.some((item) => item.verification)) {
+    summary.productos_verificados = results.filter((item) => item.verification?.ok === true).length;
+    summary.fallos_verificacion = results.filter((item) => item.verification?.ok === false).length;
+    summary.cambios_propuestos_o_aplicados = results.reduce((total, item) => total + (item.changes?.length || 0), 0);
+  }
+  const summaryLabels = { total: "Productos", updated: "Actualizados", dry_run: "Dry run", skipped: "Sin cambios", not_found: "No encontrados", ambiguous: "Ambiguos", invalid_data: "Datos inválidos", failed: "Fallidos", productos_verificados: "Verificados", fallos_verificacion: "Fallos de verificación", cambios_propuestos_o_aplicados: "Cambios" };
+  document.querySelector("#strapi-products-summary").innerHTML = Object.entries(summary).map(([key, value]) => `<div class="pdp-summary-card"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(summaryLabels[key] || key)}</span></div>`).join("");
+  document.querySelector("#strapi-products-results").innerHTML = results.map((item) => {
+    const verification = item.verification || {};
+    const verificationLabel = item.status === "DRY_RUN" ? "Dry run · sin escritura" : verification.ok === true ? "Verificado" : verification.ok === false ? "Falló verificación" : "No verificado";
+    const changes = (item.changes || []).map((change) => `<div class="strapi-change-row"><strong>${escapeHtml(change.field)}</strong><span>${escapeHtml(change.action || "update")} · ${change.verified === true ? "verificado" : change.verified === false ? "no coincide" : "sin verificación"}</span><small>Antes: ${escapeHtml(JSON.stringify(change.before ?? null))}</small><small>Después: ${escapeHtml(JSON.stringify(change.after ?? null))}</small>${change.created_id != null ? `<small>ID creado: ${escapeHtml(change.created_id)}</small>` : ""}</div>`).join("");
+    return `<details class="strapi-product-result"><summary><span><b>${escapeHtml(item.program)}</b><small>Fila ${escapeHtml(item.row_number)} · ${escapeHtml(item.status)} · ${escapeHtml(verificationLabel)}</small></span><span>${escapeHtml(item.changes?.length || 0)} cambios</span></summary><p>${escapeHtml(item.message || "")}</p>${changes ? `<div class="strapi-change-list">${changes}</div>` : "<small>Sin diferencias detectadas.</small>"}</details>`;
+  }).join("") || "Sin resultados todavía.";
 }
 
 const FILE_COUNTRIES = {
@@ -22,7 +34,17 @@ export function initializeStrapiProductsModule({ api, showToast }) {
   const status = document.querySelector("#strapi-products-status");
   const dryRun = document.querySelector("#strapi-products-dry-run");
   const descriptionRun = document.querySelector("#strapi-products-description-run");
+  const fichasFile = document.querySelector("#strapi-products-fichas-file");
+  const schemaModeInputs = [...document.querySelectorAll('input[name="strapi-products-schema-mode"]')];
+  const schemaField = document.querySelector("#strapi-products-schema-field");
+  const schemaFile = document.querySelector("#strapi-products-schema-file");
   if (!country || !file || !run) return;
+
+  schemaModeInputs.forEach((input) => input.addEventListener("change", () => {
+    const usesJson = schemaModeInputs.find((item) => item.checked)?.value === "json";
+    if (schemaField) schemaField.hidden = !usesJson;
+    if (!usesJson && schemaFile) schemaFile.value = "";
+  }));
 
   api.strapiProductCountries().then((payload) => {
     country.innerHTML = '<option value="">Selecciona un país</option>';
@@ -79,18 +101,23 @@ export function initializeStrapiProductsModule({ api, showToast }) {
       showToast("Selecciona un archivo Excel.", "error");
       return;
     }
-    if (!dryRun.checked && !window.confirm("La ejecución real modificará únicamente shortDescription y longDescription en Strapi. ¿Deseas continuar?")) return;
+    const schemaMode = schemaModeInputs.find((item) => item.checked)?.value || "integrated";
+    if (schemaMode === "json" && !schemaFile?.files[0]) {
+      showToast("Selecciona el JSON del esquema Strapi.", "error");
+      return;
+    }
+    if (!dryRun.checked && !window.confirm("La ejecución real aplicará en Strapi los cambios del plan PDP, que puede incluir descripciones, tabs, FAQ y relaciones. ¿Deseas continuar?")) return;
     descriptionRun.disabled = true;
     status.textContent = dryRun.checked ? "Extrayendo descripciones PDP en DRY RUN..." : "Cargando descripciones PDP en Strapi...";
     try {
-      const job = await api.runStrapiDescriptions(file.files[0], dryRun.checked);
+      const job = await api.runStrapiDescriptions(file.files[0], fichasFile?.files[0] || null, schemaMode === "json" ? schemaFile.files[0] : null, dryRun.checked);
       let current;
       do {
         await new Promise((resolve) => setTimeout(resolve, 500));
         current = await api.strapiProductStatus(job.job_id);
       } while (current.status === "RUNNING");
       renderResults(current);
-      status.textContent = `${current.status}: ${current.summary?.total ?? 0} filas procesadas.`;
+      status.textContent = `${current.status}: ${current.summary?.total ?? 0} filas procesadas · esquema ${current.schema_source === "json" ? "JSON" : "integrado"} (${current.schema_version || "sin versión"}).`;
       const download = document.querySelector("#strapi-products-download");
       download.hidden = !current.download_url;
       if (current.download_url) download.href = `${api.baseUrl}${current.download_url}`;

@@ -44,7 +44,7 @@
           </button>
           <button class="nav-item" data-view="excel">
             <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h2m2 0h4M8 16h2m2 0h4"/></svg></span>
-            <span>Excel vs Web</span>
+            <span>Strapi productos</span>
             <span class="nav-phase">F4</span>
           </button>
           <button class="nav-item" data-view="bot">
@@ -248,13 +248,16 @@
         <section class="view" id="view-excel" data-view-panel="excel">
           <div class="bot-layout" style="margin-top: 18px;">
             <article class="panel bot-config-panel">
-              <div class="panel-header"><div><p class="eyebrow">Automatización Strapi</p><h3>Actualizar LinkCanonical</h3><p class="panel-subtitle">Procesa la columna Programa y filtra por país en Strapi.</p></div><span class="status-badge success">DRY RUN SEGURO</span></div>
+              <div class="panel-header"><div><p class="eyebrow">Automatización Strapi</p><h3>Sincronización PDP por producto</h3><p class="panel-subtitle">Compara cada producto y presenta el plan antes de aplicar cambios.</p></div><span class="status-badge success">DRY RUN SEGURO</span></div>
               <div class="bot-fields">
                 <label class="field"><span>País</span><select id="strapi-products-country"><option value="">Cargando países...</option></select></label>
-                <label class="field full"><span>Archivo Excel (.xlsx)</span><input id="strapi-products-file" type="file" accept=".xlsx" /></label>
+                <label class="field full"><span>Archivo con productos (.xlsx)</span><input id="strapi-products-file" type="file" accept=".xlsx" /><small>Nombre con código de país, por ejemplo [AR]. Debe incluir Programa y Documento PDP; este último puede ser un enlace de Google Drive.</small></label>
+                 <label class="field full"><span>Archivo de fichas (.xlsx, opcional)</span><input id="strapi-products-fichas-file" type="file" accept=".xlsx" /><small>Inclúyelo para sincronizar los enlaces de descarga de las fichas. Si no lo cargas, se usará el archivo configurado en el backend, si existe.</small></label>
+                <fieldset class="field full" style="border:0;padding:0;margin:0"><legend>Esquema para validar el plan</legend><div class="bot-fields"><label class="toggle-field"><input type="radio" name="strapi-products-schema-mode" value="integrated" checked /><span><strong>Usar esquema integrado</strong><small>Snapshot incluido en la automatización.</small></span></label><label class="toggle-field"><input type="radio" name="strapi-products-schema-mode" value="json" /><span><strong>Usar esquema del JSON</strong><small>Solo para esta ejecución.</small></span></label></div></fieldset>
+                <label class="field full" id="strapi-products-schema-field" hidden><span>Archivo de esquema Strapi (.json)</span><input id="strapi-products-schema-file" type="file" accept=".json,application/json" /><small>Se utilizará solo para validar el payload de esta ejecución; no reemplaza el esquema integrado ni modifica Strapi.</small></label>
                 <label class="toggle-field full-toggle"><input id="strapi-products-dry-run" type="checkbox" checked /><span><strong>DRY RUN</strong><small>Calcula cambios sin modificar Strapi.</small></span></label>
               </div>
-              <div class="security-note"><span>i</span><p>La ejecución real requiere desactivar DRY RUN y confirmar explícitamente. El token permanece en el backend.</p></div>
+              <div class="security-note"><span>i</span><p>La ejecución real puede modificar los campos PDP que aparezcan en el plan. Revisa el plan por producto; el token permanece en el backend. Los documentos PDP se leen desde sus enlaces de Google Drive.</p></div>
               <div class="bot-flow-actions"><button class="primary-button" id="strapi-products-run" type="button">Actualizar canonical <span>→</span></button><button class="secondary-button" id="strapi-products-description-run" type="button">Cargar descripciones PDP</button><a class="secondary-button" id="strapi-products-download" hidden download>Descargar reporte</a></div>
             </article>
             <article class="panel bot-flow-panel">
@@ -264,8 +267,6 @@
               <div id="strapi-products-results" class="recent-list">Sin resultados todavía.</div>
             </article>
           </div>
-          <div class="section-intro"><p class="eyebrow accent">Fase 4</p><h2>Excel vs Web / Strapi</h2><p class="muted">Analiza diferencias y prepara sincronizaciones controladas con Strapi.</p></div>
-          <div class="coming-card"><div class="coming-icon">▤</div><h3>Módulo preparado para la siguiente fase</h3><p>La importación configurable, el dry-run y las confirmaciones de cambios se añadirán más adelante.</p><span class="status-badge pending">PRÓXIMAMENTE</span></div>
         </section>
 
         <section class="view" id="view-bot" data-view-panel="bot">
@@ -390,6 +391,6 @@
       </main>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="./src/renderer/app.js?v=new-products-lead-destination-1"></script>
+    <script type="module" src="./src/renderer/app.js?v=strapi-product-sync-view-3"></script>
   </body>
 </html>

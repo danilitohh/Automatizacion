@@ -187,6 +187,11 @@ def _copy_cover_image(component: dict, template_component: dict, *, creating: bo
         current_image = current_image["data"]
     has_current_image = isinstance(current_image, dict) and current_image.get("id") is not None
     if has_current_image:
+        # Populate responses wrap media in `data`; Strapi updates expect a
+        # relation reference with only the media ID.
+        current_desktop["image"] = {"id": current_image["id"]}
+        current_cover["desktop"] = current_desktop
+        component["coverImage"] = current_cover
         return
 
     template_desktop = deepcopy(template_cover.get("desktop") or {})
