@@ -86,3 +86,23 @@ def test_rows_for_mapping_does_not_require_program_url() -> None:
     assert rows[1]["country"] == "Perú"
     assert rows[0]["utel_url"] == ""
     assert rows[1]["workflow_mode"] == "form_validation"
+
+
+def test_navigation_plan_normalizes_english_master_for_local_forms() -> None:
+    """Master debe conservar el nivel de posgrado en formularios en español."""
+
+    plan = LeadsDeploySpreadsheetService.deploy_navigation_plan("Master", "Mexico")
+
+    assert plan["modality"] == "En linea"
+    assert plan["level"] == "Maestria"
+    assert plan["navigation_level"] == "Maestrias"
+
+
+def test_navigation_plan_keeps_international_master_surface() -> None:
+    """Los mercados internacionales siguen usando Master's Degree."""
+
+    plan = LeadsDeploySpreadsheetService.deploy_navigation_plan("Master", "Filipinas")
+
+    assert plan["modality"] == "Online"
+    assert plan["level"] == "Master's Degree"
+    assert plan["navigation_level"] == "Master"

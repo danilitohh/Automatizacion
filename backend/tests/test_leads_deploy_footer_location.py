@@ -89,3 +89,21 @@ def test_program_heading_tolerates_same_words_in_editorial_order():
         "maestria en mindfulness conciencia plena aplicada",
         "maestria en educacion y docencia",
     )
+
+
+def test_program_heading_tolerates_editorial_preposition_difference():
+    """La PDP puede publicar ``de`` donde el catálogo usa ``en``."""
+
+    assert LeadsDeployRunner._program_titles_equivalent(
+        "Maestría en Gestión Directiva de Instituciones de Salud",
+        "Maestría en Gestión Directiva de Instituciones en Salud",
+    )
+
+
+def test_program_heading_tolerates_known_cifal_suffix():
+    """El H1 puede omitir la promoción CIFAL/UNITAR del catálogo."""
+
+    assert LeadsDeployRunner._program_titles_equivalent(
+        "maestria en administracion publica",
+        "maestria en administracion publica con cifal malaga y unitar",
+    )

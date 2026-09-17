@@ -53,7 +53,7 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
         normalized = str(value or "").lower()
         normalized = re.sub(r"\s+", " ", normalized).strip()
         return re.sub(
-            r"^(?:licenciatura|carrera|maestr[ií]a|doctorado|diplomado|bootcamp)\s+en\s+",
+            r"^(?:licenciatura|carrera|maestr[ií]a|master|máster|doctorado|diplomado|bootcamp)\s+en\s+",
             "",
             normalized,
         ).strip()

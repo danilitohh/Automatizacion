@@ -603,6 +603,11 @@ def _ollama_phone_prompt(
 
     normalized_country = lead_service._normalize(country_label)
     prefix, total_digits = lead_service.PHONE_FORMATS[normalized_country]
+    generation_prefix = getattr(
+        lead_service,
+        "SYNTHETIC_GENERATION_PREFIXES",
+        {},
+    ).get(normalized_country, prefix)
     us_aliases = {"usa", "united states", "estados unidos", "global"}
 
     recent_used = [
@@ -630,7 +635,7 @@ def _ollama_phone_prompt(
         f"Genera exactamente UN teléfono nacional sintético para pruebas QA de {country_label}. "
         "Responde únicamente con los dígitos nacionales, sin código internacional, "
         "sin signo +, espacios, texto ni JSON. "
-        f"Debe tener exactamente {total_digits} dígitos y comenzar con {prefix}. "
+        f"Debe tener exactamente {total_digits} dígitos y comenzar con {generation_prefix}. "
         f"No uses ninguno de estos números ya reservados: {forbidden}. "
         f"Identificador único de solicitud: {nonce}. "
         f"Intento {attempt}. Devuelve un número diferente."

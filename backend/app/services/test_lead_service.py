@@ -47,6 +47,15 @@ class TestLeadService:
         "indonesia": ("812", 11),
     }
 
+    # Algunos países tienen prefijos móviles válidos dentro de un rango
+    # nacional mucho más amplio.  El prefijo general se conserva en
+    # ``PHONE_FORMATS`` para validar los campos del portal, pero el generador
+    # sintético usa una serie concreta para no recorrer miles de candidatos
+    # que libphonenumber rechaza.  321 es una serie móvil colombiana válida.
+    SYNTHETIC_GENERATION_PREFIXES = {
+        "colombia": "321",
+    }
+
     # Región ISO usada por libphonenumber para comprobar que un número
     # autorizado pertenece realmente al país de la fila.
     COUNTRY_REGIONS = {
@@ -267,13 +276,24 @@ class TestLeadService:
         used: set[str],
     ) -> str:
         prefix, total_digits = self.PHONE_FORMATS.get(normalized_country, ("9", 10))
-        suffix_digits = total_digits - len(prefix)
+        generation_prefix = self.SYNTHETIC_GENERATION_PREFIXES.get(
+            normalized_country,
+            prefix,
+        )
+        # El prefijo de generación debe seguir siendo compatible con la regla
+        # pública del país y no puede consumir más dígitos que el teléfono.
+        if (
+            not generation_prefix.startswith(prefix)
+            or len(generation_prefix) > total_digits
+        ):
+            generation_prefix = prefix
+        suffix_digits = total_digits - len(generation_prefix)
         capacity = 10 ** suffix_digits
         # Distribuye los candidatos y valida el plan nacional cuando se ha
         # habilitado explicitamente el uso de datos sinteticos.
         candidate = (capacity // 3 + phone_sequence * 7919) % capacity
         for _ in range(min(capacity, len(used) + 10000)):
-            phone = prefix + str(candidate).zfill(suffix_digits)
+            phone = generation_prefix + str(candidate).zfill(suffix_digits)
             if phone not in used and self._is_valid_generated_phone(phone, normalized_country):
                 return phone
             candidate = (candidate + 1) % capacity

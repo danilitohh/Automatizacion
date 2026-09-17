@@ -1114,6 +1114,34 @@ class UtelInconcertRunner:
         if actual_tokens == expected_tokens:
             return True
 
+        # El catálogo de algunas landings incluye la promoción CIFAL/UNITAR,
+        # mientras que el H1 de la PDP publica solo el nombre académico base.
+        # Se acepta únicamente ese sufijo completo y conocido, nunca un
+        # subconjunto arbitrario del título.
+        cifal_suffix = ("con", "cifal", "malaga", "y", "unitar")
+        for tokens_value in (actual_tokens, expected_tokens):
+            if tuple(tokens_value[-len(cifal_suffix):]) == cifal_suffix:
+                del tokens_value[-len(cifal_suffix):]
+        if actual_tokens == expected_tokens:
+            return True
+
+        # Algunas PDP publican una preposición editorial distinta a la del
+        # catálogo (por ejemplo, ``Instituciones de Salud`` frente a
+        # ``Instituciones en Salud``). Conservamos todas las palabras de
+        # contenido y toleramos únicamente esta sustitución de preposiciones,
+        # sin convertir la validación en una coincidencia por subconjunto.
+        editorial_prepositions = {"de", "en", "del"}
+        editorial_actual = [
+            "_prep" if token in editorial_prepositions else token
+            for token in actual_tokens
+        ]
+        editorial_expected = [
+            "_prep" if token in editorial_prepositions else token
+            for token in expected_tokens
+        ]
+        if editorial_actual == editorial_expected:
+            return True
+
         # Algunos títulos presentan el mismo nombre comercial en otro orden,
         # por ejemplo "Mindfulness (Conciencia Plena Aplicada)" frente a
         # "Conciencia Plena Aplicada — Mindfulness". Solo se acepta cuando el
@@ -3560,7 +3588,10 @@ class UtelInconcertRunner:
                 normalized_program = self._normalize(value)
                 # UTEL puede mostrar el programa sin el prefijo académico
                 # que sí aparece en el Excel o en el H1 de la PDP.
-                for prefix in ("carrera en ", "licenciatura en ", "maestria en ", "doctorado en ", "diplomado en "):
+                for prefix in (
+                    "carrera en ", "licenciatura en ", "maestria en ",
+                    "master en ", "máster en ", "doctorado en ", "diplomado en ",
+                ):
                     if normalized_program.startswith(prefix):
                         wanted.append(normalized_program[len(prefix):].strip())
                 if normalized_program.startswith("carrera "):
@@ -3615,7 +3646,10 @@ class UtelInconcertRunner:
 
         candidates = [value.strip()]
         normalized_program = self._normalize(value)
-        for prefix in ("carrera en ", "licenciatura en ", "maestria en ", "doctorado en ", "diplomado en "):
+        for prefix in (
+            "carrera en ", "licenciatura en ", "maestria en ",
+            "master en ", "máster en ", "doctorado en ", "diplomado en ",
+        ):
             if normalized_program.startswith(prefix):
                 # Conserva acentos y mayusculas quitando el mismo numero de
                 # caracteres que ocupa el prefijo visible del H1.

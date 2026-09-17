@@ -86,6 +86,16 @@ class LeadsDeploySpreadsheetService(BaseLeadsDeploySpreadsheetService):
                 "navigation_sublevel": "",
             }
 
+        # Algunas matrices de Leads Deploy usan las etiquetas inglesas
+        # ``Master``/``Bachelor`` también para México y otros mercados que
+        # exponen el formulario académico en español. Normalizarlas aquí evita
+        # abrir una PDP de posgrado y cambiar después el formulario a
+        # Licenciatura por la ruta de fallback del catálogo.
+        if "master" in level:
+            return super().deploy_navigation_plan("Maestria", country)
+        if "bachelor" in level:
+            return super().deploy_navigation_plan("Licenciatura", country)
+
         return super().deploy_navigation_plan(raw_level, country)
 
     @classmethod
