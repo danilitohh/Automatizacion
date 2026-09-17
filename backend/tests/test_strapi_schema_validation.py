@@ -44,3 +44,30 @@ def test_selected_json_schema_is_used_for_this_validation():
     errors = validate_product_payload({"commonQuestions": {"dropdowns": []}}, selected_schema)
 
     assert any("commonQuestions" in error for error in errors)
+
+
+def test_schema_accepts_null_values_for_optional_component_fields():
+    errors = validate_product_payload({
+        "commonQuestions": {
+            "openedDropdownColor": None,
+            "title": {"mobile": None},
+        },
+        "programs": [{
+            "descriptionDesktopMobile": {"mobile": None},
+        }],
+    })
+
+    assert errors == []
+
+
+def test_schema_rejects_null_for_required_component_fields():
+    schema_path = Path(__file__).parents[1] / "app/modules/strapi_products/strapi-product-schema.json"
+    required_schema = deepcopy(json.loads(schema_path.read_text(encoding="utf-8")))
+    required_schema["components"]["section.multiple-dropdown-markdown"]["attributes"]["openedDropdownColor"]["required"] = True
+
+    errors = validate_product_payload(
+        {"commonQuestions": {"openedDropdownColor": None}},
+        required_schema,
+    )
+
+    assert any("commonQuestions.openedDropdownColor" in error and "obligatorio" in error for error in errors)

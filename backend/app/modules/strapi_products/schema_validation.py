@@ -40,6 +40,13 @@ def _validate_attributes(
         if definition is None:
             errors.append(f"{current_path}: campo ausente en el esquema capturado")
             continue
+        if item is None:
+            if definition.get("required", False):
+                errors.append(f"{current_path}: campo obligatorio sin valor")
+            # Strapi returns null for many optional component fields. Preserve
+            # those values from the existing record without rejecting the
+            # whole PDP payload for a type mismatch.
+            continue
         kind = definition.get("type")
         if kind == "enumeration":
             if item not in definition.get("enum", []):
