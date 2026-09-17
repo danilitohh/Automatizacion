@@ -252,6 +252,7 @@ bindEvents();
 initializeOptionWheel({
   navigation: document.querySelector(".navigation"),
   sourceItems: [...document.querySelectorAll(".navigation > .nav-item, .navigation > .nav-submenu > .nav-subitem")],
+  options: { loop: true },
   // La rueda es una capa visual; la navegación real sigue pasando por los
   // botones originales y, por tanto, conserva sus rutas y estados actuales.
   onChange: (_index, source) => source?.click(),
@@ -260,7 +261,10 @@ initializeGooeyButtons();
 // Descarta una vista guardada que ya no existe para evitar una pantalla vacía
 // cuando se retiran módulos del menú en una actualización de la interfaz.
 const persistedView = localStorage.getItem(LAST_VIEW_KEY);
-state.activeView = persistedView && viewMeta[persistedView] ? persistedView : "dashboard";
+const requestedView = new URLSearchParams(window.location.search).get("view");
+state.activeView = viewMeta[requestedView]
+  ? requestedView
+  : persistedView && viewMeta[persistedView] ? persistedView : "dashboard";
 if (state.activeView !== persistedView) localStorage.setItem(LAST_VIEW_KEY, state.activeView);
 state.weeklyAutoExpanded = localStorage.getItem(WEEKLY_AUTO_EXPANDED_KEY) === "true" || WEEKLY_AUTO_VIEWS.has(state.activeView);
 setWeeklyAutoExpanded(state.weeklyAutoExpanded);

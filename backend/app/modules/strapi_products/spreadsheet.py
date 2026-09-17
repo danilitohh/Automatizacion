@@ -71,3 +71,16 @@ def read_product_rows(content: bytes) -> list[ProductRow]:
         return rows
     finally:
         workbook.close()
+
+
+def select_product_rows(rows: list[ProductRow], product_scope: str) -> list[ProductRow]:
+    """Apply an all or first-N scope while preserving spreadsheet order."""
+    if product_scope == "all":
+        return rows
+    try:
+        count = int(product_scope)
+    except (TypeError, ValueError) as error:
+        raise ValueError("product_scope debe ser un entero positivo o all.") from error
+    if count < 1:
+        raise ValueError("product_scope debe ser un entero positivo o all.")
+    return rows[:count]

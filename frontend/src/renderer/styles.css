@@ -41,6 +41,9 @@
 .strapi-change-list { display: grid; gap: 8px; }
 .strapi-change-row { display: grid; gap: 4px; padding: 9px 10px; border-radius: 8px; background: rgba(0,0,0,.06); overflow-wrap: anywhere; }
 .strapi-change-row > span, .strapi-change-row small { font-size: 11px; }
+.strapi-scope-count-row { display: flex; align-items: center; gap: 8px; min-height: 38px; }
+.strapi-scope-count-row[hidden] { display: none !important; }
+.strapi-scope-count-row input { width: 105px; }
 #view-excel > .coming-card { display: none; }
 
 * { box-sizing: border-box; }
