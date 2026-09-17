@@ -23,6 +23,8 @@ class ProductResult:
     new_canonical: str | None = None
     message: str | None = None
     description: str | None = None
+    siu_key: str | None = None
+    banner_key: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)

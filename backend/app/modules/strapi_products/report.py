@@ -29,9 +29,9 @@ def build_description_report(results: list[ProductResult], summary: ProductSumma
     workbook = Workbook()
     detail = workbook.active
     detail.title = "Resultados"
-    detail.append(["Hoja", "Fila", "Programa", "Pais", "Estado", "Descripcion extraida", "Mensaje"])
+    detail.append(["Hoja", "Fila", "Programa", "Pais", "Estado", "siuKey", "bannerKey", "Descripcion extraida", "Mensaje"])
     for result in results:
-        detail.append([result.sheet, result.row_number, result.program, result.country, result.status, result.description, result.message])
+        detail.append([result.sheet, result.row_number, result.program, result.country, result.status, result.siu_key, result.banner_key, result.description, result.message])
     overview = workbook.create_sheet("Resumen")
     overview.append(["Metrica", "Valor"])
     for key, value in summary.as_dict().items():

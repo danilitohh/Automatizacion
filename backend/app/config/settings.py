@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     lead_balancer_url: str = "https://lead-balancer.scalahed.com/leads/"
     lead_balancer_username: str = ""
     lead_balancer_password: SecretStr = SecretStr("")
+    strapi_siu_key_field: str = "siuKey"
+    strapi_banner_key_field: str = "bannerKey"
     # JSON con teléfonos reales controlados por QA, agrupados por país. Se
     # mantiene como secreto para que nunca aparezca en reprs ni respuestas.
     utel_test_phones_json: SecretStr = SecretStr("{}")

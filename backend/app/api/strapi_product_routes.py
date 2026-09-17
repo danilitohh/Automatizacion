@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 from ..config.settings import Settings
 from ..modules.strapi_products.description_runner import StrapiDescriptionRunner
 from ..modules.strapi_products.fichas import FichasLookup
+from ..modules.strapi_products.balancer_catalog import BalancerProgramCatalog
 from ..modules.strapi_products.report import build_description_report, build_report
 from ..modules.strapi_products.country import COUNTRIES, detect_country_from_filename
 from ..modules.strapi_products.runner import StrapiProductRunner
@@ -152,6 +153,7 @@ async def _run_description_job(application, job_id: str, content: bytes, filenam
     job = application.state.strapi_product_jobs[job_id]
     client = None
     drive_client = None
+    balancer_catalog = None
     try:
         rows = read_product_rows(content)
         client = StrapiClient(settings.strapi_url, _token(settings), settings.strapi_product_endpoint, settings.strapi_timeout_seconds)
@@ -165,7 +167,15 @@ async def _run_description_job(application, job_id: str, content: bytes, filenam
             downloads_path = Path.home() / "Downloads" / "fichas.xlsx"
             fichas_path = downloads_path if downloads_path.is_file() else fichas_path
         fichas = FichasLookup(fichas_path) if fichas_path.is_file() else None
-        runner = StrapiDescriptionRunner(client, country_config.label, country_config.locale, dry_run=job["dry_run"], short_field=settings.strapi_short_description_field, long_field=settings.strapi_long_description_field, content_field=settings.strapi_content_description_field, programs_field=settings.strapi_programs_field, download_program_field=settings.strapi_download_program_field, experience_field=settings.strapi_experience_field, subjects_field=settings.strapi_subjects_field, fichas_lookup=fichas, title_field=settings.strapi_program_field, status=settings.strapi_content_status, google_drive_client=drive_client)
+        username = settings.lead_balancer_username
+        password = settings.lead_balancer_password
+        username = username.get_secret_value() if hasattr(username, "get_secret_value") else str(username)
+        password = password.get_secret_value() if hasattr(password, "get_secret_value") else str(password)
+        siu_key_lookup = None
+        if username and password:
+            balancer_catalog = BalancerProgramCatalog(settings.lead_balancer_url, username, password)
+            siu_key_lookup = balancer_catalog.get_siu_key
+        runner = StrapiDescriptionRunner(client, country_config.label, country_config.locale, dry_run=job["dry_run"], short_field=settings.strapi_short_description_field, long_field=settings.strapi_long_description_field, content_field=settings.strapi_content_description_field, programs_field=settings.strapi_programs_field, download_program_field=settings.strapi_download_program_field, experience_field=settings.strapi_experience_field, subjects_field=settings.strapi_subjects_field, siu_key_field=settings.strapi_siu_key_field, banner_key_field=settings.strapi_banner_key_field, siu_key_lookup=siu_key_lookup, fichas_lookup=fichas, title_field=settings.strapi_program_field, status=settings.strapi_content_status, google_drive_client=drive_client)
         results, summary = await runner.run(rows)
         report_dir = settings.storage_dir / "reports" / "strapi"
         report_dir.mkdir(parents=True, exist_ok=True)
@@ -179,3 +189,5 @@ async def _run_description_job(application, job_id: str, content: bytes, filenam
             await client.close()
         if drive_client:
             await drive_client.close()
+        if balancer_catalog:
+            await balancer_catalog.close()

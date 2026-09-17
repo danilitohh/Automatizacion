@@ -150,6 +150,131 @@ class StrapiClient:
         data = response.json().get("data", {})
         return data.get("attributes", data)
 
+    async def get_product_tabs_bullet_section(self, identifier: int | str, locale: str) -> dict[str, Any]:
+        response = await self._request("GET", f"{self.endpoint}/{identifier}", params={
+            "status": "draft", "locale": locale, "populate[tabsBulletSection][populate]": "*",
+        })
+        data = response.json().get("data", {})
+        attributes = data.get("attributes", data)
+        section = attributes.get("tabsBulletSection") or {}
+        if isinstance(section, list):
+            section = section[0] if section else {}
+        tabs = section.get("tabs") or []
+        if isinstance(tabs, dict):
+            tabs = tabs.get("data", [])
+        section = dict(section)
+        section["tabs"] = [
+            {
+                "id": item.get("id"),
+                "strapiName": (item.get("attributes", item)).get("strapiName"),
+                "locale": (item.get("attributes", item)).get("locale"),
+            }
+            for item in tabs
+            if isinstance(item, dict) and item.get("id") is not None
+        ]
+        return section
+
+    async def find_bullet_tab_by_strapi_name(self, strapi_name: str, locale: str) -> dict[str, Any]:
+        for include_locale in (True, False):
+            params = {
+                "filters[strapiName][$eq]": strapi_name,
+                "pagination[pageSize]": 10,
+            }
+            if include_locale:
+                params["locale"] = locale
+            response = await self._request("GET", "/api/bullet-tabs", params=params)
+            entries = response.json().get("data", [])
+            if not entries:
+                continue
+            if len(entries) > 1:
+                raise StrapiAmbiguousError(f"Hay {len(entries)} pestañas llamadas {strapi_name!r}.")
+            return entries[0]
+        raise StrapiNotFoundError(f"No se encontró la pestaña {strapi_name!r} para {locale}.")
+
+    async def get_bullet_tab_by_strapi_name(self, strapi_name: str, locale: str) -> dict[str, Any] | None:
+        """Find one exact Bullet Tab and populate its editable content components."""
+        for include_locale in (True, False):
+            params = {
+                "filters[strapiName][$eq]": strapi_name,
+                "pagination[pageSize]": 10,
+                "populate[content][on][section.bullets][populate][bullets][populate]": "*",
+                "populate[content][on][section.bullets][populate][coverImage][populate][desktop][populate]": "*",
+                "populate[title]": "*",
+            }
+            if include_locale:
+                params["locale"] = locale
+            response = await self._request("GET", "/api/bullet-tabs", params=params)
+            entries = response.json().get("data", [])
+            if not entries:
+                continue
+            if len(entries) > 1:
+                raise StrapiAmbiguousError(f"Hay {len(entries)} pestañas llamadas {strapi_name!r}.")
+            return entries[0]
+        return None
+
+    async def get_bullet_tab_by_id(self, identifier: int | str) -> dict[str, Any]:
+        """Fetch an already-related tab so updates stay scoped to its product relation."""
+        response = await self._request("GET", f"/api/bullet-tabs/{identifier}", params={
+            "status": "draft",
+            "populate[content][on][section.bullets][populate][bullets][populate]": "*",
+            "populate[content][on][section.bullets][populate][coverImage][populate][desktop][populate]": "*",
+            "populate[title]": "*",
+        })
+        return response.json().get("data", {})
+
+    async def find_localized_bullet_tab_by_strapi_name(self, strapi_name: str, locale: str) -> dict[str, Any] | None:
+        """Find an exact tab in one locale without falling back to another country."""
+        response = await self._request("GET", "/api/bullet-tabs", params={
+            "filters[strapiName][$eq]": strapi_name,
+            "locale": locale,
+            "pagination[pageSize]": 10,
+            "populate[content][on][section.bullets][populate][bullets][populate]": "*",
+            "populate[content][on][section.bullets][populate][coverImage][populate][desktop][populate]": "*",
+            "populate[title]": "*",
+        })
+        entries = response.json().get("data", [])
+        if len(entries) > 1:
+            raise StrapiAmbiguousError(f"Hay {len(entries)} pestañas llamadas {strapi_name!r} para {locale}.")
+        return entries[0] if entries else None
+
+    async def find_bullet_tab_template(self, strapi_prefix: str, locale: str) -> dict[str, Any]:
+        """Find a same-locale tab of the same kind, preferring one with a desktop image."""
+        params = {
+            "filters[strapiName][$containsi]": strapi_prefix,
+            "locale": locale,
+            "pagination[pageSize]": 100,
+            "populate[content][on][section.bullets][populate][bullets][populate]": "*",
+            "populate[content][on][section.bullets][populate][coverImage][populate][desktop][populate]": "*",
+            "populate[title]": "*",
+        }
+        response = await self._request("GET", "/api/bullet-tabs", params=params)
+        entries = response.json().get("data", [])
+        matches = [
+            entry for entry in entries
+            if str((entry.get("attributes", entry)).get("strapiName", "")).casefold().startswith(strapi_prefix.casefold())
+        ]
+        for entry in matches:
+            attributes = entry.get("attributes", entry)
+            component = next((item for item in attributes.get("content") or [] if item.get("__component") == "section.bullets"), {})
+            cover = component.get("coverImage") or {}
+            desktop = cover.get("desktop") or {}
+            image = desktop.get("image") or {}
+            if isinstance(image, dict) and isinstance(image.get("data"), dict):
+                image = image["data"]
+            if isinstance(image, dict) and image.get("id") is not None:
+                return entry
+        if matches:
+            return matches[0]
+        raise StrapiNotFoundError(f"No se encontró una pestaña de referencia para {strapi_prefix!r} en {locale}.")
+
+    async def create_bullet_tab(self, attributes: dict[str, Any]) -> dict[str, Any]:
+        response = await self._request("POST", "/api/bullet-tabs", json={"data": attributes})
+        return response.json().get("data", {})
+
+    async def update_bullet_tab(self, identifier: int | str, attributes: dict[str, Any]) -> dict[str, Any]:
+        response = await self._request("PUT", f"/api/bullet-tabs/{identifier}", json={"data": attributes})
+        return response.json().get("data", {})
+
     async def find_subject(self, title: str, locale: str) -> dict[str, Any] | None:
         for include_locale in (True, False):
             params = {"filters[title][$eq]": title, "pagination[pageSize]": 10}

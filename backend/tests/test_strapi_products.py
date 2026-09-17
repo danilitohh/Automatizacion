@@ -70,7 +70,7 @@ def test_extracts_content_description_before_first_subject_block():
     assert extract_content_description("pdp.docx", output.getvalue()) == "¿Qué materias se estudian?\n\nEl plan de estudios brinda una formación integral."
 
 
-def test_description_runner_updates_only_two_description_fields(tmp_path):
+def test_description_runner_updates_descriptions_and_default_layout(tmp_path):
     document = Document()
     document.add_paragraph("Programa A", style="Title")
     document.add_paragraph("Descripcion PDP original.")
@@ -93,7 +93,51 @@ def test_description_runner_updates_only_two_description_fields(tmp_path):
     results, summary = asyncio.run(StrapiDescriptionRunner(FakeClient(), "Argentina", "es-AR", dry_run=False).run([ProductRow("Sheet", 2, "Programa A", str(source))]))
     assert results[0].status == "UPDATED"
     assert summary.updated == 1
-    assert calls == [((12, {"shortDescription": "Descripcion PDP original.", "longDescription": "Descripcion PDP original.", "contentDescription": "¿Qué materias se estudian?\n\nContenido de asignaturas."}), {})]
+    assert calls == [((12, {"shortDescription": "Descripcion PDP original.", "longDescription": "Descripcion PDP original.", "contentDescription": "¿Qué materias se estudian?\n\nContenido de asignaturas.", "customLayoutPDP": "thirdLayout"}), {})]
+
+
+def test_description_runner_sets_third_layout_and_product_specific_tabs(tmp_path):
+    document = Document()
+    document.add_paragraph("Programa A", style="Title")
+    document.add_paragraph("Descripción PDP.")
+    document.add_paragraph("Asignaturas")
+    document.add_paragraph("Contenido del plan.")
+    document.add_paragraph("1° cuatrimestre")
+    output = io.BytesIO(); document.save(output)
+    source = tmp_path / "programa-a.docx"
+    source.write_bytes(output.getvalue())
+    updates = []
+
+    class FakeClient:
+        async def find_product(self, *args, **kwargs):
+            return {"id": 12}
+
+        async def get_product_tabs_bullet_section(self, identifier, locale):
+            assert identifier == 12
+            assert locale == "es-AR"
+            return {"id": 42, "hideSection": True}
+
+        async def find_bullet_tab_by_strapi_name(self, name, locale):
+            assert locale == "es-AR"
+            return {"id": {"Perfil ingreso Programa A": 101, "Perfil egreso Programa A": 102, "Empleabilidad Programa A": 103}[name]}
+
+        async def update_product(self, identifier, attributes):
+            updates.append((identifier, attributes))
+
+    results, summary = asyncio.run(
+        StrapiDescriptionRunner(FakeClient(), "Argentina", "es-AR", dry_run=False).run(
+            [ProductRow("Sheet", 2, "Programa A", str(source))]
+        )
+    )
+    assert results[0].status == "UPDATED"
+    assert summary.updated == 1
+    assert updates[0][1]["customLayoutPDP"] == "thirdLayout"
+    assert updates[0][1]["tabsBulletSection"] == {
+        "id": 42,
+        "idForScrolling": "bannerSectionPdp",
+        "hideSection": True,
+        "tabs": [{"id": 101}, {"id": 102}, {"id": 103}],
+    }
 
 
 def test_description_runner_exports_private_google_doc_with_drive_client():
@@ -128,6 +172,78 @@ def test_description_runner_exports_private_google_doc_with_drive_client():
     assert results[0].status == "DRY_RUN"
     assert results[0].description == "Descripcion PDP original."
     assert summary.dry_run == 1
+
+
+def test_description_runner_dry_run_reports_siu_key_without_writing(tmp_path):
+    document = Document()
+    document.add_paragraph("Licenciatura en Educación para la Sustentabilidad", style="Title")
+    document.add_paragraph("Descripción PDP original.")
+    document.add_paragraph("Asignaturas")
+    document.add_paragraph("Contenido del plan.")
+    document.add_paragraph("1° cuatrimestre")
+    output = io.BytesIO()
+    document.save(output)
+    source = tmp_path / "educacion-sustentabilidad.docx"
+    source.write_bytes(output.getvalue())
+    writes = []
+
+    class FakeStrapiClient:
+        async def find_product(self, *args, **kwargs):
+            return {"id": 1571}
+
+        async def update_product(self, *args, **kwargs):
+            writes.append((args, kwargs))
+
+    async def lookup(program):
+        assert program == "Licenciatura en Educación para la Sustentabilidad"
+        return "20261591"
+
+    results, summary = asyncio.run(
+        StrapiDescriptionRunner(
+            FakeStrapiClient(), "México", "es-MX", dry_run=True, siu_key_lookup=lookup
+        ).run([ProductRow("México", 2, "Licenciatura en Educación para la Sustentabilidad", str(source))])
+    )
+    assert results[0].status == "DRY_RUN"
+    assert results[0].siu_key == "20261591"
+    assert results[0].banner_key == "20261591"
+    assert summary.dry_run == 1
+    assert writes == []
+
+
+def test_description_runner_includes_siu_key_in_live_product_payload(tmp_path):
+    document = Document()
+    document.add_paragraph("Licenciatura en Educación para la Sustentabilidad", style="Title")
+    document.add_paragraph("Descripción PDP original.")
+    document.add_paragraph("Asignaturas")
+    document.add_paragraph("Contenido del plan.")
+    document.add_paragraph("1° cuatrimestre")
+    output = io.BytesIO()
+    document.save(output)
+    source = tmp_path / "educacion-sustentabilidad.docx"
+    source.write_bytes(output.getvalue())
+    updates = []
+
+    class FakeStrapiClient:
+        async def find_product(self, *args, **kwargs):
+            return {"id": 1571}
+
+        async def update_product(self, identifier, attributes):
+            updates.append((identifier, attributes))
+
+    async def lookup(program):
+        return "20261591"
+
+    results, summary = asyncio.run(
+        StrapiDescriptionRunner(
+            FakeStrapiClient(), "México", "es-MX", dry_run=False, siu_key_lookup=lookup
+        ).run([ProductRow("México", 2, "Licenciatura en Educación para la Sustentabilidad", str(source))])
+    )
+    assert results[0].status == "UPDATED"
+    assert results[0].siu_key == "20261591"
+    assert summary.updated == 1
+    assert updates[0][0] == 1571
+    assert updates[0][1]["siuKey"] == "20261591"
+    assert updates[0][1]["bannerKey"] == "20261591"
 
 
 def test_spreadsheet_reads_program_and_skips_blank_rows():

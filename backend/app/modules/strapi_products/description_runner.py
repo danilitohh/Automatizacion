@@ -11,7 +11,9 @@ from ...services.google_drive_client import GoogleDriveClient, GoogleDriveClient
 from ...services.strapi_client import StrapiAmbiguousError, StrapiClient, StrapiClientError, StrapiNotFoundError
 from .models import ProductResult, ProductRow, ProductSummary
 from .pdp_description import extract_content_description, extract_description, extract_program_durations, extract_subjects
+from .bullet_tabs import TAB_PREFIXES, build_bullet_tab_payload, extract_bullet_tabs, has_desktop_cover_image, linked_tab_prefix
 from .fichas import FichasLookup
+from .balancer_catalog import BalancerCatalogError
 
 
 EXPERIENCE_SUFFIX = {"Argentina": "Arg", "México": "", "Mexico": "", "Colombia": "Col", "Ecuador": "Ecu", "Perú": "Per", "Peru": "Per", "Chile": "Chile", "El Salvador": "SV", "Panamá": "Pan", "Panama": "Pan", "Bolivia": "Bol", "USA": "USA", "República Dominicana": "Dom", "Republica Dominicana": "Dom"}
@@ -34,7 +36,7 @@ def education_level_title(program: str) -> str:
 
 
 class StrapiDescriptionRunner:
-    def __init__(self, client: StrapiClient, country: str, locale: str, *, dry_run: bool = True, short_field: str = "shortDescription", long_field: str = "longDescription", content_field: str = "contentDescription", programs_field: str = "programs", download_program_field: str = "downloadProgram", experience_field: str = "modalities", education_field: str = "education_level", related_products_field: str = "relatedProducts", form_education_field: str = "form_education_levels", knowledge_area_field: str = "knowledgeArea", subjects_field: str = "subjects", title_field: str = "title", status: str = "draft", google_drive_client: GoogleDriveClient | None = None, fichas_lookup: FichasLookup | None = None) -> None:
+    def __init__(self, client: StrapiClient, country: str, locale: str, *, dry_run: bool = True, short_field: str = "shortDescription", long_field: str = "longDescription", content_field: str = "contentDescription", programs_field: str = "programs", download_program_field: str = "downloadProgram", experience_field: str = "modalities", education_field: str = "education_level", related_products_field: str = "relatedProducts", form_education_field: str = "form_education_levels", knowledge_area_field: str = "knowledgeArea", subjects_field: str = "subjects", siu_key_field: str = "siuKey", banner_key_field: str = "bannerKey", siu_key_lookup=None, title_field: str = "title", status: str = "draft", google_drive_client: GoogleDriveClient | None = None, fichas_lookup: FichasLookup | None = None) -> None:
         self.client = client
         self.country = country
         self.locale = locale
@@ -50,6 +52,9 @@ class StrapiDescriptionRunner:
         self.form_education_field = form_education_field
         self.knowledge_area_field = knowledge_area_field
         self.subjects_field = subjects_field
+        self.siu_key_field = siu_key_field
+        self.banner_key_field = banner_key_field
+        self.siu_key_lookup = siu_key_lookup
         self.fichas_lookup = fichas_lookup
         self.title_field = title_field
         self.status = status
@@ -123,6 +128,83 @@ class StrapiDescriptionRunner:
             identifier = product.get("id") or product.get("documentId")
             if identifier is None:
                 raise ValueError("El producto no tiene id ni documentId.")
+            siu_key = await self.siu_key_lookup(row.program) if self.siu_key_lookup else None
+            tabs_bullet_section_payload = None
+            bullet_tab_operations = []
+            manages_bullet_tabs = all(
+                hasattr(self.client, name)
+                for name in (
+                    "get_bullet_tab_by_id", "find_bullet_tab_template",
+                    "create_bullet_tab", "update_bullet_tab",
+                )
+            )
+            if manages_bullet_tabs and hasattr(self.client, "get_product_tabs_bullet_section"):
+                bullet_tab_sections = extract_bullet_tabs(source, content)
+                section = await self.client.get_product_tabs_bullet_section(identifier, self.locale)
+                tab_ids = []
+                for tab_prefix in TAB_PREFIXES:
+                    tab_name = f"{tab_prefix} {row.program}"
+                    linked_matches = [
+                        item for item in (section.get("tabs") or [])
+                        if item.get("id") is not None
+                        and linked_tab_prefix(item.get("strapiName") or "", row.program) == tab_prefix
+                    ]
+                    if len(linked_matches) > 1:
+                        raise StrapiAmbiguousError(f"El producto tiene varias pestañas relacionadas para {tab_prefix!r}.")
+                    existing_tab = (
+                        await self.client.get_bullet_tab_by_id(linked_matches[0]["id"])
+                        if linked_matches else None
+                    )
+                    if existing_tab is None and hasattr(self.client, "find_localized_bullet_tab_by_strapi_name"):
+                        existing_tab = await self.client.find_localized_bullet_tab_by_strapi_name(tab_name, self.locale)
+                    template = None
+                    if existing_tab is None or not has_desktop_cover_image(existing_tab):
+                        template = await self.client.find_bullet_tab_template(tab_prefix, self.locale)
+                    payload = build_bullet_tab_payload(
+                        row.program, bullet_tab_sections[tab_prefix],
+                        existing=existing_tab, template=template, locale=self.locale,
+                    )
+                    bullet_tab_operations.append((existing_tab, payload, tab_name))
+                    tab_id = existing_tab.get("id") if existing_tab else None
+                    tab_ids.append({"id": tab_id} if tab_id is not None else None)
+                tabs_bullet_section_payload = {
+                    "idForScrolling": "bannerSectionPdp",
+                    "hideSection": section.get("hideSection", False),
+                }
+                if section.get("id") is not None:
+                    tabs_bullet_section_payload["id"] = section["id"]
+                if all(tab_ids):
+                    tabs_bullet_section_payload["tabs"] = tab_ids
+                if not self.dry_run:
+                    persisted_ids = []
+                    for existing_tab, payload, tab_name in bullet_tab_operations:
+                        if existing_tab:
+                            saved = await self.client.update_bullet_tab(existing_tab["id"], payload)
+                            tab_id = saved.get("id", existing_tab["id"])
+                        else:
+                            saved = await self.client.create_bullet_tab(payload)
+                            tab_id = saved.get("id")
+                        if tab_id is None:
+                            raise StrapiClientError(f"Strapi no devolvió id al guardar la pestaña {tab_name!r}.")
+                        persisted_ids.append({"id": tab_id})
+                    tabs_bullet_section_payload["tabs"] = persisted_ids
+            elif hasattr(self.client, "get_product_tabs_bullet_section") and hasattr(self.client, "find_bullet_tab_by_strapi_name"):
+                section = await self.client.get_product_tabs_bullet_section(identifier, self.locale)
+                tabs = []
+                for tab_prefix in TAB_PREFIXES:
+                    tab = await self.client.find_bullet_tab_by_strapi_name(
+                        f"{tab_prefix} {row.program}", self.locale
+                    )
+                    if tab.get("id") is None:
+                        raise StrapiNotFoundError(f"La pestaña {tab_prefix!r} no tiene un id válido.")
+                    tabs.append({"id": tab["id"]})
+                tabs_bullet_section_payload = {
+                    "idForScrolling": "bannerSectionPdp",
+                    "hideSection": section.get("hideSection", False),
+                    "tabs": tabs,
+                }
+                if section.get("id") is not None:
+                    tabs_bullet_section_payload["id"] = section["id"]
             programs_payload: list[dict] | None = None
             if len(durations) == 2:
                 existing = await self.client.get_product_programs(identifier)
@@ -193,6 +275,12 @@ class StrapiDescriptionRunner:
                         subjects_payload.append({"id": found.get("id")})
             if not self.dry_run:
                 attributes = {self.short_field: description, self.long_field: description, self.content_field: content_description}
+                attributes["customLayoutPDP"] = "thirdLayout"
+                if tabs_bullet_section_payload is not None:
+                    attributes["tabsBulletSection"] = tabs_bullet_section_payload
+                if siu_key is not None:
+                    attributes[self.siu_key_field] = siu_key
+                    attributes[self.banner_key_field] = siu_key
                 if programs_payload is not None:
                     attributes[self.programs_field] = programs_payload
                 if download_payload is not None:
@@ -211,7 +299,9 @@ class StrapiDescriptionRunner:
                 message += "; Asignaturas no encontradas: " + ", ".join(missing_subjects)
             if created_subjects:
                 message += "; Asignaturas creadas: " + ", ".join(created_subjects)
-            result = ProductResult(row.sheet, row.row_number, row.program, self.country, "DRY_RUN" if self.dry_run else "UPDATED", message=message, description=description)
+            if self.siu_key_lookup is None:
+                message += "; siuKey no consultada: el lookup del Balanceador no está configurado"
+            result = ProductResult(row.sheet, row.row_number, row.program, self.country, "DRY_RUN" if self.dry_run else "UPDATED", message=message, description=description, siu_key=siu_key, banner_key=siu_key)
             self.logger.info("Strapi descriptions result sheet=%s row=%s program=%s country=%s status=%s", row.sheet, row.row_number, row.program, self.country, result.status)
             return result
         except (StrapiNotFoundError, StrapiAmbiguousError) as error:
@@ -223,6 +313,8 @@ class StrapiDescriptionRunner:
         except StrapiClientError as error:
             return ProductResult(row.sheet, row.row_number, row.program, self.country, "FAILED", message=str(error))
         except GoogleDriveClientError as error:
+            return ProductResult(row.sheet, row.row_number, row.program, self.country, "FAILED", message=str(error))
+        except BalancerCatalogError as error:
             return ProductResult(row.sheet, row.row_number, row.program, self.country, "FAILED", message=str(error))
 
     async def run(self, rows: list[ProductRow]) -> tuple[list[ProductResult], ProductSummary]:
