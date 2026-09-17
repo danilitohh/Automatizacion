@@ -243,16 +243,15 @@
         <section class="view" id="view-excel" data-view-panel="excel">
           <div class="bot-layout" style="margin-top: 18px;">
             <article class="panel bot-config-panel">
-              <div class="panel-header"><div><p class="eyebrow">Automatización Strapi</p><h3>Sincronización PDP por producto</h3><p class="panel-subtitle">Compara cada producto y presenta el plan antes de aplicar cambios.</p></div><span class="status-badge success">DRY RUN SEGURO</span></div>
+              <div class="panel-header"><div><p class="eyebrow">Automatización Strapi</p><h3>Sincronización PDP por producto</h3><p class="panel-subtitle">Compara cada producto, aplica los cambios y verifica el resultado.</p></div><span class="status-badge success">EJECUCIÓN REAL</span></div>
               <div class="bot-fields">
                 <label class="field"><span>País</span><select id="strapi-products-country"><option value="">Cargando países...</option></select></label>
                 <label class="field"><span>Alcance de la ejecución</span><select id="strapi-products-scope"><option value="limit" selected>Solo los primeros…</option><option value="all">Todos los productos del Excel</option></select><span class="strapi-scope-count-row" id="strapi-products-scope-count-row">Procesar primeros <input id="strapi-products-scope-count" type="number" min="1" max="100000" value="2" inputmode="numeric" aria-label="Cantidad de primeros productos" /> productos</span><small>Se conserva el orden del archivo. En modo real solo se actualizarán los productos incluidos en el alcance.</small></label>
                 <label class="field full"><span>Archivo con productos (.xlsx)</span><input id="strapi-products-file" type="file" accept=".xlsx" /><small>Nombre con código de país, por ejemplo [AR]. Debe incluir Programa y Documento PDP; este último puede ser un enlace de Google Drive.</small></label>
                 <label class="field full"><span>Archivo de fichas (.xlsx, opcional)</span><input id="strapi-products-fichas-file" type="file" accept=".xlsx" /><small>Inclúyelo para sincronizar los enlaces de descarga de las fichas. Si no lo cargas, se usará el archivo configurado en el backend, si existe.</small></label>
                 <div class="security-note schema-note"><span>✓</span><p>Validación PDP con el esquema Strapi integrado (versión 2026-09-17.1), incluido en el proyecto. No necesitas cargar otro archivo.</p></div>
-                <label class="toggle-field full-toggle"><input id="strapi-products-dry-run" type="checkbox" checked /><span><strong>DRY RUN</strong><small>Calcula cambios sin modificar Strapi.</small></span></label>
               </div>
-              <div class="security-note"><span>i</span><p>Si Balanceador solicita una verificación, se abrirá una ventana para completarla y el proceso continuará al terminar. PDP se valida primero; canonical solo se ejecuta si PDP no queda bloqueado. En modo real se modificarán los campos que aparezcan en el plan.</p></div>
+              <div class="security-note"><span>i</span><p>Este proceso modifica Strapi. Antes de iniciar, se pedirá confirmación. Si Balanceador solicita una verificación, complétala para que PDP pueda guardar y verificar los cambios.</p></div>
                 <div class="bot-flow-actions"><button class="primary-button" id="strapi-products-full-run" type="button">Hacer todo el proceso <span>→</span></button><a class="secondary-button" id="strapi-products-report-download" hidden download>Descargar reporte completo</a></div>
             </article>
             <article class="panel bot-flow-panel">

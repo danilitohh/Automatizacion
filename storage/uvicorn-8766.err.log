@@ -1,0 +1,222 @@
+INFO:     Started server process [10560]
+INFO:     Waiting for application startup.
+[13:43:42] INFO Backend iniciado en 127.0.0.1:8000
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8766 (Press CTRL+C to quit)
+[13:44:38] INFO Consultando resumen del dashboard
+[13:45:08] INFO Consultando resumen del dashboard
+[13:45:38] INFO Consultando resumen del dashboard
+[13:46:08] INFO Consultando resumen del dashboard
+[13:46:38] INFO Consultando resumen del dashboard
+[13:47:08] INFO Consultando resumen del dashboard
+[13:47:38] INFO Consultando resumen del dashboard
+[13:48:08] INFO Consultando resumen del dashboard
+[13:48:38] INFO Consultando resumen del dashboard
+[13:49:08] INFO Consultando resumen del dashboard
+[13:49:38] INFO Consultando resumen del dashboard
+[13:50:08] INFO Consultando resumen del dashboard
+[13:50:38] INFO Consultando resumen del dashboard
+[13:51:08] INFO Consultando resumen del dashboard
+[13:51:38] INFO Consultando resumen del dashboard
+[13:52:08] INFO Consultando resumen del dashboard
+[13:52:23] INFO Consultando resumen del dashboard
+[13:52:24] INFO Consultando resumen del dashboard
+[13:52:24] INFO Consultando resumen del dashboard
+[13:52:24] INFO Consultando resumen del dashboard
+[13:52:25] INFO Consultando resumen del dashboard
+[15:27:41] INFO Consultando resumen del dashboard
+[15:28:11] INFO Consultando resumen del dashboard
+[15:28:19] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 3, 'program': 'Licenciatura en Educación para la Sustentabilidad', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:28:20] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 4, 'program': 'Licenciatura en Finanzas y Estrategia Fiscal', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:28:20] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 5, 'program': 'Licenciatura en Finanzas y Banca', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:28:21] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 6, 'program': 'Licenciatura en Comercio Electrónico y Negocios Digitales', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:28:21] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 7, 'program': 'Licenciatura en Tecnologías Interactivas y Virtuales', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:22] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 8, 'program': 'Licenciatura en Software para Entretenimiento Digital', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:23] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 9, 'program': 'Licenciatura en Ciberseguridad y Riesgos en Inteligencia Artificial', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:23] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 10, 'program': 'Licenciatura en Innovación y Transformación de Negocios', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:24] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 11, 'program': 'Licenciatura en Estrategia y Transformación de Negocios', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:29] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 12, 'program': 'Licenciatura en Ingeniería Ambiental', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:30] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 13, 'program': 'Licenciatura en Inteligencia Artificial y Ciencia de Datos', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:31] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 14, 'program': 'Licenciatura en Inteligencia Artificial en Educación', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:32] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 15, 'program': 'Licenciatura en Ética y Gobernanza de la Inteligencia Artificial', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:32] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 16, 'program': 'Licenciatura en Innovación y Emprendimiento con Inteligencia Artificial', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:33] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 17, 'program': 'Licenciatura en Inteligencia Artificial Aplicada a Negocios, Industria y Automatización', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:34] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 18, 'program': 'Licenciatura en Ingeniería en Ciencia de Datos e Inteligencia Analítica', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'El host del canonical no es el esperado: utel.edu.mxlicenciatura-en-ingenieria-en-ciencia-de-datos-e-inteligencia-analitica'}
+[15:28:34] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 19, 'program': 'Licenciatura en Ingeniería en Tecnología de Videojuegos y Realidad Virtual', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:35] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 20, 'program': 'Licenciatura en Ingeniería Robótica', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:36] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 21, 'program': 'Licenciatura en Arquitectura', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:28:40] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 22, 'program': 'Licenciatura en Ingeniería en Programación en la Nube', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:40] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 23, 'program': 'Licenciatura en Ingeniería en Sistemas Inteligentes', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:28:41] INFO Consultando resumen del dashboard
+[15:28:46] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 24, 'program': 'Licenciatura en Diseño y Producción de Videojuegos', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:48] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 25, 'program': 'Licenciatura en Comercialización y Dirección de Marcas', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:28:52] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 26, 'program': 'Licenciatura en Tecnologías Interactivas y Experiencia e Interfaz de Usuario', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:53] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 27, 'program': 'Licenciatura en Consultoría y Desarrollo Empresarial', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:53] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 28, 'program': 'Licenciatura en Comercialización Turística y Mercados Digitales', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:28:54] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 29, 'program': 'Licenciatura en Comercio Internacional', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:28:55] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 30, 'program': 'Licenciatura en Publicidad y Medios', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:55] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 31, 'program': 'Licenciatura en Administración de Negocios Gastronómicos', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:28:56] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 32, 'program': 'Licenciatura en Comunicación y Manejo de Redes Sociales', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:57] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 33, 'program': 'Licenciatura en Comunicación y Periodismo', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:57] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 34, 'program': 'Licenciatura en Ingeniería en Automatización Industrial', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:58] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 35, 'program': 'Licenciatura en Gestión Empresarial y Logística', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:28:59] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 36, 'program': 'Licenciatura en Dirección de Operaciones Empresariales', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:29:00] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 37, 'program': 'Licenciatura en Dirección Hotelera y Experiencia del Cliente', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:29:01] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 38, 'program': 'Licenciatura en Planeación y Evaluación de Proyectos', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'El host del canonical no es el esperado: cms.utel.edu.mx'}
+[15:29:01] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 39, 'program': 'Licenciatura en Gastronomía Sustentable y Cultura Alimentaria', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:29:02] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 40, 'program': 'Licenciatura en Administración Pública y Políticas Económicas', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:29:03] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 41, 'program': 'Licenciatura en Derechos Humanos y Justicia Social', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:29:04] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 42, 'program': 'Licenciatura en Gestión de Políticas y Gobierno', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:29:05] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 43, 'program': 'Licenciatura en Seguridad Pública y Gobernabilidad Democrática', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:29:06] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 44, 'program': 'Licenciatura en Lenguas Extranjeras', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:29:06] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 45, 'program': 'Licenciatura en Estudios Socioculturales', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:29:07] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 46, 'program': 'Licenciatura en Lengua y Literatura', 'country': 'Argentina', 'status': 'UPDATED'}
+[15:29:08] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 47, 'program': 'Licenciatura en Antropología y Diversidad Cultural', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:29:11] INFO Consultando resumen del dashboard
+[15:29:41] INFO Consultando resumen del dashboard
+[15:30:11] INFO Consultando resumen del dashboard
+[15:30:41] INFO Consultando resumen del dashboard
+[15:31:47] INFO Consultando resumen del dashboard
+[15:32:47] INFO Consultando resumen del dashboard
+[15:33:47] INFO Consultando resumen del dashboard
+[15:34:31] INFO Consultando resumen del dashboard
+[15:34:35] INFO Consultando resumen del dashboard
+[15:35:05] INFO Consultando resumen del dashboard
+[15:35:35] INFO Consultando resumen del dashboard
+[15:36:05] INFO Consultando resumen del dashboard
+[15:36:35] INFO Consultando resumen del dashboard
+[15:37:05] INFO Consultando resumen del dashboard
+[15:37:35] INFO Consultando resumen del dashboard
+[15:38:05] INFO Consultando resumen del dashboard
+[15:38:17] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 3, 'program': 'Licenciatura en Educación para la Sustentabilidad', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:17] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 4, 'program': 'Licenciatura en Finanzas y Estrategia Fiscal', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:18] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 5, 'program': 'Licenciatura en Finanzas y Banca', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:18] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 6, 'program': 'Licenciatura en Comercio Electrónico y Negocios Digitales', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:38:18] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 7, 'program': 'Licenciatura en Tecnologías Interactivas y Virtuales', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:19] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 8, 'program': 'Licenciatura en Software para Entretenimiento Digital', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:19] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 9, 'program': 'Licenciatura en Ciberseguridad y Riesgos en Inteligencia Artificial', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:19] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 10, 'program': 'Licenciatura en Innovación y Transformación de Negocios', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:20] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 11, 'program': 'Licenciatura en Estrategia y Transformación de Negocios', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:20] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 12, 'program': 'Licenciatura en Ingeniería Ambiental', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:21] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 13, 'program': 'Licenciatura en Inteligencia Artificial y Ciencia de Datos', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:21] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 14, 'program': 'Licenciatura en Inteligencia Artificial en Educación', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:21] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 15, 'program': 'Licenciatura en Ética y Gobernanza de la Inteligencia Artificial', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:22] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 16, 'program': 'Licenciatura en Innovación y Emprendimiento con Inteligencia Artificial', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:22] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 17, 'program': 'Licenciatura en Inteligencia Artificial Aplicada a Negocios, Industria y Automatización', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:23] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 18, 'program': 'Licenciatura en Ingeniería en Ciencia de Datos e Inteligencia Analítica', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'El host del canonical no es el esperado: utel.edu.mxlicenciatura-en-ingenieria-en-ciencia-de-datos-e-inteligencia-analitica'}
+[15:38:23] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 19, 'program': 'Licenciatura en Ingeniería en Tecnología de Videojuegos y Realidad Virtual', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:24] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 20, 'program': 'Licenciatura en Ingeniería Robótica', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:24] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 21, 'program': 'Licenciatura en Arquitectura', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:38:25] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 22, 'program': 'Licenciatura en Ingeniería en Programación en la Nube', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:25] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 23, 'program': 'Licenciatura en Ingeniería en Sistemas Inteligentes', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:26] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 24, 'program': 'Licenciatura en Diseño y Producción de Videojuegos', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:26] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 25, 'program': 'Licenciatura en Comercialización y Dirección de Marcas', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:38:27] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 26, 'program': 'Licenciatura en Tecnologías Interactivas y Experiencia e Interfaz de Usuario', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:27] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 27, 'program': 'Licenciatura en Consultoría y Desarrollo Empresarial', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:28] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 28, 'program': 'Licenciatura en Comercialización Turística y Mercados Digitales', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:38:28] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 29, 'program': 'Licenciatura en Comercio Internacional', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:38:29] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 30, 'program': 'Licenciatura en Publicidad y Medios', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:29] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 31, 'program': 'Licenciatura en Administración de Negocios Gastronómicos', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:30] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 32, 'program': 'Licenciatura en Comunicación y Manejo de Redes Sociales', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:30] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 33, 'program': 'Licenciatura en Comunicación y Periodismo', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:31] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 34, 'program': 'Licenciatura en Ingeniería en Automatización Industrial', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:31] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 35, 'program': 'Licenciatura en Gestión Empresarial y Logística', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:32] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 36, 'program': 'Licenciatura en Dirección de Operaciones Empresariales', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:32] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 37, 'program': 'Licenciatura en Dirección Hotelera y Experiencia del Cliente', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:33] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 38, 'program': 'Licenciatura en Planeación y Evaluación de Proyectos', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'El host del canonical no es el esperado: cms.utel.edu.mx'}
+[15:38:33] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 39, 'program': 'Licenciatura en Gastronomía Sustentable y Cultura Alimentaria', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:34] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 40, 'program': 'Licenciatura en Administración Pública y Políticas Económicas', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:38:34] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 41, 'program': 'Licenciatura en Derechos Humanos y Justicia Social', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:35] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 42, 'program': 'Licenciatura en Gestión de Políticas y Gobierno', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:35] INFO Consultando resumen del dashboard
+[15:38:35] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 43, 'program': 'Licenciatura en Seguridad Pública y Gobernabilidad Democrática', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:36] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 44, 'program': 'Licenciatura en Lenguas Extranjeras', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:36] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 45, 'program': 'Licenciatura en Estudios Socioculturales', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:37] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 46, 'program': 'Licenciatura en Lengua y Literatura', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:38:38] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 47, 'program': 'Licenciatura en Antropología y Diversidad Cultural', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:39:06] INFO Consultando resumen del dashboard
+[15:39:35] INFO Consultando resumen del dashboard
+[15:40:47] INFO Consultando resumen del dashboard
+[15:41:47] INFO Consultando resumen del dashboard
+[15:42:35] INFO Consultando resumen del dashboard
+[15:42:38] INFO Consultando resumen del dashboard
+[15:43:08] INFO Consultando resumen del dashboard
+[15:43:38] INFO Consultando resumen del dashboard
+[15:44:08] INFO Consultando resumen del dashboard
+[15:44:38] INFO Consultando resumen del dashboard
+[15:45:08] INFO Consultando resumen del dashboard
+[15:45:38] INFO Consultando resumen del dashboard
+[15:46:08] INFO Consultando resumen del dashboard
+[15:46:38] INFO Consultando resumen del dashboard
+[15:46:42] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 3, 'program': 'Licenciatura en Educación para la Sustentabilidad', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:42] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 4, 'program': 'Licenciatura en Finanzas y Estrategia Fiscal', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:42] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 5, 'program': 'Licenciatura en Finanzas y Banca', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:43] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 6, 'program': 'Licenciatura en Comercio Electrónico y Negocios Digitales', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:46:43] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 7, 'program': 'Licenciatura en Tecnologías Interactivas y Virtuales', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:44] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 8, 'program': 'Licenciatura en Software para Entretenimiento Digital', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:44] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 9, 'program': 'Licenciatura en Ciberseguridad y Riesgos en Inteligencia Artificial', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:44] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 10, 'program': 'Licenciatura en Innovación y Transformación de Negocios', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:45] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 11, 'program': 'Licenciatura en Estrategia y Transformación de Negocios', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:45] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 12, 'program': 'Licenciatura en Ingeniería Ambiental', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:46] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 13, 'program': 'Licenciatura en Inteligencia Artificial y Ciencia de Datos', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:46] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 14, 'program': 'Licenciatura en Inteligencia Artificial en Educación', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:46] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 15, 'program': 'Licenciatura en Ética y Gobernanza de la Inteligencia Artificial', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:47] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 16, 'program': 'Licenciatura en Innovación y Emprendimiento con Inteligencia Artificial', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:47] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 17, 'program': 'Licenciatura en Inteligencia Artificial Aplicada a Negocios, Industria y Automatización', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:48] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 18, 'program': 'Licenciatura en Ingeniería en Ciencia de Datos e Inteligencia Analítica', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'El host del canonical no es el esperado: utel.edu.mxlicenciatura-en-ingenieria-en-ciencia-de-datos-e-inteligencia-analitica'}
+[15:46:48] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 19, 'program': 'Licenciatura en Ingeniería en Tecnología de Videojuegos y Realidad Virtual', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:49] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 20, 'program': 'Licenciatura en Ingeniería Robótica', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:49] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 21, 'program': 'Licenciatura en Arquitectura', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:46:50] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 22, 'program': 'Licenciatura en Ingeniería en Programación en la Nube', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:50] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 23, 'program': 'Licenciatura en Ingeniería en Sistemas Inteligentes', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:51] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 24, 'program': 'Licenciatura en Diseño y Producción de Videojuegos', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:51] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 25, 'program': 'Licenciatura en Comercialización y Dirección de Marcas', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:46:52] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 26, 'program': 'Licenciatura en Tecnologías Interactivas y Experiencia e Interfaz de Usuario', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:52] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 27, 'program': 'Licenciatura en Consultoría y Desarrollo Empresarial', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:53] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 28, 'program': 'Licenciatura en Comercialización Turística y Mercados Digitales', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:46:53] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 29, 'program': 'Licenciatura en Comercio Internacional', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:46:54] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 30, 'program': 'Licenciatura en Publicidad y Medios', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:54] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 31, 'program': 'Licenciatura en Administración de Negocios Gastronómicos', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:55] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 32, 'program': 'Licenciatura en Comunicación y Manejo de Redes Sociales', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:55] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 33, 'program': 'Licenciatura en Comunicación y Periodismo', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:56] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 34, 'program': 'Licenciatura en Ingeniería en Automatización Industrial', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:56] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 35, 'program': 'Licenciatura en Gestión Empresarial y Logística', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:57] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 36, 'program': 'Licenciatura en Dirección de Operaciones Empresariales', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:57] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 37, 'program': 'Licenciatura en Dirección Hotelera y Experiencia del Cliente', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:58] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 38, 'program': 'Licenciatura en Planeación y Evaluación de Proyectos', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'El host del canonical no es el esperado: cms.utel.edu.mx'}
+[15:46:58] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 39, 'program': 'Licenciatura en Gastronomía Sustentable y Cultura Alimentaria', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:46:59] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 40, 'program': 'Licenciatura en Administración Pública y Políticas Económicas', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:46:59] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 41, 'program': 'Licenciatura en Derechos Humanos y Justicia Social', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:47:00] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 42, 'program': 'Licenciatura en Gestión de Políticas y Gobierno', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:47:00] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 43, 'program': 'Licenciatura en Seguridad Pública y Gobernabilidad Democrática', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:47:01] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 44, 'program': 'Licenciatura en Lenguas Extranjeras', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:47:02] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 45, 'program': 'Licenciatura en Estudios Socioculturales', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:47:05] INFO Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 46, 'program': 'Licenciatura en Lengua y Literatura', 'country': 'Argentina', 'status': 'SKIPPED'}
+[15:47:07] WARNING Strapi product result {'sheet': 'Bloque 1 Staging', 'row': 47, 'program': 'Licenciatura en Antropología y Diversidad Cultural', 'country': 'Argentina', 'status': 'INVALID_DATA', 'message': 'LinkCanonical esta vacio o no existe.'}
+[15:47:08] INFO Consultando resumen del dashboard
+[15:47:38] INFO Consultando resumen del dashboard
+[15:48:08] INFO Consultando resumen del dashboard
+[15:48:47] INFO Consultando resumen del dashboard
+[15:48:58] INFO Consultando resumen del dashboard
+[15:49:28] INFO Consultando resumen del dashboard
+[15:49:47] INFO Consultando resumen del dashboard
+[15:49:58] INFO Consultando resumen del dashboard
+[15:50:05] INFO Consultando resumen del dashboard
+[15:50:28] INFO Consultando resumen del dashboard
+[15:50:47] INFO Consultando resumen del dashboard
+[15:50:57] INFO Consultando resumen del dashboard
+[15:50:58] INFO Consultando resumen del dashboard
+[15:51:11] INFO Consultando resumen del dashboard
+[15:51:28] INFO Consultando resumen del dashboard
+[15:51:36] INFO Consultando resumen del dashboard
+[15:51:48] INFO Consultando resumen del dashboard
+[15:51:58] INFO Consultando resumen del dashboard
+[15:52:06] INFO Consultando resumen del dashboard
+[15:52:28] INFO Consultando resumen del dashboard
+[15:52:34] INFO Consultando resumen del dashboard
+[15:52:47] INFO Consultando resumen del dashboard
+[15:52:58] INFO Consultando resumen del dashboard
+[15:53:01] INFO Consultando resumen del dashboard
+[15:53:28] INFO Consultando resumen del dashboard
+[15:53:47] INFO Consultando resumen del dashboard
+[15:53:58] INFO Consultando resumen del dashboard

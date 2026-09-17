@@ -12,14 +12,15 @@ function renderResults(job) {
     summary.fallos_verificacion = results.filter((item) => item.verification?.ok === false).length;
     summary.cambios_propuestos_o_aplicados = results.reduce((total, item) => total + (item.changes?.length || 0), 0);
   }
-  const summaryLabels = { total: "Productos", updated: "Actualizados", dry_run: "Dry run", skipped: "Sin cambios", not_found: "No encontrados", ambiguous: "Ambiguos", invalid_data: "Datos inválidos", failed: "Fallidos", productos_verificados: "Verificados", fallos_verificacion: "Fallos de verificación", cambios_propuestos_o_aplicados: "Cambios", canonical_procesados: "Canonical procesados", pdp_procesados: "PDP procesados" };
+  const summaryLabels = { total: "Productos", productos_terminados: "Terminados", updated: "Actualizados", skipped: "Sin cambios", not_found: "No encontrados", ambiguous: "Ambiguos", invalid_data: "Datos inválidos", failed: "Fallidos", productos_verificados: "Verificados", fallos_verificacion: "Fallos de verificación", cambios_propuestos_o_aplicados: "Cambios", canonical_procesados: "Canonical procesados", pdp_procesados: "PDP procesados" };
   document.querySelector("#strapi-products-summary").innerHTML = Object.entries(summary).map(([key, value]) => `<div class="pdp-summary-card"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(summaryLabels[key] || key)}</span></div>`).join("");
   document.querySelector("#strapi-products-results").innerHTML = results.map((item) => {
     const verification = item.verification || {};
-    const verificationLabel = item.status === "DRY_RUN" ? "Dry run · sin escritura" : verification.ok === true ? "Verificado" : verification.ok === false ? "Falló verificación" : "No verificado";
+    const verificationLabel = verification.ok === true ? "Verificado" : verification.ok === false ? "Falló verificación" : "No verificado";
     const changes = (item.changes || []).map((change) => `<div class="strapi-change-row"><strong>${escapeHtml(change.field)}</strong><span>${escapeHtml(change.action || "update")} · ${change.verified === true ? "verificado" : change.verified === false ? "no coincide" : "sin verificación"}</span><small>Antes: ${escapeHtml(JSON.stringify(change.before ?? null))}</small><small>Después: ${escapeHtml(JSON.stringify(change.after ?? null))}</small>${change.created_id != null ? `<small>ID creado: ${escapeHtml(change.created_id)}</small>` : ""}</div>`).join("");
     const operationLabel = item.operation_label ? `${escapeHtml(item.operation_label)} · ` : "";
-    return `<details class="strapi-product-result"><summary><span><b>${escapeHtml(item.program)}</b><small>${operationLabel}Fila ${escapeHtml(item.row_number)} · ${escapeHtml(item.status)} · ${escapeHtml(verificationLabel)}</small></span><span>${escapeHtml(item.changes?.length || 0)} cambios</span></summary><p>${escapeHtml(item.message || "")}</p>${changes ? `<div class="strapi-change-list">${changes}</div>` : "<small>Sin diferencias detectadas.</small>"}</details>`;
+    const timingLabel = item.sequence ? `${item.sequence}/${item.total || "?"} · ${Number(item.elapsed_seconds || 0).toFixed(1)} s` : "";
+    return `<details class="strapi-product-result"><summary><span><b>${escapeHtml(item.program)}</b><small>${operationLabel}${timingLabel ? `${timingLabel} · ` : ""}Fila ${escapeHtml(item.row_number)} · ${escapeHtml(item.status)} · ${escapeHtml(verificationLabel)}</small></span><span>${escapeHtml(item.changes?.length || 0)} cambios</span></summary><p>${escapeHtml(item.message || "")}</p>${changes ? `<div class="strapi-change-list">${changes}</div>` : "<small>Sin diferencias detectadas.</small>"}</details>`;
   }).join("") || "Sin resultados todavía.";
 }
 
@@ -36,7 +37,6 @@ export function initializeStrapiProductsModule({ api, showToast }) {
   const file = document.querySelector("#strapi-products-file");
   const fullRun = document.querySelector("#strapi-products-full-run");
   const status = document.querySelector("#strapi-products-status");
-  const dryRun = document.querySelector("#strapi-products-dry-run");
   const fichasFile = document.querySelector("#strapi-products-fichas-file");
   const reportDownload = document.querySelector("#strapi-products-report-download");
   if (!country || !file || !fullRun) return;
@@ -70,12 +70,24 @@ export function initializeStrapiProductsModule({ api, showToast }) {
     }
   });
 
-  async function waitForJob(job) {
+  async function waitForJob(job, onProgress) {
     let current;
+    let lastRenderedCount = -1;
+    let cursor = 0;
+    const accumulatedResults = [];
     do {
       await new Promise((resolve) => setTimeout(resolve, 500));
-      current = await api.strapiProductStatus(job.job_id);
+      current = await api.strapiProductStatus(job.job_id, cursor);
       if (current.progress_message) status.textContent = current.progress_message;
+      const newResults = current.progress_results || [];
+      accumulatedResults.push(...newResults);
+      cursor += newResults.length;
+      current.progress_results = accumulatedResults;
+      const count = accumulatedResults.length;
+      if (count !== lastRenderedCount) {
+        lastRenderedCount = count;
+        onProgress?.(current);
+      }
     } while (current.status === "RUNNING");
     return current;
   }
@@ -100,7 +112,7 @@ export function initializeStrapiProductsModule({ api, showToast }) {
     const scopeLabel = scope === "all" ? "todos los productos" : `los primeros ${scope} productos`;
     const stepNames = { canonical: "actualizar canonical", descriptions: "sincronizar contenido PDP" };
     const flowLabel = steps.map((step) => stepNames[step]).join(" y ");
-    if (!dryRun.checked && !window.confirm(`La ejecución real aplicará ${flowLabel} en Strapi para ${scopeLabel}. ¿Deseas continuar?`)) return;
+    if (!window.confirm(`Se aplicará ${flowLabel} en Strapi para ${scopeLabel}. ¿Deseas continuar?`)) return;
 
     controls.forEach((control) => { control.disabled = true; });
     if (reportDownload) {
@@ -110,11 +122,20 @@ export function initializeStrapiProductsModule({ api, showToast }) {
     const completedJobs = [];
     try {
       for (const [index, step] of steps.entries()) {
-        status.textContent = `${dryRun.checked ? "DRY RUN" : "Ejecución real"} · paso ${index + 1}/${steps.length}: ${stepNames[step]}...`;
+        status.textContent = `Ejecución real · paso ${index + 1}/${steps.length}: ${stepNames[step]}...`;
         const started = step === "canonical"
-          ? await api.runStrapiProducts(file.files[0], country.value, scope, dryRun.checked)
-          : await api.runStrapiDescriptions(file.files[0], fichasFile?.files[0] || null, scope, dryRun.checked);
-        const current = await waitForJob(started);
+          ? await api.runStrapiProducts(file.files[0], country.value, scope)
+          : await api.runStrapiDescriptions(file.files[0], fichasFile?.files[0] || null, scope);
+        const operationLabel = step === "canonical" ? "Canonical" : "PDP";
+        const current = await waitForJob(started, (snapshot) => {
+          const finished = completedJobs.flatMap((job) => (job.results || []).map((result) => ({ ...result, operation_label: job.operation_label })));
+          const running = (snapshot.progress_results || []).map((result) => ({ ...result, operation_label: operationLabel }));
+          renderResults({
+            ...snapshot,
+            summary: { total: snapshot.input_total ?? snapshot.selected_total ?? running.length, productos_terminados: running.length },
+            results: [...finished, ...running],
+          });
+        });
         current.operation_label = step === "canonical" ? "Canonical" : "PDP";
         completedJobs.push(current);
         renderResults(current);

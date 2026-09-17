@@ -47,6 +47,23 @@ def test_web_frontend_is_served_by_fastapi(tmp_path):
     assert health_response.status_code == 200
 
 
+def test_strapi_job_status_returns_only_new_progress_results(tmp_path):
+    application = create_app(Settings(database_path=tmp_path / "api-test.db", storage_dir=tmp_path / "storage"))
+    with TestClient(application) as client:
+        client.app.state.strapi_product_jobs["progress-test"] = {
+            "job_id": "progress-test",
+            "status": "RUNNING",
+            "completed": 2,
+            "progress_results": [{"program": "Programa 1"}, {"program": "Programa 2"}],
+        }
+        response = client.get("/api/strapi/products/jobs/progress-test?after=1")
+
+    assert response.status_code == 200
+    assert response.json()["progress_results"] == [{"program": "Programa 2"}]
+    assert response.json()["progress_offset"] == 1
+    assert response.json()["completed"] == 2
+
+
 def test_ai_provider_status_never_returns_keys(tmp_path):
     """El endpoint de estado solo expone configuración y modelo."""
 

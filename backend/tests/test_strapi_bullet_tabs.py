@@ -228,7 +228,7 @@ def test_description_runner_updates_only_product_specific_bullet_tabs(tmp_path):
         async def update_product(self, identifier, payload): updates.append(("product", payload)); return {}
 
     client = FakeClient()
-    results, summary = asyncio.run(StrapiDescriptionRunner(client, "Argentina", "es-AR", dry_run=False).run([
+    results, summary = asyncio.run(StrapiDescriptionRunner(client, "Argentina", "es-AR").run([
         ProductRow("Sheet", 2, "Programa de prueba", str(source))
     ]))
     assert results[0].status == "UPDATED", (results[0].message, results[0].verification)
@@ -242,31 +242,3 @@ def test_description_runner_updates_only_product_specific_bullet_tabs(tmp_path):
     product_update = updates[-1][1]
     assert product_update["tabsBulletSection"]["tabs"] == [{"id": 41}, {"id": 42}, {"id": 43}]
     assert client.template["attributes"]["content"][0]["iconsColor"] == "secondary.default"
-
-
-def test_description_runner_dry_run_does_not_create_or_update_strapi_entries(tmp_path):
-    source = tmp_path / "programa.docx"
-    source.write_bytes(_document())
-    writes = []
-
-    class FakeClient:
-        async def find_product(self, *args, **kwargs): return {"id": 7}
-        async def get_product_tabs_bullet_section(self, *args):
-            return {"id": 8, "hideSection": False, "tabs": [
-                {"id": 41, "strapiName": "Perfil de ingreso Programa de prueba"},
-                {"id": 42, "strapiName": "Perfil de egreso Programa de prueba"},
-            ]}
-        async def get_bullet_tab_by_id(self, identifier):
-            return {"id": identifier, "attributes": {"strapiName": f"tab {identifier}", "content": [{"id": identifier, "__component": "section.bullets", "bullets": []}]}}
-        async def find_bullet_tab_template(self, prefix, locale):
-            return {"id": 99, "attributes": {"title": {"desktop": prefix}, "content": [{"id": 9, "__component": "section.bullets", "bullets": []}]}}
-        async def update_bullet_tab(self, *args): writes.append(("update-tab", args))
-        async def create_bullet_tab(self, *args): writes.append(("create-tab", args))
-        async def update_product(self, *args): writes.append(("update-product", args))
-
-    results, summary = asyncio.run(StrapiDescriptionRunner(FakeClient(), "Argentina", "es-AR", dry_run=True).run([
-        ProductRow("Sheet", 2, "Programa de prueba", str(source))
-    ]))
-    assert results[0].status == "DRY_RUN"
-    assert summary.dry_run == 1
-    assert writes == []

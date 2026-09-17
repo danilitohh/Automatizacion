@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import time
 from collections import Counter
-from typing import Any
+from typing import Any, Callable
 
 from ...services.logging_service import get_logger
 from ...services.strapi_client import StrapiClientError, StrapiClient, StrapiAmbiguousError, StrapiNotFoundError
@@ -10,12 +11,11 @@ from .models import ProductResult, ProductRow, ProductSummary
 
 
 class StrapiProductRunner:
-    def __init__(self, client: StrapiClient, country: str, locale: str, country_slugs: dict[str, str], *, dry_run: bool = True, expected_host: str = "utel.edu.mx", title_field: str = "title", seo_field: str = "seo", canonical_field: str = "LinkCanonical", status: str = "draft") -> None:
+    def __init__(self, client: StrapiClient, country: str, locale: str, country_slugs: dict[str, str], *, expected_host: str = "utel.edu.mx", title_field: str = "title", seo_field: str = "seo", canonical_field: str = "LinkCanonical", status: str = "draft") -> None:
         self.client = client
         self.country = country
         self.locale = locale
         self.country_slugs = country_slugs
-        self.dry_run = dry_run
         self.expected_host = expected_host
         self.title_field = title_field
         self.seo_field = seo_field
@@ -39,15 +39,14 @@ class StrapiProductRunner:
             if new_canonical == old_canonical:
                 result = ProductResult(row.sheet, row.row_number, row.program, self.country, "SKIPPED", old_canonical, old_canonical, "El pais ya estaba incluido.")
             else:
-                if not self.dry_run:
-                    identifier = product.get("id") or product.get("documentId")
-                    if identifier is None:
-                        raise ValueError("El producto no tiene id ni documentId.")
-                    # Solo se envia el componente SEO; el resto de atributos queda intacto.
-                    updated_seo = dict(seo)
-                    updated_seo[self.canonical_field] = new_canonical
-                    await self.client.update_product(identifier, {self.seo_field: updated_seo})
-                result = ProductResult(row.sheet, row.row_number, row.program, self.country, "DRY_RUN" if self.dry_run else "UPDATED", old_canonical, new_canonical)
+                identifier = product.get("id") or product.get("documentId")
+                if identifier is None:
+                    raise ValueError("El producto no tiene id ni documentId.")
+                # Solo se envia el componente SEO; el resto de atributos queda intacto.
+                updated_seo = dict(seo)
+                updated_seo[self.canonical_field] = new_canonical
+                await self.client.update_product(identifier, {self.seo_field: updated_seo})
+                result = ProductResult(row.sheet, row.row_number, row.program, self.country, "UPDATED", old_canonical, new_canonical)
             self.logger.info("Strapi product result %s", {**context, "status": result.status})
             return result
         except StrapiNotFoundError as error:
@@ -66,11 +65,22 @@ class StrapiProductRunner:
         self.logger.warning("Strapi product result %s", {"sheet": row.sheet, "row": row.row_number, "program": row.program, "country": self.country, "status": status, "message": message})
         return ProductResult(row.sheet, row.row_number, row.program, self.country, status, message=message)
 
-    async def run(self, rows: list[ProductRow]) -> tuple[list[ProductResult], ProductSummary]:
-        results = [await self.process(row) for row in rows]
+    async def run(
+        self,
+        rows: list[ProductRow],
+        on_result: Callable[[int, int, ProductResult, float], None] | None = None,
+    ) -> tuple[list[ProductResult], ProductSummary]:
+        results = []
+        for index, row in enumerate(rows, start=1):
+            started = time.perf_counter()
+            result = await self.process(row)
+            elapsed = time.perf_counter() - started
+            results.append(result)
+            if on_result:
+                on_result(index, len(rows), result, elapsed)
         counts = Counter(result.status for result in results)
         summary = ProductSummary(
-            total=len(results), updated=counts["UPDATED"], dry_run=counts["DRY_RUN"], skipped=counts["SKIPPED"],
+            total=len(results), updated=counts["UPDATED"], skipped=counts["SKIPPED"],
             not_found=counts["NOT_FOUND"], ambiguous=counts["AMBIGUOUS"], invalid_data=counts["INVALID_DATA"], failed=counts["FAILED"],
         )
         return results, summary

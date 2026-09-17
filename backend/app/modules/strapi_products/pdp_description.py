@@ -93,6 +93,39 @@ def extract_description(program: str, filename: str, content: bytes) -> str:
     raise ValueError(f"Formato de Documento PDP no soportado: {filename}.")
 
 
+def extract_long_description(filename: str, content: bytes) -> str | None:
+    """Extract an explicitly labeled long-description section when present."""
+    extension = Path(urlparse(filename).path or filename).suffix.casefold()
+    try:
+        if extension == ".docx":
+            blocks = [paragraph.text for paragraph in Document(BytesIO(content)).paragraphs]
+        elif extension == ".pdf":
+            blocks = [line for page in PdfReader(BytesIO(content)).pages for line in (page.extract_text() or "").splitlines()]
+        else:
+            raise ValueError(f"Formato de Documento PDP no soportado: {filename}.")
+    except ValueError:
+        raise
+    except Exception as error:
+        raise ValueError(f"No se pudo abrir el Documento PDP {filename}.") from error
+
+    headings = {"descripcion larga", "descripcion extendida", "descripcion del programa", "acerca del programa"}
+    start = next((index for index, block in enumerate(blocks) if _normalize(_clean(block)).rstrip(":") in headings), None)
+    if start is None:
+        return None
+
+    collected: list[str] = []
+    for block in blocks[start + 1:]:
+        text = _clean(block)
+        if not text:
+            continue
+        if _is_heading(text):
+            break
+        collected.append(text)
+    if not collected:
+        raise ValueError(f"La sección de descripción larga está vacía en {filename}.")
+    return "\n\n".join(collected)
+
+
 def extract_program_durations(filename: str, content: bytes) -> list[str]:
     """Return the distinct month durations from the PDP's Duración line."""
     extension = Path(urlparse(filename).path or filename).suffix.casefold()

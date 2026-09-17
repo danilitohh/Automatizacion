@@ -9,7 +9,7 @@ from docx import Document
 from backend.app.modules.strapi_products.canonical import add_country_to_canonical
 from backend.app.modules.strapi_products.country import detect_country_from_filename
 from backend.app.modules.strapi_products.description_runner import StrapiDescriptionRunner
-from backend.app.modules.strapi_products.pdp_description import extract_content_description, extract_description
+from backend.app.modules.strapi_products.pdp_description import extract_content_description, extract_description, extract_long_description
 from backend.app.modules.strapi_products.models import ProductRow
 from backend.app.modules.strapi_products.runner import StrapiProductRunner
 from backend.app.modules.strapi_products.spreadsheet import read_product_rows
@@ -59,6 +59,16 @@ def test_extracts_only_text_immediately_after_program_title():
     assert extract_description("Licenciatura en Sistemas", "pdp.docx", output.getvalue()) == "Esta es la descripción original del programa."
 
 
+def test_extracts_explicit_long_description_section():
+    document = Document()
+    document.add_paragraph("Descripción larga", style="Heading 1")
+    document.add_paragraph("Este es el contenido extenso.")
+    document.add_paragraph("ASIGNATURAS", style="Heading 1")
+    document.add_paragraph("No debe incluirse.")
+    output = io.BytesIO(); document.save(output)
+    assert extract_long_description("pdp.docx", output.getvalue()) == "Este es el contenido extenso."
+
+
 def test_extracts_content_description_before_first_subject_block():
     document = Document()
     document.add_paragraph("Asignaturas", style="Heading 1")
@@ -90,7 +100,7 @@ def test_description_runner_updates_descriptions_and_default_layout(tmp_path):
 
     source = tmp_path / "programa-a.docx"
     source.write_bytes(output.getvalue())
-    results, summary = asyncio.run(StrapiDescriptionRunner(FakeClient(), "Argentina", "es-AR", dry_run=False).run([ProductRow("Sheet", 2, "Programa A", str(source))]))
+    results, summary = asyncio.run(StrapiDescriptionRunner(FakeClient(), "Argentina", "es-AR").run([ProductRow("Sheet", 2, "Programa A", str(source))]))
     assert results[0].status == "UPDATED"
     assert summary.updated == 1
     assert calls == [((12, {"shortDescription": "Descripcion PDP original.", "longDescription": "Descripcion PDP original.", "contentDescription": "¿Qué materias se estudian?\n\nContenido de asignaturas.", "customLayoutPDP": "thirdLayout"}), {})]
@@ -125,7 +135,7 @@ def test_description_runner_sets_third_layout_and_product_specific_tabs(tmp_path
             updates.append((identifier, attributes))
 
     results, summary = asyncio.run(
-        StrapiDescriptionRunner(FakeClient(), "Argentina", "es-AR", dry_run=False).run(
+        StrapiDescriptionRunner(FakeClient(), "Argentina", "es-AR").run(
             [ProductRow("Sheet", 2, "Programa A", str(source))]
         )
     )
@@ -163,51 +173,17 @@ def test_description_runner_exports_private_google_doc_with_drive_client():
         async def find_product(self, *args, **kwargs):
             return {"id": 12, "attributes": {"title": "Programa A"}}
 
+        async def update_product(self, *args, **kwargs):
+            return {}
+
     row = ProductRow("Bloque 1 Staging", 3, "Programa A", "https://docs.google.com/document/d/google-doc-id/edit")
     results, summary = asyncio.run(
         StrapiDescriptionRunner(
-            FakeStrapiClient(), "Argentina", "es-AR", dry_run=True, google_drive_client=FakeDriveClient()
+            FakeStrapiClient(), "Argentina", "es-AR", google_drive_client=FakeDriveClient()
         ).run([row])
     )
-    assert results[0].status == "DRY_RUN"
+    assert results[0].status == "UPDATED"
     assert results[0].description == "Descripcion PDP original."
-    assert summary.dry_run == 1
-
-
-def test_description_runner_dry_run_reports_siu_key_without_writing(tmp_path):
-    document = Document()
-    document.add_paragraph("Licenciatura en Educación para la Sustentabilidad", style="Title")
-    document.add_paragraph("Descripción PDP original.")
-    document.add_paragraph("Asignaturas")
-    document.add_paragraph("Contenido del plan.")
-    document.add_paragraph("1° cuatrimestre")
-    output = io.BytesIO()
-    document.save(output)
-    source = tmp_path / "educacion-sustentabilidad.docx"
-    source.write_bytes(output.getvalue())
-    writes = []
-
-    class FakeStrapiClient:
-        async def find_product(self, *args, **kwargs):
-            return {"id": 1571}
-
-        async def update_product(self, *args, **kwargs):
-            writes.append((args, kwargs))
-
-    async def lookup(program):
-        assert program == "Licenciatura en Educación para la Sustentabilidad"
-        return "20261591"
-
-    results, summary = asyncio.run(
-        StrapiDescriptionRunner(
-            FakeStrapiClient(), "México", "es-MX", dry_run=True, siu_key_lookup=lookup
-        ).run([ProductRow("México", 2, "Licenciatura en Educación para la Sustentabilidad", str(source))])
-    )
-    assert results[0].status == "DRY_RUN"
-    assert results[0].siu_key == "20261591"
-    assert results[0].banner_key == "20261591"
-    assert summary.dry_run == 1
-    assert writes == []
 
 
 def test_description_runner_includes_siu_key_in_live_product_payload(tmp_path):
@@ -235,7 +211,7 @@ def test_description_runner_includes_siu_key_in_live_product_payload(tmp_path):
 
     results, summary = asyncio.run(
         StrapiDescriptionRunner(
-            FakeStrapiClient(), "México", "es-MX", dry_run=False, siu_key_lookup=lookup
+            FakeStrapiClient(), "México", "es-MX", siu_key_lookup=lookup
         ).run([ProductRow("México", 2, "Licenciatura en Educación para la Sustentabilidad", str(source))])
     )
     assert results[0].status == "UPDATED"
@@ -244,6 +220,60 @@ def test_description_runner_includes_siu_key_in_live_product_payload(tmp_path):
     assert updates[0][0] == 1571
     assert updates[0][1]["siuKey"] == "20261591"
     assert updates[0][1]["bannerKey"] == "20261591"
+
+
+def test_description_runner_updates_all_metadata_and_faq_when_subjects_exist(tmp_path):
+    document = Document()
+    document.add_paragraph("Licenciatura en Sistemas", style="Title")
+    document.add_paragraph("Descripción corta del programa.")
+    document.add_paragraph("Descripción larga", style="Heading 1")
+    document.add_paragraph("Descripción extendida independiente.")
+    document.add_paragraph("ASIGNATURAS", style="Heading 1")
+    document.add_paragraph("¿Qué materias se estudian?")
+    document.add_paragraph("Contenido de asignaturas.")
+    document.add_paragraph("1° cuatrimestre", style="Heading 2")
+    document.add_paragraph("Introducción a sistemas")
+    document.add_heading("12. Preguntas frecuentes (FAQ)", level=2)
+    document.add_paragraph("1. ¿Qué aprenderé?")
+    document.add_paragraph("Aprenderás sistemas.")
+    source = tmp_path / "programa-completo.docx"
+    document.save(source)
+    updates = []
+
+    class FakeStrapiClient:
+        async def find_product(self, *args, **kwargs): return {"id": 1571}
+        async def get_product_common_questions(self, *args): return None
+        async def find_subject(self, title, locale):
+            assert title == "Introducción a sistemas"
+            return {"id": 55}
+        async def find_experience_option(self, title, locale):
+            assert title == "En línea Home2026"
+            return {"id": 66}
+        async def get_product_metadata_relations(self, identifier): return {}
+        async def find_relation_by_title(self, endpoint, title, locale):
+            return {"id": 77 if endpoint == "education-levels" else 88}
+        async def update_product(self, identifier, attributes): updates.append((identifier, attributes))
+
+    async def siu_lookup(program): return "20261591"
+
+    result, _ = asyncio.run(StrapiDescriptionRunner(
+        FakeStrapiClient(), "México", "es-MX", siu_key_lookup=siu_lookup,
+    ).run([ProductRow("Sheet", 2, "Licenciatura en Sistemas", str(source))]))
+
+    assert result[0].status == "UPDATED", result[0].message
+    assert len(updates) == 1
+    payload = updates[0][1]
+    assert payload["shortDescription"] == "Descripción corta del programa."
+    assert payload["longDescription"] == "Descripción extendida independiente."
+    assert payload["modalities"] == [{"id": 66}]
+    assert payload["education_level"] == {"id": 77}
+    assert payload["form_education_levels"] == [{"id": 88}]
+    assert payload["relatedProducts"] == [{"id": 1571}]
+    assert payload["siuKey"] == payload["bannerKey"] == "20261591"
+    assert payload["subjects"] == [{"id": 55}]
+    assert payload["commonQuestions"]["dropdowns"] == [{
+        "dropdownTitle": "¿Qué aprenderé?", "richText": "Aprenderás sistemas.", "iconPosition": "Left",
+    }]
 
 
 def test_spreadsheet_reads_program_and_skips_blank_rows():
@@ -376,22 +406,6 @@ def test_client_falls_back_without_locale_for_available_draft():
     asyncio.run(run())
 
 
-def test_runner_dry_run_does_not_update():
-    calls = []
-
-    class FakeClient:
-        async def find_product(self, *args, **kwargs):
-            return {"id": 7, "attributes": {"seo": {"LinkCanonical": "https://utel.edu.mx/programa"}}}
-
-        async def update_product(self, *args, **kwargs):
-            calls.append((args, kwargs))
-
-    results, summary = asyncio.run(StrapiProductRunner(FakeClient(), "México", "es-MX", COUNTRIES, dry_run=True).run([ProductRow("Sheet", 2, "Programa")]))
-    assert results[0].status == "DRY_RUN"
-    assert summary.dry_run == 1
-    assert calls == []
-
-
 def test_runner_updates_only_seo_and_supports_id():
     calls = []
 
@@ -402,9 +416,30 @@ def test_runner_updates_only_seo_and_supports_id():
         async def update_product(self, *args, **kwargs):
             calls.append((args, kwargs))
 
-    results, _ = asyncio.run(StrapiProductRunner(FakeClient(), "México", "es-MX", COUNTRIES, dry_run=False).run([ProductRow("Sheet", 2, "Programa")]))
+    results, _ = asyncio.run(StrapiProductRunner(FakeClient(), "México", "es-MX", COUNTRIES).run([ProductRow("Sheet", 2, "Programa")]))
     assert results[0].status == "UPDATED"
     assert calls == [((7, {"seo": {"id": 9, "LinkCanonical": "https://utel.edu.mx/mexico/programa", "MetaTitle": "keep"}}), {})]
+
+
+def test_runner_reports_each_completed_product_without_shortening_the_batch():
+    events = []
+
+    class FakeClient:
+        async def find_product(self, program, *args, **kwargs):
+            return {"id": program, "attributes": {"seo": {"LinkCanonical": "https://utel.edu.mx/programa"}}}
+
+        async def update_product(self, *args, **kwargs):
+            return {}
+
+    rows = [ProductRow("Sheet", index + 2, f"Programa {index + 1}") for index in range(45)]
+    results, summary = asyncio.run(StrapiProductRunner(
+        FakeClient(), "México", "es-MX", COUNTRIES,
+    ).run(rows, on_result=lambda index, total, result, elapsed: events.append((index, total, result.program, elapsed))))
+
+    assert len(results) == summary.total == len(events) == 45
+    assert [event[0] for event in events] == list(range(1, 46))
+    assert all(event[1] == 45 and event[3] >= 0 for event in events)
+    assert events[-1][2] == "Programa 45"
 
 
 def test_client_retries_transient_error():

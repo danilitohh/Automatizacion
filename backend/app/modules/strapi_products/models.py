@@ -36,7 +36,6 @@ class ProductResult:
 class ProductSummary:
     total: int
     updated: int
-    dry_run: int
     skipped: int
     not_found: int
     ambiguous: int

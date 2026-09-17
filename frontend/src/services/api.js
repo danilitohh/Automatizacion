@@ -104,27 +104,25 @@ export const api = {
   weeklyAutoStatus: (jobId) => request(`/api/weekly-auto/runs/${jobId}`),
   cancelWeeklyAuto: (jobId) => request(`/api/weekly-auto/runs/${jobId}/cancel`, { method: "POST" }),
   strapiProductCountries: () => request("/api/strapi/products/countries"),
-  runStrapiProducts: (file, country, productScope = "2", dryRun = true) => {
+  runStrapiProducts: (file, country, productScope = "2") => {
     const formData = new FormData();
     formData.append("file", file);
     if (country) formData.append("country", country);
     formData.append("product_scope", productScope);
-    formData.append("dry_run", String(dryRun));
     return request("/api/strapi/products/run", { method: "POST", body: formData });
   },
-  strapiProductStatus: (jobId) => request(`/api/strapi/products/jobs/${jobId}`),
+  strapiProductStatus: (jobId, after = 0) => request(`/api/strapi/products/jobs/${jobId}?after=${after}`),
   createStrapiCombinedReport: (canonicalJobId, pdpJobId) => {
     const formData = new FormData();
     formData.append("canonical_job_id", canonicalJobId);
     formData.append("pdp_job_id", pdpJobId);
     return request("/api/strapi/products/combined-report", { method: "POST", body: formData });
   },
-  runStrapiDescriptions: (file, fichasFile, productScope = "2", dryRun = true) => {
+  runStrapiDescriptions: (file, fichasFile, productScope = "2") => {
     const formData = new FormData();
     formData.append("file", file);
     if (fichasFile) formData.append("fichas_file", fichasFile);
     formData.append("product_scope", productScope);
-    formData.append("dry_run", String(dryRun));
     return request("/api/strapi/products/descriptions/run", { method: "POST", body: formData });
   },
   aiProviders: () => request("/api/ai/providers"),

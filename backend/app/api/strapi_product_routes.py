@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 
 from ..config.settings import Settings
@@ -70,12 +70,12 @@ async def preview_strapi_product_file(file: UploadFile = File(...)) -> dict:
 
 
 @router.post("/run", status_code=202)
-async def run_strapi_product_job(request: Request, file: UploadFile = File(...), country: str = Form(""), product_scope: str = Form("2"), dry_run: str = Form("true")) -> dict:
+async def run_strapi_product_job(request: Request, file: UploadFile = File(...), country: str = Form(""), product_scope: str = Form("2"), dry_run: str | None = Form(None)) -> dict:
     settings: Settings = request.app.state.settings
     if not (file.filename or "").lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="Selecciona un archivo .xlsx.")
-    if dry_run.casefold() not in {"true", "false"}:
-        raise HTTPException(status_code=400, detail="dry_run debe ser true o false.")
+    if dry_run is not None and dry_run.casefold() == "true":
+        raise HTTPException(status_code=400, detail="El modo dry run fue retirado. Actualiza la página y confirma la ejecución real.")
     _validate_product_scope(product_scope)
     try:
         detected = detect_country_from_filename(file.filename or "")
@@ -88,23 +88,23 @@ async def run_strapi_product_job(request: Request, file: UploadFile = File(...),
     content = await file.read()
     job_id = uuid4().hex
     request.app.state.strapi_product_jobs[job_id] = {
-        "job_id": job_id, "status": "RUNNING", "country": detected.label, "country_code": detected.code, "locale": detected.locale, "dry_run": dry_run.casefold() == "true",
-        "filename": file.filename, "product_scope": product_scope, "started_at": datetime.now(timezone.utc).isoformat(), "completed": 0,
+        "job_id": job_id, "status": "RUNNING", "country": detected.label, "country_code": detected.code, "locale": detected.locale,
+        "filename": file.filename, "product_scope": product_scope, "started_at": datetime.now(timezone.utc).isoformat(), "completed": 0, "progress_results": [],
     }
     request.app.state.bot_tasks[job_id] = asyncio.create_task(_run_job(request.app, job_id, content, file.filename or "resultado.xlsx", country_config, product_scope))
     return request.app.state.strapi_product_jobs[job_id]
 
 
 @router.post("/descriptions/run", status_code=202)
-async def run_strapi_description_job(request: Request, file: UploadFile = File(...), fichas_file: UploadFile | None = File(None), product_scope: str = Form("2"), dry_run: str = Form("true")) -> dict:
+async def run_strapi_description_job(request: Request, file: UploadFile = File(...), fichas_file: UploadFile | None = File(None), product_scope: str = Form("2"), dry_run: str | None = Form(None)) -> dict:
     settings: Settings = request.app.state.settings
     if not (file.filename or "").lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="Selecciona un archivo .xlsx.")
     if fichas_file and not (fichas_file.filename or "").lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="El archivo de fichas debe ser .xlsx.")
+    if dry_run is not None and dry_run.casefold() == "true":
+        raise HTTPException(status_code=400, detail="El modo dry run fue retirado. Actualiza la página y confirma la ejecución real.")
     _validate_product_scope(product_scope)
-    if dry_run.casefold() not in {"true", "false"}:
-        raise HTTPException(status_code=400, detail="dry_run debe ser true o false.")
     try:
         detected = detect_country_from_filename(file.filename or "")
     except ValueError as error:
@@ -117,18 +117,32 @@ async def run_strapi_description_job(request: Request, file: UploadFile = File(.
     fichas_content = await fichas_file.read() if fichas_file else None
     request.app.state.strapi_product_jobs[job_id] = {
         "job_id": job_id, "operation": "descriptions", "status": "RUNNING", "country": detected.label, "country_code": detected.code, "locale": detected.locale,
-        "dry_run": dry_run.casefold() == "true", "filename": file.filename, "product_scope": product_scope, "schema_version": product_schema_version(), "schema_source": "integrado", "started_at": datetime.now(timezone.utc).isoformat(), "completed": 0,
+        "filename": file.filename, "product_scope": product_scope, "schema_version": product_schema_version(), "schema_source": "integrado", "started_at": datetime.now(timezone.utc).isoformat(), "completed": 0, "progress_results": [],
     }
     request.app.state.bot_tasks[job_id] = asyncio.create_task(_run_description_job(request.app, job_id, content, file.filename or "resultado.xlsx", detected, fichas_content, product_scope))
     return request.app.state.strapi_product_jobs[job_id]
 
 
 @router.get("/jobs/{job_id}")
-async def strapi_product_job_status(request: Request, job_id: str) -> dict:
+async def strapi_product_job_status(request: Request, job_id: str, after: int = Query(default=0, ge=0)) -> dict:
     job = request.app.state.strapi_product_jobs.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job no encontrado.")
-    return job
+    response = dict(job)
+    response["progress_results"] = job.get("progress_results", [])[after:]
+    response["progress_offset"] = after
+    return response
+
+
+def _record_product_progress(job: dict, index: int, total: int, result, elapsed: float) -> None:
+    workbook_total = job.get("input_total", total)
+    item = result.as_dict()
+    item.update({"sequence": index, "total": workbook_total, "elapsed_seconds": round(elapsed, 1)})
+    job.setdefault("progress_results", []).append(item)
+    job.update({
+        "completed": index,
+        "progress_message": f"{index}/{workbook_total} productos terminados · {result.program} · {result.status} · {elapsed:.1f} s",
+    })
 
 
 @router.get("/jobs/{job_id}/download")
@@ -148,8 +162,8 @@ async def create_combined_strapi_product_report(request: Request, canonical_job_
         raise HTTPException(status_code=404, detail="No se encontraron los dos procesos para crear el reporte.")
     if canonical_job.get("status") not in {"SUCCESS", "WARNING"} or pdp_job.get("status") not in {"SUCCESS", "WARNING"}:
         raise HTTPException(status_code=409, detail="Ambos procesos deben terminar correctamente antes de crear el reporte.")
-    if any(canonical_job.get(key) != pdp_job.get(key) for key in ("filename", "product_scope", "dry_run", "country_code")):
-        raise HTTPException(status_code=400, detail="Los procesos no corresponden al mismo archivo, país, alcance y modo de ejecución.")
+    if any(canonical_job.get(key) != pdp_job.get(key) for key in ("filename", "product_scope", "country_code")):
+        raise HTTPException(status_code=400, detail="Los procesos no corresponden al mismo archivo, país y alcance.")
 
     report_id = uuid4().hex
     report_dir = request.app.state.settings.storage_dir / "reports" / "strapi"
@@ -177,13 +191,13 @@ async def _run_job(application, job_id: str, content: bytes, filename: str, coun
         slug_map = {key: value["slug"] for key, value in _countries(settings).items() if value.get("slug")}
         slug_map.update({item.label.casefold(): item.slug for item in COUNTRIES.values()})
         client = StrapiClient(settings.strapi_url, _token(settings), settings.strapi_product_endpoint, settings.strapi_timeout_seconds)
-        runner = StrapiProductRunner(client, country_config["label"], country_config["locale"], slug_map, dry_run=job["dry_run"], expected_host=settings.strapi_expected_host, title_field=settings.strapi_program_field, seo_field=settings.strapi_seo_field, canonical_field=settings.strapi_canonical_field, status=settings.strapi_content_status)
-        results, summary = await runner.run(rows)
+        runner = StrapiProductRunner(client, country_config["label"], country_config["locale"], slug_map, expected_host=settings.strapi_expected_host, title_field=settings.strapi_program_field, seo_field=settings.strapi_seo_field, canonical_field=settings.strapi_canonical_field, status=settings.strapi_content_status)
+        results, summary = await runner.run(rows, on_result=lambda index, total, result, elapsed: _record_product_progress(job, index, total, result, elapsed))
         report_dir = settings.storage_dir / "reports" / "strapi"
         report_dir.mkdir(parents=True, exist_ok=True)
         report_path = report_dir / f"{job_id}_{Path(filename).stem}.xlsx"
         report_path.write_bytes(build_report(results, summary))
-        job.update({"status": "SUCCESS" if not summary.failed and not summary.invalid_data else "WARNING", "completed": summary.total, "summary": summary.as_dict(), "results": [result.as_dict() for result in results], "report_path": str(report_path), "download_url": f"/api/strapi/products/jobs/{job_id}/download", "finished_at": datetime.now(timezone.utc).isoformat()})
+        job.update({"status": "SUCCESS" if not summary.failed and not summary.invalid_data else "WARNING", "completed": summary.total, "summary": summary.as_dict(), "results": list(job.get("progress_results", [])), "report_path": str(report_path), "download_url": f"/api/strapi/products/jobs/{job_id}/download", "finished_at": datetime.now(timezone.utc).isoformat()})
     except Exception as error:  # noqa: BLE001
         job.update({"status": "FAILED", "message": str(error), "finished_at": datetime.now(timezone.utc).isoformat()})
     finally:
@@ -229,8 +243,8 @@ async def _run_description_job(application, job_id: str, content: bytes, filenam
             progress_callback=lambda message: job.update({"progress_message": message}),
         )
         siu_key_lookup = balancer_catalog.get_siu_key
-        runner = StrapiDescriptionRunner(client, country_config.label, country_config.locale, dry_run=job["dry_run"], short_field=settings.strapi_short_description_field, long_field=settings.strapi_long_description_field, content_field=settings.strapi_content_description_field, programs_field=settings.strapi_programs_field, download_program_field=settings.strapi_download_program_field, experience_field=settings.strapi_experience_field, subjects_field=settings.strapi_subjects_field, siu_key_field=settings.strapi_siu_key_field, banner_key_field=settings.strapi_banner_key_field, siu_key_lookup=siu_key_lookup, fichas_lookup=fichas, title_field=settings.strapi_program_field, status=settings.strapi_content_status, google_drive_client=drive_client)
-        results, summary = await runner.run(rows)
+        runner = StrapiDescriptionRunner(client, country_config.label, country_config.locale, short_field=settings.strapi_short_description_field, long_field=settings.strapi_long_description_field, content_field=settings.strapi_content_description_field, programs_field=settings.strapi_programs_field, download_program_field=settings.strapi_download_program_field, experience_field=settings.strapi_experience_field, subjects_field=settings.strapi_subjects_field, siu_key_field=settings.strapi_siu_key_field, banner_key_field=settings.strapi_banner_key_field, siu_key_lookup=siu_key_lookup, fichas_lookup=fichas, title_field=settings.strapi_program_field, status=settings.strapi_content_status, google_drive_client=drive_client)
+        results, summary = await runner.run(rows, on_result=lambda index, total, result, elapsed: _record_product_progress(job, index, total, result, elapsed))
         balancer_blockers = [
             result.message for result in results
             if result.status == "FAILED" and result.message and "balanceador" in result.message.casefold()
@@ -239,7 +253,7 @@ async def _run_description_job(application, job_id: str, content: bytes, filenam
         report_dir.mkdir(parents=True, exist_ok=True)
         report_path = report_dir / f"{job_id}_{Path(filename).stem}_descriptions.xlsx"
         report_path.write_bytes(build_description_report(results, summary))
-        job.update({"status": "SUCCESS" if not summary.failed and not summary.invalid_data else "WARNING", "completed": summary.total, "summary": summary.as_dict(), "results": [result.as_dict() for result in results], "blocking_reason": balancer_blockers[0] if balancer_blockers else None, "report_path": str(report_path), "download_url": f"/api/strapi/products/jobs/{job_id}/download", "finished_at": datetime.now(timezone.utc).isoformat()})
+        job.update({"status": "SUCCESS" if not summary.failed and not summary.invalid_data else "WARNING", "completed": summary.total, "summary": summary.as_dict(), "results": list(job.get("progress_results", [])), "blocking_reason": balancer_blockers[0] if balancer_blockers else None, "report_path": str(report_path), "download_url": f"/api/strapi/products/jobs/{job_id}/download", "finished_at": datetime.now(timezone.utc).isoformat()})
     except Exception as error:  # noqa: BLE001
         job.update({"status": "FAILED", "message": str(error), "finished_at": datetime.now(timezone.utc).isoformat()})
     finally:

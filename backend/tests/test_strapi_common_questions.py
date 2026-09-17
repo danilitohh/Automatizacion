@@ -58,7 +58,7 @@ def test_builds_faq_payload_preserving_section_settings_and_dropdown_ids():
     assert common_questions_match(entries, payload)
 
 
-def test_description_runner_dry_run_reports_faq_mismatch_and_live_run_syncs(tmp_path):
+def test_description_runner_syncs_faq_mismatch(tmp_path):
     doc = Document()
     doc.add_paragraph("Programa A", style="Title")
     doc.add_paragraph("Descripción del programa.")
@@ -84,12 +84,7 @@ def test_description_runner_dry_run_reports_faq_mismatch_and_live_run_syncs(tmp_
 
     client = FakeClient()
     row = ProductRow("Sheet", 2, "Programa A", str(path))
-    dry_results, _ = asyncio.run(StrapiDescriptionRunner(client, "Argentina", "es-AR", dry_run=True).run([row]))
-    assert dry_results[0].status == "DRY_RUN"
-    assert "Preguntas frecuentes se actualizarían" in dry_results[0].message
-    assert client.updates == []
-
-    results, _ = asyncio.run(StrapiDescriptionRunner(client, "Argentina", "es-AR", dry_run=False).run([row]))
+    results, _ = asyncio.run(StrapiDescriptionRunner(client, "Argentina", "es-AR").run([row]))
     assert results[0].status == "UPDATED"
     faq_payload = client.updates[-1][1]["commonQuestions"]
     assert faq_payload["dropdowns"][0]["dropdownTitle"] == "¿Cuánto dura el programa?"
@@ -120,7 +115,7 @@ def test_description_runner_does_not_rewrite_common_questions_when_already_equal
         async def update_product(self, identifier, attributes): self.updates.append(attributes)
 
     client = FakeClient()
-    result, _ = asyncio.run(StrapiDescriptionRunner(client, "Argentina", "es-AR", dry_run=False).run([
+    result, _ = asyncio.run(StrapiDescriptionRunner(client, "Argentina", "es-AR").run([
         ProductRow("Sheet", 2, "Programa A", str(path)),
     ]))
     assert result[0].status == "UPDATED"

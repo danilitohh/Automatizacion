@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import time
 from collections import Counter
 from pathlib import Path
+from typing import Callable
 from urllib.parse import urlparse
 
 import httpx
@@ -10,7 +12,7 @@ from ...services.logging_service import get_logger
 from ...services.google_drive_client import GoogleDriveClient, GoogleDriveClientError, google_document_id
 from ...services.strapi_client import StrapiAmbiguousError, StrapiClient, StrapiClientError, StrapiNotFoundError
 from .models import ProductResult, ProductRow, ProductSummary
-from .pdp_description import extract_content_description, extract_description, extract_program_durations, extract_subjects
+from .pdp_description import extract_content_description, extract_description, extract_long_description, extract_program_durations, extract_subjects
 from .common_questions import build_common_questions_payload, common_questions_match, extract_common_questions
 from .bullet_tabs import TAB_PREFIXES, build_bullet_tab_payload, extract_bullet_tabs, has_desktop_cover_image, linked_tab_prefix
 from .fichas import FichasLookup
@@ -39,11 +41,10 @@ def education_level_title(program: str) -> str:
 
 
 class StrapiDescriptionRunner:
-    def __init__(self, client: StrapiClient, country: str, locale: str, *, dry_run: bool = True, short_field: str = "shortDescription", long_field: str = "longDescription", content_field: str = "contentDescription", programs_field: str = "programs", download_program_field: str = "downloadProgram", experience_field: str = "modalities", education_field: str = "education_level", related_products_field: str = "relatedProducts", form_education_field: str = "form_education_levels", knowledge_area_field: str = "knowledgeArea", subjects_field: str = "subjects", siu_key_field: str = "siuKey", banner_key_field: str = "bannerKey", siu_key_lookup=None, title_field: str = "title", status: str = "draft", google_drive_client: GoogleDriveClient | None = None, fichas_lookup: FichasLookup | None = None, product_schema: dict | None = None) -> None:
+    def __init__(self, client: StrapiClient, country: str, locale: str, *, short_field: str = "shortDescription", long_field: str = "longDescription", content_field: str = "contentDescription", programs_field: str = "programs", download_program_field: str = "downloadProgram", experience_field: str = "modalities", education_field: str = "education_level", related_products_field: str = "relatedProducts", form_education_field: str = "form_education_levels", knowledge_area_field: str = "knowledgeArea", subjects_field: str = "subjects", siu_key_field: str = "siuKey", banner_key_field: str = "bannerKey", siu_key_lookup=None, title_field: str = "title", status: str = "draft", google_drive_client: GoogleDriveClient | None = None, fichas_lookup: FichasLookup | None = None, product_schema: dict | None = None) -> None:
         self.client = client
         self.country = country
         self.locale = locale
-        self.dry_run = dry_run
         self.short_field = short_field
         self.long_field = long_field
         self.content_field = content_field
@@ -120,6 +121,7 @@ class StrapiDescriptionRunner:
         try:
             source, content = await self._document_content(row.document or "")
             description = extract_description(row.program, source, content)
+            long_description = extract_long_description(source, content) or description
             content_description = extract_content_description(source, content)
             subjects = extract_subjects(source, content)
             programs_error: str | None = None
@@ -261,7 +263,6 @@ class StrapiDescriptionRunner:
                 if area_id is not None:
                     # Strapi expects the relation id directly for this field.
                     metadata_payload[self.knowledge_area_field] = area_id
-            missing_subjects: list[str] = []
             created_subjects: list[str] = []
             subject_changes: list[dict] = []
             subjects_payload = None
@@ -270,16 +271,12 @@ class StrapiDescriptionRunner:
                 for subject in subjects:
                     found = await self.client.find_subject(subject, self.locale)
                     if found is None:
-                        if self.dry_run:
-                            missing_subjects.append(subject)
-                            subject_changes.append(plan_change(f"{self.subjects_field}.{subject}", None, subject, action="create"))
-                        else:
-                            found = await self.client.create_subject(subject, self.locale)
-                            created_subjects.append(subject)
-                            subject_change = plan_change(f"{self.subjects_field}.{subject}", None, subject, action="create")
-                            subject_change["created_id"] = found.get("id")
-                            subject_changes.append(subject_change)
-                            subjects_payload.append({"id": found.get("id")})
+                        found = await self.client.create_subject(subject, self.locale)
+                        created_subjects.append(subject)
+                        subject_change = plan_change(f"{self.subjects_field}.{subject}", None, subject, action="create")
+                        subject_change["created_id"] = found.get("id")
+                        subject_changes.append(subject_change)
+                        subjects_payload.append({"id": found.get("id")})
                     else:
                         subjects_payload.append({"id": found.get("id")})
             current_attributes = (
@@ -311,7 +308,7 @@ class StrapiDescriptionRunner:
                 tab_id = existing_tab.get("id") if existing_tab else None
                 persisted_tab_ids.append({"id": tab_id} if tab_id is not None else {"name": tab_name})
 
-            attributes = {self.short_field: description, self.long_field: description, self.content_field: content_description}
+            attributes = {self.short_field: description, self.long_field: long_description, self.content_field: content_description}
             attributes["customLayoutPDP"] = "thirdLayout"
             if common_questions_payload is not None and faq_matches is False:
                 attributes["commonQuestions"] = common_questions_payload
@@ -331,7 +328,7 @@ class StrapiDescriptionRunner:
                 attributes[self.experience_field] = [experience_payload]
             if metadata_payload:
                 attributes.update(metadata_payload)
-            if subjects_payload is not None and not missing_subjects:
+            if subjects_payload is not None:
                 attributes[self.subjects_field] = subjects_payload
 
             schema_errors = validate_product_payload(attributes, self.product_schema)
@@ -345,92 +342,75 @@ class StrapiDescriptionRunner:
                     update_attributes[field_name] = desired
                     changes.append(plan_change(field_name, current, desired))
 
-            if tabs_bullet_section_payload is not None and self.dry_run and any(
-                existing_tab is None for existing_tab, _, _, _ in tab_changes
-            ):
-                section_after = [
-                    existing_tab.get("id") if existing_tab else tab_name
-                    for existing_tab, _, tab_name, _ in tab_changes
-                ]
-                changes.append(plan_change(
-                    "tabsBulletSection.tabs", section.get("tabs"), section_after,
-                    action="link-created-tabs",
-                ))
-
-            if not self.dry_run:
-                if manages_bullet_tabs:
-                    persisted_tab_ids = []
-                    for existing_tab, payload, tab_name, needs_write in tab_changes:
-                        if needs_write:
-                            if existing_tab:
-                                saved = await self.client.update_bullet_tab(existing_tab["id"], payload)
-                                tab_id = saved.get("id", existing_tab["id"])
-                            else:
-                                saved = await self.client.create_bullet_tab(payload)
-                                tab_id = saved.get("id")
-                            if tab_id is None:
-                                raise StrapiClientError(f"Strapi no devolvió id al guardar la pestaña {tab_name!r}.")
+            if manages_bullet_tabs:
+                persisted_tab_ids = []
+                for existing_tab, payload, tab_name, needs_write in tab_changes:
+                    if needs_write:
+                        if existing_tab:
+                            saved = await self.client.update_bullet_tab(existing_tab["id"], payload)
+                            tab_id = saved.get("id", existing_tab["id"])
                         else:
-                            tab_id = existing_tab["id"]
-                        persisted_tab_ids.append({"id": tab_id})
-                        if needs_write:
-                            verification_tabs.append((tab_id, payload, tab_name))
+                            saved = await self.client.create_bullet_tab(payload)
+                            tab_id = saved.get("id")
+                        if tab_id is None:
+                            raise StrapiClientError(f"Strapi no devolvió id al guardar la pestaña {tab_name!r}.")
+                    else:
+                        tab_id = existing_tab["id"]
+                    persisted_tab_ids.append({"id": tab_id})
+                    if needs_write:
+                        verification_tabs.append((tab_id, payload, tab_name))
 
-                if tabs_bullet_section_payload is not None and len(persisted_tab_ids) == len(TAB_PREFIXES):
-                    section_payload = dict(tabs_bullet_section_payload)
-                    section_payload["tabs"] = persisted_tab_ids
-                    if not payload_matches(current_attributes.get("tabsBulletSection"), section_payload):
-                        update_attributes["tabsBulletSection"] = section_payload
-                        changes.append(plan_change("tabsBulletSection", current_attributes.get("tabsBulletSection"), section_payload))
+            if tabs_bullet_section_payload is not None and len(persisted_tab_ids) == len(TAB_PREFIXES):
+                section_payload = dict(tabs_bullet_section_payload)
+                section_payload["tabs"] = persisted_tab_ids
+                if not payload_matches(current_attributes.get("tabsBulletSection"), section_payload):
+                    update_attributes["tabsBulletSection"] = section_payload
+                    changes.append(plan_change("tabsBulletSection", current_attributes.get("tabsBulletSection"), section_payload))
 
-                if update_attributes:
-                    await self.client.update_product(identifier, update_attributes)
-                verification = {"ok": True, "fields": [], "tabs": []}
-                if hasattr(self.client, "get_product_sync_attributes"):
-                    verified_attributes = await self.client.get_product_sync_attributes(identifier, self.locale)
-                    for field_name, desired in update_attributes.items():
-                        ok = payload_matches(verified_attributes.get(field_name), desired)
-                        verification["fields"].append({"field": field_name, "ok": ok})
-                        for item in changes:
-                            if item.get("field") == field_name and item.get("action") == "update":
-                                item["verified"] = ok
-                        verification["ok"] = verification["ok"] and ok
-                else:
-                    verification["fields"] = [{"field": key, "ok": None} for key in update_attributes]
-                    verification["ok"] = None
-                for subject in created_subjects:
-                    saved_subject = await self.client.find_subject(subject, self.locale)
-                    ok = saved_subject is not None
-                    verification.setdefault("subjects", []).append({"name": subject, "ok": ok})
+            if update_attributes:
+                await self.client.update_product(identifier, update_attributes)
+            verification = {"ok": True, "fields": [], "tabs": []}
+            if hasattr(self.client, "get_product_sync_attributes"):
+                verified_attributes = await self.client.get_product_sync_attributes(identifier, self.locale)
+                for field_name, desired in update_attributes.items():
+                    ok = payload_matches(verified_attributes.get(field_name), desired)
+                    verification["fields"].append({"field": field_name, "ok": ok})
                     for item in changes:
-                        if item.get("field") == f"{self.subjects_field}.{subject}" and item.get("action") == "create":
+                        if item.get("field") == field_name and item.get("action") == "update":
                             item["verified"] = ok
-                            if saved_subject and saved_subject.get("id") is not None:
-                                item["created_id"] = saved_subject["id"]
-                    verification["ok"] = (verification["ok"] is not False) and ok
-                if verification_tabs:
-                    for tab_id, desired, tab_name in verification_tabs:
-                        saved_tab = await self.client.get_bullet_tab_by_id(tab_id)
-                        ok = payload_matches(saved_tab.get("attributes", saved_tab), desired)
-                        verification["tabs"].append({"name": tab_name, "id": tab_id, "ok": ok})
-                        for item in changes:
-                            if item.get("field") == f"tabsBulletSection.{tab_name}" and item.get("action") in {"update", "create"}:
-                                item["verified"] = ok
-                                if item.get("action") == "create":
-                                    item["created_id"] = tab_id
-                        if not ok:
-                            verification["ok"] = False
-                if verification.get("ok") is False:
-                    failed_checks = [item for item in verification["fields"] + verification["tabs"] if item.get("ok") is False]
-                    message = "Verificación posterior fallida: " + ", ".join(item["field"] for item in failed_checks if "field" in item) + ", ".join(item["name"] for item in failed_checks if "name" in item)
-                    return ProductResult(row.sheet, row.row_number, row.program, self.country, "FAILED", message=message, description=description, siu_key=siu_key, banner_key=siu_key, changes=changes, verification=verification)
+                    verification["ok"] = verification["ok"] and ok
             else:
-                verification = {"ok": None, "performed": False, "message": "Dry run: no se escribieron datos en Strapi."}
+                verification["fields"] = [{"field": key, "ok": None} for key in update_attributes]
+                verification["ok"] = None
+            for subject in created_subjects:
+                saved_subject = await self.client.find_subject(subject, self.locale)
+                ok = saved_subject is not None
+                verification.setdefault("subjects", []).append({"name": subject, "ok": ok})
+                for item in changes:
+                    if item.get("field") == f"{self.subjects_field}.{subject}" and item.get("action") == "create":
+                        item["verified"] = ok
+                        if saved_subject and saved_subject.get("id") is not None:
+                            item["created_id"] = saved_subject["id"]
+                verification["ok"] = (verification["ok"] is not False) and ok
+            if verification_tabs:
+                for tab_id, desired, tab_name in verification_tabs:
+                    saved_tab = await self.client.get_bullet_tab_by_id(tab_id)
+                    ok = payload_matches(saved_tab.get("attributes", saved_tab), desired)
+                    verification["tabs"].append({"name": tab_name, "id": tab_id, "ok": ok})
+                    for item in changes:
+                        if item.get("field") == f"tabsBulletSection.{tab_name}" and item.get("action") in {"update", "create"}:
+                            item["verified"] = ok
+                            if item.get("action") == "create":
+                                item["created_id"] = tab_id
+                    if not ok:
+                        verification["ok"] = False
+            if verification.get("ok") is False:
+                failed_checks = [item for item in verification["fields"] + verification["tabs"] if item.get("ok") is False]
+                message = "Verificación posterior fallida: " + ", ".join(item["field"] for item in failed_checks if "field" in item) + ", ".join(item["name"] for item in failed_checks if "name" in item)
+                return ProductResult(row.sheet, row.row_number, row.program, self.country, "FAILED", message=message, description=description, siu_key=siu_key, banner_key=siu_key, changes=changes, verification=verification)
             message = f"Descripcion extraida de {source}"
             if programs_error:
                 message += f"; Programas no modificados: {programs_error}"
-            if missing_subjects:
-                message += "; Asignaturas no encontradas: " + ", ".join(missing_subjects)
             if created_subjects:
                 message += "; Asignaturas creadas: " + ", ".join(created_subjects)
             if faq_matches is not None:
@@ -438,18 +418,14 @@ class StrapiDescriptionRunner:
                     "; Preguntas frecuentes ya coinciden exactamente con el documento"
                     if faq_matches else
                     (
-                        f"; Preguntas frecuentes se actualizarían desde el documento ({len(faq_entries)} preguntas)"
-                        if self.dry_run else
                         f"; Preguntas frecuentes sincronizadas desde el documento ({len(faq_entries)} preguntas)"
                     )
                 )
             if self.siu_key_lookup is None:
                 message += "; siuKey no consultada: el lookup del Balanceador no está configurado"
-            if self.dry_run:
-                message += f"; Cambios propuestos: {len(changes)}"
-            elif not changes:
+            if not changes:
                 message += "; Sin cambios: Strapi ya coincide con el documento"
-            result_status = "DRY_RUN" if self.dry_run else ("UPDATED" if changes else "SKIPPED")
+            result_status = "UPDATED" if changes else "SKIPPED"
             result = ProductResult(row.sheet, row.row_number, row.program, self.country, result_status, message=message, description=description, siu_key=siu_key, banner_key=siu_key, changes=changes, verification=verification)
             self.logger.info("Strapi descriptions result sheet=%s row=%s program=%s country=%s status=%s", row.sheet, row.row_number, row.program, self.country, result.status)
             return result
@@ -466,10 +442,21 @@ class StrapiDescriptionRunner:
         except BalancerCatalogError as error:
             return ProductResult(row.sheet, row.row_number, row.program, self.country, "FAILED", message=str(error), description=description, siu_key=siu_key, banner_key=siu_key, changes=changes, verification=verification)
 
-    async def run(self, rows: list[ProductRow]) -> tuple[list[ProductResult], ProductSummary]:
-        results = [await self.process(row) for row in rows]
+    async def run(
+        self,
+        rows: list[ProductRow],
+        on_result: Callable[[int, int, ProductResult, float], None] | None = None,
+    ) -> tuple[list[ProductResult], ProductSummary]:
+        results = []
+        for index, row in enumerate(rows, start=1):
+            started = time.perf_counter()
+            result = await self.process(row)
+            elapsed = time.perf_counter() - started
+            results.append(result)
+            if on_result:
+                on_result(index, len(rows), result, elapsed)
         counts = Counter(result.status for result in results)
         return results, ProductSummary(
-            total=len(results), updated=counts["UPDATED"], dry_run=counts["DRY_RUN"], skipped=counts["SKIPPED"],
+            total=len(results), updated=counts["UPDATED"], skipped=counts["SKIPPED"],
             not_found=counts["NOT_FOUND"], ambiguous=counts["AMBIGUOUS"], invalid_data=counts["INVALID_DATA"], failed=counts["FAILED"],
         )
