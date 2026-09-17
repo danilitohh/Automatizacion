@@ -16,7 +16,7 @@ for line in (Path(__file__).resolve().parents[1] / 'backend/requirements.txt').r
 
 for module in (
     'fastapi', 'uvicorn', 'pydantic_settings', 'httpx', 'cloudscraper',
-    'openpyxl', 'docx', 'multipart', 'pypdf', 'phonenumbers',
+    'openpyxl', 'multipart', 'phonenumbers',
 ):
     importlib.import_module(module)
 

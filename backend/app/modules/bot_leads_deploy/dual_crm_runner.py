@@ -24,7 +24,7 @@ from .service import LeadsDeploySpreadsheetService
 
 
 class LeadsDeployDualCrmRunner(UtelInconcertRunner):
-    """Busca el lead en InConcert y Balanceador de forma segura y secuencial."""
+    """Busca el lead en InConcert y Balanceador de forma segura y en paralelo."""
 
     def _can_retry_footer_submit(self, error: UtelQaError) -> bool:
         """Autoriza un segundo mecanismo solo si NO hubo ningún envío observado.
@@ -393,6 +393,10 @@ class LeadsDeployDualCrmRunner(UtelInconcertRunner):
         """Usa Url Origen Lead como prioridad y el otro CRM como respaldo."""
 
         primary = await super().run(config, should_stop)
+        if config.parallel_crm_search:
+            # Form Validation ya consultó ambos CRM en paralelo; no se debe
+            # repetir una segunda búsqueda secuencial si ninguno confirmó.
+            return primary
         secondary_config = self._secondary_verification_config(config, primary)
         if secondary_config is None:
             return primary

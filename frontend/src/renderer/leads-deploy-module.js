@@ -107,7 +107,7 @@ function renderModuleShell() {
           <label class="toggle-field full-toggle"><input id="leads-deploy-keep-browser-open" type="checkbox" /><span><strong>Modo debug visible</strong><small>Muestra el navegador durante la ejecucion y lo deja abierto al final</small></span></label>
         </div>
         <div class="security-note"><span>i</span><p>Las credenciales de InConcert se leen desde .env como INCONCERT_USERNAME/INCONCERT_PASSWORD o CRM_USERNAME/CRM_PASSWORD. No se guardan en la interfaz.</p></div>
-        <div class="bot-step-builder bot-generated-lead-hidden" aria-hidden="true">
+        <div id="leads-deploy-generated-lead-panel" class="bot-step-builder bot-generated-lead-hidden" aria-hidden="true">
           <div class="builder-heading"><div><p class="eyebrow">Lead de prueba</p><h3>Datos generados automaticamente</h3><p class="panel-subtitle">Se crean al ejecutar cada caso.</p></div><span class="step-hint">Sin contrasenas</span></div>
           <div class="bot-fields step-fields">
             <label class="field full"><span>Nombre de prueba</span><input id="leads-deploy-lead-name" type="text" readonly /></label>
@@ -319,6 +319,15 @@ function writeForm() {
   setInputValue("#leads-deploy-lead-name", state.config.lead.name);
   setInputValue("#leads-deploy-lead-email", state.config.lead.email);
   setInputValue("#leads-deploy-lead-phone", state.config.lead.phone);
+}
+
+// Mantiene los datos de prueba fuera de la vista hasta que el backend genere
+// un lead para la ejecución actual; aria-hidden por sí solo no los oculta.
+function setGeneratedLeadVisibility(visible) {
+  const panel = document.querySelector("#leads-deploy-generated-lead-panel");
+  if (!panel) return;
+  panel.classList.toggle("bot-generated-lead-hidden", !visible);
+  panel.setAttribute("aria-hidden", String(!visible));
 }
 
 function saveConfig(showToast) {
@@ -581,6 +590,17 @@ async function pollJob(showToast, statusApi, jobId) {
       return;
     }
     if (job.result) renderRunResult(job.result);
+    if (job.result?.lead_name && job.result?.lead_email && job.result?.lead_phone) {
+      // Rehidrata el lead cuando se recupera una ejecución ya finalizada.
+      state.config.lead = {
+        name: job.result.lead_name,
+        email: job.result.lead_email,
+        phone: job.result.lead_phone,
+      };
+      writeForm();
+      setGeneratedLeadVisibility(true);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config));
+    }
     if (job.result) renderErrorLog({
       job_id: job.job_id,
       completed: 1,
@@ -638,6 +658,7 @@ async function executeBot(showToast, runApi, statusApi) {
       state.config.lead.email = job.lead_email;
       state.config.lead.phone = job.lead_phone;
       writeForm();
+      setGeneratedLeadVisibility(true);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config));
       renderPreview();
       showToast(`Datos generados: ${job.lead_email}`, "info");
@@ -1213,6 +1234,7 @@ export function initializeLeadsDeployModule({ showToast, runUtelInconcertBot, ut
       lead: { name: "pending", email: "pending@testingUtel.com", phone: "900000000" },
     };
     writeForm();
+    setGeneratedLeadVisibility(false);
     renderPreview();
     renderStages([]);
     renderErrorLog({ results: [] });

@@ -47,25 +47,6 @@ def test_web_frontend_is_served_by_fastapi(tmp_path):
     assert health_response.status_code == 200
 
 
-def test_pdp_validation_rejects_wrong_file_extensions(tmp_path):
-    """El endpoint PDP detiene archivos equivocados antes de abrir Playwright."""
-
-    settings = Settings(database_path=tmp_path / "api-test.db", storage_dir=tmp_path / "storage")
-    application = create_app(settings)
-
-    with TestClient(application) as client:
-        response = client.post(
-            "/api/pdp/validate",
-            files={
-                "excel_file": ("programas.csv", b"Programa,URL", "text/csv"),
-                "docx_file": ("contenido.docx", b"archivo", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-            },
-        )
-
-    assert response.status_code == 400
-    assert ".xlsx" in response.json()["detail"]
-
-
 def test_ai_provider_status_never_returns_keys(tmp_path):
     """El endpoint de estado solo expone configuración y modelo."""
 
@@ -87,23 +68,6 @@ def test_ai_provider_status_never_returns_keys(tmp_path):
     assert "ollama-secret" not in response.text
     assert "groq-secret" not in response.text
     assert "gemini-secret" not in response.text
-
-
-def test_semantic_pdp_rejects_unsupported_source_before_browser(tmp_path):
-    """El modo genÃ©rico valida formato y URL antes de iniciar Playwright."""
-
-    settings = Settings(database_path=tmp_path / "api-test.db", storage_dir=tmp_path / "storage")
-    application = create_app(settings)
-
-    with TestClient(application) as client:
-        response = client.post(
-            "/api/pdp/semantic-validate",
-            data={"url": "https://example.com", "use_ai": "false"},
-            files={"source_file": ("fuente.exe", b"contenido", "application/octet-stream")},
-        )
-
-    assert response.status_code == 400
-    assert "Formato no soportado" in response.json()["detail"]
 
 
 def test_bot_run_returns_immediately_as_background_job(tmp_path, monkeypatch):

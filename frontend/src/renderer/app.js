@@ -3,35 +3,31 @@
 // Coordinador de la interfaz: navegación, dashboard e historial compartido.
 import { api } from "../services/api.js";
 import { leadsDeployApi } from "../services/leads-deploy-api.js";
-import { initializeBotModule } from "./bot-module.js?v=scoped-bot-form-1";
+import { initializeBotModule } from "./bot-module.js?v=new-products-lead-destination-1";
 import { initializeLeadsDeployModule } from "./leads-deploy-module.js?v=leads-deploy-isolated-4";
-import { initializePdpModule } from "./pdp-module.js";
+import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
 import { initializeStrapiProductsModule } from "./strapi-products-module.js";
-import { initializeWeeklyAutoModule } from "../modules/weekly_auto/module.js";
 import { initializeGooeyButtons } from "./gooey-buttons.js";
+import { initializeOptionWheel } from "./option-wheel.js";
+import { initializeLiquidButtons } from "./liquid-buttons.js";
 
 // Estado mínimo persistido para restaurar la última pantalla abierta.
 const LAST_VIEW_KEY = "qa-automation.last-view";
-const state = { activeView: "dashboard" };
+const WEEKLY_AUTO_EXPANDED_KEY = "qa-automation.weekly-auto-expanded";
+const WEEKLY_AUTO_VIEWS = new Set(["weekly-photos", "weekly-forms", "weekly-performance"]);
+const state = { activeView: "dashboard", weeklyAutoExpanded: false };
 const runtimeMode = window.desktop ? "desktop" : "web";
-
-function readLastView() {
-  try { return localStorage.getItem(LAST_VIEW_KEY); } catch { return null; }
-}
-
-function saveLastView(viewName) {
-  try { localStorage.setItem(LAST_VIEW_KEY, viewName); } catch { /* Storage may be disabled in embedded browsers. */ }
-}
 
 const viewMeta = {
   dashboard: { title: "Dashboard", description: "Resumen operativo" },
-  forms: { title: "Validación de formularios", description: "Automatizaciones" },
-  visual: { title: "Monitoreo visual", description: "Automatizaciones" },
   excel: { title: "Strapi productos", description: "Sincronización PDP" },
   bot: { title: "Bot de nuevos productos", description: "Automatizaciones" },
   "leads-deploy": { title: "Bot Leads Deploy", description: "Automatizaciones" },
   "weekly-auto": { title: "Weekly Auto", description: "Automatizaciones" },
-  pdp: { title: "Validación PDP vs DOCX", description: "Automatizaciones" },
+  "weekly-photos": { title: "Weekly Photos", description: "Weekly Auto" },
+  "weekly-forms": { title: "Weekly Forms", description: "Weekly Auto" },
+  "weekly-performance": { title: "Weekly Performance", description: "Weekly Auto" },
+  "weekly-leads": { title: "Form Validation", description: "Automatizaciones" },
   history: { title: "Historial", description: "Trazabilidad" },
   settings: { title: "Configuración", description: "Administración" },
 };
@@ -191,6 +187,18 @@ function showToast(message, type = "info") {
   window.setTimeout(() => elements.toast.classList.remove("visible"), 3500);
 }
 
+// Abre o cierra el grupo de módulos sin alterar los contratos de navegación.
+function setWeeklyAutoExpanded(expanded) {
+  const parent = document.querySelector("[data-weekly-parent='true']");
+  const submenu = document.querySelector("#weekly-auto-subnav");
+  if (!parent || !submenu) return;
+  state.weeklyAutoExpanded = Boolean(expanded);
+  parent.setAttribute("aria-expanded", String(state.weeklyAutoExpanded));
+  submenu.hidden = !state.weeklyAutoExpanded;
+  parent.classList.toggle("expanded", state.weeklyAutoExpanded);
+  localStorage.setItem(WEEKLY_AUTO_EXPANDED_KEY, String(state.weeklyAutoExpanded));
+}
+
 async function refreshDashboard() {
   elements.refreshButton.classList.add("loading");
   try {
@@ -211,14 +219,27 @@ async function refreshDashboard() {
 function navigate(viewName) {
   if (!viewMeta[viewName]) return;
   state.activeView = viewName;
-  saveLastView(viewName);
-  elements.navigation.forEach((item) => item.classList.toggle("active", item.dataset.view === viewName));
+  localStorage.setItem(LAST_VIEW_KEY, viewName);
+  if (WEEKLY_AUTO_VIEWS.has(viewName)) setWeeklyAutoExpanded(true);
+  else if (viewName !== "weekly-auto") setWeeklyAutoExpanded(false);
+  elements.navigation.forEach((item) => {
+    const isWeeklyParent = item.dataset.view === "weekly-auto" && WEEKLY_AUTO_VIEWS.has(viewName);
+    item.classList.toggle("active", item.dataset.view === viewName || isWeeklyParent);
+  });
   elements.views.forEach((view) => view.classList.toggle("active", view.dataset.viewPanel === viewName));
   elements.title.textContent = viewMeta[viewName].title;
 }
 
 function bindEvents() {
-  elements.navigation.forEach((item) => item.addEventListener("click", () => navigate(item.dataset.view)));
+  elements.navigation.forEach((item) => item.addEventListener("click", () => {
+    if (item.dataset.weeklyParent === "true") {
+      const willExpand = !state.weeklyAutoExpanded;
+      setWeeklyAutoExpanded(willExpand);
+      if (willExpand) navigate("weekly-auto");
+      return;
+    }
+    navigate(item.dataset.view);
+  }));
   elements.refreshButton.addEventListener("click", refreshDashboard);
   document.querySelector("#today-label").textContent = new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
   document.querySelector("#api-url-label").textContent = api.baseUrl;
@@ -228,9 +249,21 @@ function bindEvents() {
 }
 
 bindEvents();
+initializeOptionWheel({
+  navigation: document.querySelector(".navigation"),
+  sourceItems: [...document.querySelectorAll(".navigation > .nav-item, .navigation > .nav-submenu > .nav-subitem")],
+  // La rueda es una capa visual; la navegación real sigue pasando por los
+  // botones originales y, por tanto, conserva sus rutas y estados actuales.
+  onChange: (_index, source) => source?.click(),
+});
 initializeGooeyButtons();
-const requestedView = new URLSearchParams(window.location.search).get("view");
-state.activeView = viewMeta[requestedView] ? requestedView : (readLastView() || state.activeView);
+// Descarta una vista guardada que ya no existe para evitar una pantalla vacía
+// cuando se retiran módulos del menú en una actualización de la interfaz.
+const persistedView = localStorage.getItem(LAST_VIEW_KEY);
+state.activeView = persistedView && viewMeta[persistedView] ? persistedView : "dashboard";
+if (state.activeView !== persistedView) localStorage.setItem(LAST_VIEW_KEY, state.activeView);
+state.weeklyAutoExpanded = localStorage.getItem(WEEKLY_AUTO_EXPANDED_KEY) === "true" || WEEKLY_AUTO_VIEWS.has(state.activeView);
+setWeeklyAutoExpanded(state.weeklyAutoExpanded);
 navigate(state.activeView);
 initializeBotModule({
   showToast,
@@ -257,8 +290,24 @@ initializeWeeklyAutoModule({
   runWeeklyAuto: api.runWeeklyAuto,
   weeklyAutoStatus: api.weeklyAutoStatus,
   cancelWeeklyAuto: api.cancelWeeklyAuto,
+  previewWeeklyFormsSpreadsheet: api.previewWeeklyFormsSpreadsheet,
+  runWeeklyFormsBatch: api.runUtelBatch,
+  weeklyFormsStatus: api.utelBatchStatus,
+  cancelWeeklyForms: api.cancelUtelBatch,
+  weeklyFormsDownloadUrl: api.weeklyFormsDownloadUrl,
+  runWeeklyPerformance: api.runWeeklyPerformance,
+  weeklyPerformanceStatus: api.weeklyPerformanceStatus,
+  cancelWeeklyPerformance: api.cancelWeeklyPerformance,
+  weeklyPerformanceDownloadUrl: api.weeklyPerformanceDownloadUrl,
+  previewWeeklyLeadsSpreadsheet: api.previewWeeklyLeadsSpreadsheet,
+  previewFormValidationUrls: api.previewFormValidationUrls,
+  runWeeklyLeadsBatch: api.runWeeklyLeadsBatch,
+  runFormValidationUrls: api.runFormValidationUrls,
+  weeklyLeadsStatus: api.weeklyLeadsStatus,
+  cancelWeeklyLeads: api.cancelWeeklyLeads,
+  weeklyLeadsDownloadUrl: api.weeklyLeadsDownloadUrl,
 });
-initializePdpModule({ showToast, validatePdp: api.validatePdp, validatePdpSemantic: api.validatePdpSemantic });
 initializeStrapiProductsModule({ api, showToast });
+initializeLiquidButtons();
 refreshDashboard();
 window.setInterval(refreshDashboard, 30000);

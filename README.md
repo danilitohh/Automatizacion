@@ -4,8 +4,6 @@ Aplicación web y desktop para centralizar automatizaciones de QA. La interfaz p
 
 Las automatizaciones reales de formularios, monitoreo visual y Excel/Strapi se incorporarán en las fases siguientes. También se añadió el módulo **Bot de verificaciones**, que permite construir flujos y ejecutarlos con Playwright.
 
-El módulo **PDP vs documentos** compara las páginas de producto con un Excel de URLs y un DOCX de referencia. Revisa título, descripción, asignaturas y preguntas frecuentes, y guarda el reporte en `storage/reports/pdp/`.
-
 ## Arquitectura
 
 ```text
@@ -89,24 +87,11 @@ La documentación interactiva queda disponible en `http://127.0.0.1:8000/docs`.
 | GET | `/api/bots/recorder/{id}/events` | Consulta clicks y campos capturados. |
 | POST | `/api/bots/recorder/{id}/stop` | Cierra la grabación y devuelve los pasos. |
 
-## Validar PDP vs DOCX
-
-1. Abre **PDP vs documentos** en la navegación.
-2. Sube el Excel, con una columna de programa (`Programa`, `Carrera` o `Nombre`) y una URL (`URL`, `Link`, `Enlace` o `PDP`).
-3. Sube el documento `.docx`. Si contiene varios programas, inicia cada bloque con el nombre del programa como título y usa encabezados como **Descripción**, **Asignaturas** y **Preguntas frecuentes**.
-4. Pulsa **Comparar PDPs**. La aplicación revisa cada URL, muestra la coincidencia por sección y registra el resultado en el historial.
-
-La comparación es textual y tolera cambios menores de redacción. Las diferencias marcadas como **Revisar** requieren verificación humana, especialmente si el contenido de la PDP está dentro de acordeones, imágenes o componentes sin texto HTML.
-
 ## Proveedores de IA
 
 Las integraciones de Ollama Cloud, Groq y Gemini viven en `backend/app/services/ai_service.py`. Sus claves se configuran únicamente en `.env`; el renderer solo puede consultar el estado booleano mediante `GET /api/ai/providers`.
 
 Para las automatizaciones futuras se dispone de `POST /api/ai/generate` con `provider`, `prompt`, `system_instruction` opcional y `model` opcional. La respuesta tiene el mismo formato para los tres proveedores.
-
-### Respaldo automático
-
-El módulo PDP semántico utiliza esta cascada: **Gemini → Groq → Ollama local → comparador determinístico**. Si un proveedor responde con cuota agotada, error de red o una respuesta inválida, se registra el motivo y se intenta el siguiente. Si todos fallan, la comparación textual continúa y los casos ambiguos quedan para revisión manual.
 
 Para activar Ollama local:
 
@@ -114,7 +99,7 @@ Para activar Ollama local:
 2. Confirma que el servidor local esté disponible en `OLLAMA_LOCAL_BASE_URL` (por defecto `http://127.0.0.1:11434/api`).
 3. No necesitas una clave para el servidor local.
 
-El reporte PDP incluye `ai.providers`, donde se puede ver qué proveedor respondió, cuál fue omitido, cuál agotó su cuota y qué proveedor actuó como respaldo. Las respuestas directas de `/api/ai/generate` también incluyen `usage` y `rate_limits` cuando el proveedor los informa.
+Las respuestas directas de `/api/ai/generate` incluyen `usage` y `rate_limits` cuando el proveedor los informa.
 
 ## Tests
 

@@ -1,4 +1,4 @@
-"""Runner de capturas semanales con Playwright."""
+"""Runner de Weekly Photos para capturas semanales con Playwright."""
 
 import asyncio
 import re
@@ -9,8 +9,8 @@ from time import perf_counter
 from typing import Any, Callable
 from urllib.parse import urlparse
 
-from ...schemas.weekly_auto import WeeklyAutoConfig
-from ...services.logging_service import get_logger
+from ....schemas.weekly_auto import WeeklyAutoConfig
+from ....services.logging_service import get_logger
 
 
 class WeeklyAutoError(RuntimeError):
@@ -238,8 +238,9 @@ class WeeklyAutoRunner:
             else:
                 self.logger.warning("Se alcanzó el límite de scroll progresivo; se continuará con la captura.")
         finally:
-            # Se conserva la posición al fondo para que la captura vea el estado final.
-            pass
+            # La captura es full_page; regresar arriba deja la pestaña en una
+            # posición estable incluso cuando se alcanzó el límite de seguridad.
+            await page.evaluate("() => window.scrollTo(0, 0)")
 
     async def _stabilize_page(self, page: Any, pause_ms: int) -> None:
         """Dale tiempo al DOM para resolver cambios tras el scroll."""

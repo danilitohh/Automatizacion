@@ -16,8 +16,7 @@ class ResourceSetupTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         for relative in (resources.CATALOG, '.env.example',
-            'backend/app/modules/weekly_auto/default_urls.txt',
-            'backend/app/automations/weekly_auto/default_urls.txt',
+            'backend/app/modules/weekly_auto/weekly_photos/default_urls.txt',
             'backend/app/modules/bot_leads_deploy/data/utel_programas1.xlsx',
             'backend/app/modules/bot_nuevos_productos/data/utel_programas1.xlsx'):
             dest = self.root / relative

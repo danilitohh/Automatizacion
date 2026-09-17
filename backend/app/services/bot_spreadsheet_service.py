@@ -172,7 +172,19 @@ class BotSpreadsheetService:
         "country": ("country", "pais", "país", "locale"),
         "level": ("nivel", "level", "grado"),
         "modality": ("modalidad", "modality"),
-        "utel_url": ("activo de test", "url utel", "utel url", "url nueva", "url page", "url"),
+        "utel_url": (
+            "activo de test",
+            "url utel",
+            "utel url",
+            "url nueva",
+            "url page",
+            "landing url",
+            "url landing",
+            "link",
+            "links",
+            "enlace",
+            "url",
+        ),
         "inconcert_url": (
             "url inconcert/balanceador",
             "inconcert/balanceador",
@@ -274,9 +286,12 @@ class BotSpreadsheetService:
         """Convierte el nivel descriptivo de Leads Deploy en opciones reales del menu/formulario."""
 
         level = cls._normalize(raw_level)
-        if "filipinas master" in level or "philippines master" in level:
+        # Las landings Global de QA identifican el mercado dentro de Nivel.
+        # Conservamos la superficie internacional y traducimos ambos niveles
+        # a las etiquetas que realmente expone el portal.
+        if any(token in level for token in ("filipinas", "philippines", "india", "vietnam")) and "master" in level:
             return {"modality": "Online", "level": "Master's Degree", "navigation_modality": "", "navigation_level": "Master", "navigation_sublevel": ""}
-        if "filipinas bachelor" in level or "philippines bachelor" in level or "india bachelor" in level:
+        if any(token in level for token in ("filipinas", "philippines", "india", "vietnam")) and "bachelor" in level:
             return {"modality": "Online", "level": "Bachelor's Degree", "navigation_modality": "", "navigation_level": "Bachelor", "navigation_sublevel": ""}
         if "ejecutiva" in level:
             base = "Maestria" if "maestr" in level else "Licenciatura"

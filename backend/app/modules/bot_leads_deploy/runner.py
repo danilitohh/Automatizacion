@@ -115,6 +115,15 @@ class UtelInconcertRunner:
         self._rotation_config = None
         self._crm_session_recoveries = 0
         self._crm_origin = ""
+        self._inconcert_lead_url: str | None = None
+        self._balancer_lead_url: str | None = None
+        # Fuente cuyo detalle se confirmó primero cuando se consultan ambos CRM.
+        # Se conserva separada de los dos enlaces para que ``lead_url`` y el
+        # reporte apunten al primer resultado real, no a un orden fijo.
+        self._first_crm_source: str | None = None
+        self._inconcert_found_at: float | None = None
+        self._balancer_found_at: float | None = None
+        self._crm_search_duration = 0.0
         self._submission_attempted = False
         self._cancelled_before_submit = False
         self._cancelled = False
@@ -148,6 +157,13 @@ class UtelInconcertRunner:
         self._rotation_config = config
         self._crm_session_recoveries = 0
         self._crm_origin = ""
+        self._inconcert_lead_url = None
+        self._balancer_lead_url = None
+        self._first_crm_source = None
+        self._inconcert_found_at = None
+        self._balancer_found_at = None
+        self._crm_search_duration = 0.0
+        self._crm_search_timeout_seconds = config.crm_search_timeout_seconds
         self._submission_attempted = False
         self._cancelled_before_submit = False
         self._cancelled = False
@@ -207,6 +223,8 @@ class UtelInconcertRunner:
                             )
                             self.status_flags["lead_source"] = "balanceador"
                             self.status_flags["lead_found"] = "success"
+                            self._balancer_lead_url = self.lead_url
+                            self._first_crm_source = "balanceador"
                             self.status_flags["conversion_found"] = "skipped"
                             return self._build_result(config, started_at, timer)
                         inconcert_page = await context.new_page()
@@ -220,6 +238,8 @@ class UtelInconcertRunner:
                             await self._run_stage(4, "inconcert_search", "Lead localizado y verificado", inconcert_page, lambda: self._search_lead(inconcert_page, config.lead.email, config.lead.name))
                             self.status_flags["lead_source"] = "inconcert"
                             self.status_flags["lead_found"] = "success"
+                            self._inconcert_lead_url = self.lead_url
+                            self._first_crm_source = "inconcert"
                             inconcert_page = await self._run_stage(
                                 5,
                                 "inconcert_manage",
@@ -247,6 +267,8 @@ class UtelInconcertRunner:
                                 raise
                             self.status_flags["lead_source"] = "balanceador"
                             self.status_flags["lead_found"] = "success"
+                            self._balancer_lead_url = self.lead_url
+                            self._first_crm_source = "balanceador"
                             self.status_flags["conversion_found"] = "skipped"
                             return self._build_result(config, started_at, timer)
                         if config.workflow_mode == "form_validation":
@@ -265,6 +287,29 @@ class UtelInconcertRunner:
                     form = await self._run_stage(3, "utel_form", "Formulario identificado", utel_page, lambda: self._find_utel_form(utel_page, config))
                     await self._run_stage(4, "utel_fill", "Formulario rellenado", utel_page, lambda: self._fill_utel_form(utel_page, form, config), "02_formulario_lleno")
                     self._raise_if_stop_requested(should_stop)
+                    if config.fill_only:
+                        # El modo de inspección permite revisar visualmente cada
+                        # selector y dato obligatorio sin crear un lead real.
+                        # Se detiene antes del primer clic y, por tanto, tampoco
+                        # abre InConcert ni Balanceador.
+                        await self._run_stage(
+                            5,
+                            "fill_only_stop",
+                            "Formulario listo; envío omitido (solo llenado)",
+                            utel_page,
+                            self._fill_only_stop,
+                            "03_solo_llenado_pre_envio",
+                        )
+                        self._submission_attempted = False
+                        self.status_flags.update({
+                            "utel_submission": "skipped",
+                            "utel_submission_message": "No enviado: modo solo llenado activo.",
+                            "inconcert_login": "skipped",
+                            "lead_found": "skipped",
+                            "lead_source": "skipped",
+                            "conversion_found": "skipped",
+                        })
+                        return self._build_result(config, started_at, timer)
                     if config.dry_run:
                         await self._run_stage(5, "dry_run_stop", "Dry run: formulario listo, envio omitido", utel_page, lambda: self._dry_run_stop(), "03_dry_run_pre_envio")
                         self.status_flags = {key: "skipped" for key in self.status_flags}
@@ -334,6 +379,22 @@ class UtelInconcertRunner:
                         self.status_flags["conversion_found"] = "pending"
                         return self._build_result(config, started_at, timer)
 
+                    if (
+                        config.parallel_crm_search
+                        and config.lead_search_destination in {"auto", "both"}
+                        and not self._lead_origin_is_balanceador(config)
+                    ):
+                        # Form Validation consulta ambos sistemas en páginas
+                        # independientes para reducir la latencia y conservar
+                        # los dos enlaces cuando el lead aparece en ambos.
+                        return await self._verify_crm_parallel(
+                            context,
+                            config,
+                            post_submit_signal,
+                            started_at,
+                            timer,
+                        )
+
                     if self._lead_origin_is_balanceador(config):
                         balancer_page = await context.new_page()
                         page = balancer_page
@@ -351,6 +412,7 @@ class UtelInconcertRunner:
                         )
                         self.status_flags["lead_source"] = "balanceador"
                         self.status_flags["lead_found"] = "success"
+                        self._balancer_lead_url = self.lead_url
                         self.status_flags["conversion_found"] = "skipped"
                         self._mark_submission_verified(post_submit_signal)
                         return self._build_result(config, started_at, timer)
@@ -399,6 +461,7 @@ class UtelInconcertRunner:
                             "05_lead_encontrado",
                         )
                         self.status_flags["lead_source"] = "inconcert"
+                        self._inconcert_lead_url = self.lead_url
                     except UtelQaError as search_error:
                         if search_error.stage != "inconcert_search":
                             raise
@@ -429,6 +492,8 @@ class UtelInconcertRunner:
                             raise
                         self.status_flags["lead_source"] = "balanceador"
                         self.status_flags["lead_found"] = "success"
+                        self._balancer_lead_url = self.lead_url
+                        self._first_crm_source = "balanceador"
                         self.status_flags["conversion_found"] = "skipped"
                         self._mark_submission_verified(post_submit_signal)
                         return self._build_result(config, started_at, timer)
@@ -447,6 +512,8 @@ class UtelInconcertRunner:
                         "06_gestionar",
                     )
                     page = inconcert_page
+                    self._inconcert_lead_url = self.lead_url
+                    self._first_crm_source = "inconcert"
                     self._mark_submission_verified(post_submit_signal)
                     if config.workflow_mode == "form_validation":
                         self.status_flags["conversion_found"] = "skipped"
@@ -501,12 +568,175 @@ class UtelInconcertRunner:
 
         return self._build_result(config, started_at, timer)
 
+    async def _verify_crm_parallel(
+        self,
+        context: Any,
+        config: UtelQaConfig,
+        post_submit_signal: PostSubmitSignal | None,
+        started_at: str,
+        timer: float,
+    ) -> dict[str, Any]:
+        """Busca simultáneamente en InConcert y Balanceador después del POST."""
+
+        started = perf_counter()
+
+        async def search_inconcert() -> tuple[str | None, bool, float | None]:
+            page = await context.new_page()
+            page.set_default_timeout(30000)
+            login_completed = False
+            try:
+                await self._run_stage(
+                    6,
+                    "inconcert_open",
+                    "InConcert disponible después del envío",
+                    page,
+                    lambda: self._open_inconcert(page, config),
+                )
+                await self._run_stage(
+                    7,
+                    "inconcert_login",
+                    "Login de InConcert completado",
+                    page,
+                    lambda: self._login_inconcert(page),
+                    "04_inconcert_login",
+                )
+                login_completed = True
+                await self._run_stage(
+                    8,
+                    "inconcert_contacts",
+                    "Contactos listos para buscar el lead enviado",
+                    page,
+                    lambda: self._open_contacts(page),
+                )
+                await self._run_stage(
+                    9,
+                    "inconcert_search",
+                    "Lead localizado y verificado en InConcert",
+                    page,
+                    lambda: self._search_lead(page, config.lead.email, config.lead.name),
+                    "05_lead_encontrado_inconcert",
+                )
+                detail = await self._run_stage(
+                    10,
+                    "inconcert_manage",
+                    "Ficha de InConcert abierta y email confirmado",
+                    page,
+                    lambda: self._open_manage(page, config.lead.name, config.lead.email),
+                    "06_gestionar_inconcert",
+                )
+                url = getattr(detail, "url", None) or self.lead_url
+                self._inconcert_lead_url = url
+                self.status_flags["inconcert_login"] = "success"
+                # Se toma la marca después de abrir y validar la ficha. Ese es
+                # el momento en que el resultado deja de ser una coincidencia
+                # provisional y puede convertirse en el enlace principal.
+                return url, True, self._inconcert_found_at or perf_counter()
+            except UtelQaError:
+                # La otra consulta continúa aunque un CRM no esté disponible.
+                if not login_completed:
+                    self.status_flags["inconcert_login"] = "failed"
+                return None, False, None
+
+        async def search_balancer() -> tuple[str | None, bool, float | None]:
+            page = await context.new_page()
+            page.set_default_timeout(30000)
+            try:
+                await self._run_stage(
+                    6,
+                    "lead_balancer_search",
+                    "Lead localizado en Balanceador",
+                    page,
+                    lambda: self._search_lead_balancer(
+                        page,
+                        config.lead.email,
+                        config.lead.name,
+                    ),
+                    "05_lead_encontrado_balancer",
+                )
+                self._balancer_lead_url = self.lead_url
+                # Igual que en InConcert, el instante se registra después de
+                # abrir y validar el detalle del lead en el Balanceador.
+                return (
+                    self._balancer_lead_url,
+                    bool(self._balancer_lead_url),
+                    self._balancer_found_at or perf_counter(),
+                )
+            except UtelQaError:
+                return None, False, None
+
+        # Las dos búsquedas siguen corriendo en paralelo para conservar ambas
+        # evidencias, pero ya no se elige InConcert por ser la primera variable
+        # del código: el enlace principal será el CRM cuyo detalle terminó
+        # primero (Balancer o InConcert).
+        (
+            inconcert_url,
+            inconcert_found,
+            inconcert_finished,
+        ), (
+            balancer_url,
+            balancer_found,
+            balancer_finished,
+        ) = await asyncio.gather(
+            search_inconcert(),
+            search_balancer(),
+        )
+        self._inconcert_lead_url = inconcert_url
+        self._balancer_lead_url = balancer_url
+        self._crm_search_duration = perf_counter() - started
+        finished_candidates = [
+            (inconcert_finished, "inconcert", inconcert_url, inconcert_found),
+            (balancer_finished, "balanceador", balancer_url, balancer_found),
+        ]
+        finished_candidates = [
+            candidate
+            for candidate in finished_candidates
+            if candidate[0] is not None and candidate[3]
+        ]
+        if finished_candidates:
+            _, first_source, first_url, _ = min(
+                finished_candidates,
+                key=lambda candidate: candidate[0],
+            )
+            self._first_crm_source = first_source
+            self.lead_url = first_url
+        else:
+            self._first_crm_source = None
+            self.lead_url = None
+        self.status_flags["lead_source"] = self._first_crm_source or ""
+        self.status_flags["lead_found"] = "success" if (inconcert_found or balancer_found) else "failed"
+        self.status_flags["conversion_found"] = "skipped"
+        if inconcert_found or balancer_found:
+            self._mark_submission_verified(post_submit_signal)
+        else:
+            self.status_flags["utel_submission"] = "pending" if post_submit_signal else "success"
+        return self._build_result(config, started_at, timer)
+
     def _build_result(self, config: UtelQaConfig, started_at: str, timer: float) -> dict[str, Any]:
         failed = any(stage.status == "FAIL" for stage in self.stage_results)
+        crm_found = bool(self._inconcert_lead_url or self._balancer_lead_url)
+        only_crm_failure = failed and all(
+            stage.stage.startswith(("inconcert_", "lead_balancer_"))
+            for stage in self.stage_results
+            if stage.status == "FAIL"
+        )
+        if config.workflow_mode == "form_validation" and crm_found and only_crm_failure:
+            # Un CRM indisponible no invalida un lead confirmado en el otro; el
+            # reporte conserva la etapa FAIL y los dos estados individuales.
+            failed = False
         finished_at = datetime.now().isoformat(timespec="seconds")
         if config.workflow_mode == "form_validation":
-            if failed:
+            if config.fill_only and not failed:
+                summary = "Formulario rellenado correctamente; el envio se omitio por modo solo llenado."
+            elif failed:
                 summary = "La validacion del formulario o del lead fallo en una etapa."
+            elif self._inconcert_lead_url and self._balancer_lead_url:
+                first_label = "Balanceador" if self._first_crm_source == "balanceador" else "InConcert"
+                summary = (
+                    "Formulario enviado y lead verificado en ambos CRM; "
+                    f"el primer detalle se abrió en {first_label}."
+                )
+            elif self._balancer_lead_url:
+                summary = "Formulario enviado y lead verificado en Balancer; no confirmado en InConcert."
             elif self.status_flags.get("lead_source") == "balanceador":
                 summary = "Formulario enviado y enlace del lead verificado en el Balanceador."
             else:
@@ -521,6 +751,22 @@ class UtelInconcertRunner:
         if config.dry_run and not failed:
             summary = "Dry run completado: el formulario se lleno, pero no se envio ningun lead real."
             self.status_flags["utel_submission_message"] = "No enviado: dry run activo."
+        found_inconcert = bool(self._inconcert_lead_url)
+        found_balancer = bool(self._balancer_lead_url)
+        # En una consulta dual se conservan los dos enlaces, pero ``Fuente
+        # final`` y ``lead_url`` deben representar el primer detalle que se
+        # pudo abrir. Para flujos históricos sin marca se mantiene el fallback
+        # basado en disponibilidad de cada CRM.
+        source_final = self._first_crm_source or (
+            "inconcert y balancer"
+            if found_inconcert and found_balancer
+            else "inconcert"
+            if found_inconcert
+            else "balancer"
+            if found_balancer
+            else ""
+        )
+        failure = next((stage.message for stage in self.stage_results if stage.status == "FAIL"), "")
         return {
             "status": "FAIL" if failed else "PASS",
             "summary": summary,
@@ -538,8 +784,17 @@ class UtelInconcertRunner:
             "selected_program_name": self.selected_program_name,
             "program_selection_notice": self.program_selection_notice,
             "lead_url": self.lead_url,
+            "first_crm_source": self._first_crm_source,
+            "inconcert_lead_url": self._inconcert_lead_url,
+            "balancer_lead_url": self._balancer_lead_url,
+            "found_inconcert": found_inconcert,
+            "found_balancer": found_balancer,
+            "source_final": source_final,
+            "search_duration_seconds": round(self._crm_search_duration, 2),
+            "error": failure,
             "environment": config.environment,
             "dry_run": config.dry_run,
+            "fill_only": config.fill_only,
             "workflow_mode": config.workflow_mode,
             **self.status_flags,
             "stages": self.stage_results,
@@ -1492,6 +1747,16 @@ class UtelInconcertRunner:
 
     def _rotate_program(self, candidates: list[dict], url: str, config: UtelQaConfig | None = None) -> dict:
         config = config or self._rotation_config
+        if config and getattr(config, "randomize_academic_selections", False):
+            # Form Validation prueba una opción real diferente sin alterar la
+            # rotación persistente usada por Nuevos Productos/Leads Deploy.
+            selected = secrets.choice(candidates)
+            self.logger.info(
+                "Selección aleatoria de programa Form Validation: %s (%s opciones).",
+                selected["text"],
+                len(candidates),
+            )
+            return selected
         scope = [config.country, config.level, config.modality, config.form_type,
                  "dry_run" if config.dry_run else "real"] if config else [urlparse(url).path]
         scope.insert(0, urlparse(url).netloc)
@@ -2355,7 +2620,10 @@ class UtelInconcertRunner:
         # InConcert puede tardar en indexar el envío. No retenemos el flujo
         # cuatro minutos: al agotarse este tiempo se consulta el Balanceador
         # como respaldo desde run(), sin reenviar el formulario.
-        indexing_wait_seconds = max(15, int(self.settings.inconcert_index_wait_seconds))
+        indexing_wait_seconds = max(
+            15,
+            int(getattr(self, "_crm_search_timeout_seconds", self.settings.inconcert_index_wait_seconds)),
+        )
         indexing_deadline = perf_counter() + indexing_wait_seconds
         attempt = 0
         email_candidates = []
@@ -2627,8 +2895,12 @@ class UtelInconcertRunner:
         search_button = page.get_by_role("button", name=re.compile(r"^Buscar$", re.I)).first
         await search_button.click()
 
-        deadline = perf_counter() + 90
-        next_refresh = perf_counter() + 15
+        timeout_seconds = max(
+            15,
+            int(getattr(self, "_crm_search_timeout_seconds", 90)),
+        )
+        deadline = perf_counter() + timeout_seconds
+        next_refresh = perf_counter() + min(15, timeout_seconds)
         matching_row = None
         # El Balanceador puede tardar varios segundos en renderizar la tabla.
         # Se observa el DOM antes de repetir la consulta para no reiniciar la
@@ -2703,6 +2975,8 @@ class UtelInconcertRunner:
         if compact_email not in re.sub(r"\s+", "", body).casefold():
             raise UtelQaError("lead_balancer_search", f"El detalle abierto en Balanceador no coincide con el email {email}.")
         self.lead_url = detail_page.url
+        self._balancer_lead_url = detail_page.url
+        self._balancer_found_at = perf_counter()
 
     async def _apply_contact_search(self, page: Any, filter_name: str, value: str) -> None:
         search_input = await self._resolve_inconcert_search_input(page)
@@ -3105,6 +3379,8 @@ class UtelInconcertRunner:
         # actividad tarda o falla después, BotReportService podrá escribirlo en
         # el Excel como validación pendiente.
         self.lead_url = detail_page.url
+        self._inconcert_lead_url = detail_page.url
+        self._inconcert_found_at = perf_counter()
 
         try:
             await detail_page.wait_for_function(
@@ -3153,6 +3429,7 @@ class UtelInconcertRunner:
             raise failure
 
         self.lead_url = detail_page.url
+        self._inconcert_lead_url = detail_page.url
         return detail_page
 
     async def _confirm_conversion(self, page: Any, config: UtelQaConfig) -> None:
@@ -3383,6 +3660,13 @@ class UtelInconcertRunner:
 
     async def _dry_run_stop(self) -> None:
         self.logger.info("Dry run activo: no se enviara el formulario ni se abrira InConcert.")
+
+    async def _fill_only_stop(self) -> None:
+        """Deja la landing lista para revisión sin ejecutar ninguna mutación."""
+
+        self.logger.info(
+            "Modo solo llenado activo: formulario preparado; no se enviara ni se abrira CRM."
+        )
 
     async def _fill_first_available(self, form: Any, selectors: list[str], value: str) -> None:
         for selector in selectors:
