@@ -107,3 +107,22 @@ def test_program_heading_tolerates_known_cifal_suffix():
         "maestria en administracion publica",
         "maestria en administracion publica con cifal malaga y unitar",
     )
+
+
+def test_footer_program_match_accepts_label_or_control_value():
+    """FooterBLC puede exponer la etiqueta o el valor interno del control."""
+
+    runner = LeadsDeployRunner(Settings())
+
+    assert runner._footer_program_matches(
+        ["Administración Pública y Políticas Económicas", "programa-123"],
+        "Administración Pública y Políticas Económicas",
+    )
+    assert not runner._footer_program_matches(
+        ["Maestría en Educación"],
+        "Administración Pública y Políticas Económicas",
+    )
+    assert runner._footer_program_candidate(
+        ["Selecciona una opción", "Administración Pública"]
+    ) == "Administración Pública"
+    assert runner._footer_program_candidate(["Selecciona una opción"]) == ""

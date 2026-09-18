@@ -48,12 +48,71 @@ class TestLeadService:
     }
 
     # Algunos países tienen prefijos móviles válidos dentro de un rango
-    # nacional mucho más amplio.  El prefijo general se conserva en
+    # nacional mucho más amplio. El prefijo general se conserva en
     # ``PHONE_FORMATS`` para validar los campos del portal, pero el generador
     # sintético usa una serie concreta para no recorrer miles de candidatos
-    # que libphonenumber rechaza.  321 es una serie móvil colombiana válida.
+    # que libphonenumber rechaza. 321 es una serie móvil colombiana válida.
     SYNTHETIC_GENERATION_PREFIXES = {
         "colombia": "321",
+    }
+
+    # Pools de prefijos para generar teléfonos sintéticos por país. Las series
+    # se mantienen dentro de los planes nacionales conocidos por
+    # ``libphonenumber``; no sustituyen el banco autorizado para envíos reales.
+    SYNTHETIC_GENERATION_PREFIX_POOLS = {
+        "mexico": ("55", "33", "81", "56", "22", "44"),
+        "ecuador": ("96", "98", "99"),
+        # Se conserva 321 como serie estable porque el flujo y el prompt de
+        # Ollama ya la usan como contrato para Colombia.
+        "colombia": ("321",),
+        "peru": ("9",),
+        # En Chile los rangos móviles empiezan con 9 y las siguientes cifras
+        # determinan si el bloque está reconocido como válido.
+        "chile": ("99", "96", "92", "95", "97", "98"),
+        "argentina": ("11", "221", "261", "341", "351", "381"),
+        "usa": (
+            "202555", "212555", "213555", "305555", "312555", "347555",
+            "415555", "424555", "469555", "512555", "617555", "646555",
+            "702555", "703555", "713555", "718555", "786555", "917555",
+            "929555", "954555", "972555",
+        ),
+        "united states": (
+            "202555", "212555", "213555", "305555", "312555", "347555",
+            "415555", "424555", "469555", "512555", "617555", "646555",
+            "702555", "703555", "713555", "718555", "786555", "917555",
+            "929555", "954555", "972555",
+        ),
+        "estados unidos": (
+            "202555", "212555", "213555", "305555", "312555", "347555",
+            "415555", "424555", "469555", "512555", "617555", "646555",
+            "702555", "703555", "713555", "718555", "786555", "917555",
+            "929555", "954555", "972555",
+        ),
+        "global": (
+            "202555", "212555", "213555", "305555", "312555", "347555",
+            "415555", "424555", "469555", "512555", "617555", "646555",
+            "702555", "703555", "713555", "718555", "786555", "917555",
+            "929555", "954555", "972555",
+        ),
+        "bolivia": ("6", "7"),
+        "paraguay": (
+            "981", "982", "983", "984", "985", "986", "987",
+            "991", "992", "993", "994", "995",
+        ),
+        "dominicana": ("809555", "829555", "849555"),
+        "republica dominicana": ("809555", "829555", "849555"),
+        "dominican republic": ("809555", "829555", "849555"),
+        "guatemala": ("5",),
+        "panama": ("6",),
+        "el salvador": ("7",),
+        "filipinas": ("917", "905", "918", "927", "995"),
+        "india": ("9",),
+        "indonesia": (
+            "812", "813", "811", "821", "822", "823", "851", "852",
+            "853", "854", "855", "856", "857", "858", "859", "877",
+            "878", "879", "881", "882", "883", "884", "885", "886",
+            "887", "888", "889",
+        ),
     }
 
     # Región ISO usada por libphonenumber para comprobar que un número
@@ -83,6 +142,17 @@ class TestLeadService:
         "indonesia": "ID",
     }
     COUNTRY_POOL_ALIASES = {
+        "mexico": ("mexico",),
+        "ecuador": ("ecuador",),
+        "colombia": ("colombia",),
+        "peru": ("peru",),
+        "chile": ("chile",),
+        "argentina": ("argentina",),
+        "bolivia": ("bolivia",),
+        "paraguay": ("paraguay",),
+        "guatemala": ("guatemala",),
+        "panama": ("panama",),
+        "el salvador": ("el salvador",),
         "usa": ("usa", "united states", "estados unidos"),
         "united states": ("usa", "united states", "estados unidos"),
         "estados unidos": ("usa", "united states", "estados unidos"),
@@ -92,6 +162,8 @@ class TestLeadService:
         "global": ("global", "usa", "united states", "estados unidos"),
         "filipinas": ("filipinas", "philippines"),
         "philippines": ("filipinas", "philippines"),
+        "india": ("india",),
+        "indonesia": ("indonesia",),
     }
 
     def __init__(
@@ -181,6 +253,42 @@ class TestLeadService:
                 phone_sequence += 1
 
         return reserved
+
+    def preview_phone(
+        self,
+        country: str,
+        sequence: int,
+        used_phones: set[str],
+        *,
+        allow_synthetic_fallback: bool = True,
+    ) -> str:
+        """Obtiene un teléfono efímero sin insertar ni consumir un lead.
+
+        El modo ``fill_only`` necesita comprobar el formulario con datos
+        realistas, pero no debe reservar filas en SQLite. Cuando existe un
+        banco autorizado se prueba primero de forma puramente consultiva; si
+        está agotado o no fue configurado, el fallback sintético permite
+        continuar una inspección sin envío.
+        """
+
+        normalized_country = self._normalize(country)
+        if self.authorized_phones:
+            try:
+                return self._next_authorized_phone(
+                    normalized_country,
+                    country.strip(),
+                    used_phones,
+                )
+            except ValueError:
+                if not allow_synthetic_fallback:
+                    raise
+
+        return self._generated_phone(
+            normalized_country,
+            country.strip(),
+            max(1, sequence),
+            used_phones,
+        )
 
     def validate_authorized_capacity(self, countries: list[str]) -> None:
         """Comprueba formato y capacidad del banco sin consumir sus números."""
@@ -276,30 +384,57 @@ class TestLeadService:
         used: set[str],
     ) -> str:
         prefix, total_digits = self.PHONE_FORMATS.get(normalized_country, ("9", 10))
-        generation_prefix = self.SYNTHETIC_GENERATION_PREFIXES.get(
-            normalized_country,
-            prefix,
-        )
-        # El prefijo de generación debe seguir siendo compatible con la regla
-        # pública del país y no puede consumir más dígitos que el teléfono.
-        if (
-            not generation_prefix.startswith(prefix)
-            or len(generation_prefix) > total_digits
-        ):
-            generation_prefix = prefix
-        suffix_digits = total_digits - len(generation_prefix)
-        capacity = 10 ** suffix_digits
-        # Distribuye los candidatos y valida el plan nacional cuando se ha
-        # habilitado explicitamente el uso de datos sinteticos.
-        candidate = (capacity // 3 + phone_sequence * 7919) % capacity
-        for _ in range(min(capacity, len(used) + 10000)):
-            phone = generation_prefix + str(candidate).zfill(suffix_digits)
-            if phone not in used and self._is_valid_generated_phone(phone, normalized_country):
-                return phone
-            candidate = (candidate + 1) % capacity
+        prefixes = self._synthetic_prefix_pool(normalized_country)
+        if not prefixes:
+            prefixes = (
+                self.SYNTHETIC_GENERATION_PREFIXES.get(normalized_country, prefix),
+            )
+
+        for prefix_index, generation_prefix in enumerate(prefixes):
+            # El prefijo de generación debe seguir siendo compatible con la
+            # regla pública del país y no consumir más dígitos que el teléfono.
+            pool_prefix = bool(self._synthetic_prefix_pool(normalized_country))
+            if (
+                (not pool_prefix and not generation_prefix.startswith(prefix))
+                or len(generation_prefix) > total_digits
+            ):
+                generation_prefix = prefix
+            suffix_digits = total_digits - len(generation_prefix)
+            capacity = 10 ** suffix_digits
+            # Distribuye los candidatos para no recorrer siempre desde cero.
+            # La capacidad combinada de los pools es deliberadamente amplia;
+            # en la práctica evita agotar teléfonos por historiales largos.
+            candidate = (
+                capacity // 3
+                + phone_sequence * 7919
+                + prefix_index * 104729
+            ) % capacity
+            # La búsqueda es deliberadamente amplia para saltar rangos que
+            # ``libphonenumber`` considera posibles pero no válidos. Con esto
+            # los historiales grandes no reducen el generador a unas pocas
+            # combinaciones iniciales.
+            search_limit = min(capacity, max(100_000, len(used) + 10_000))
+            for _ in range(search_limit):
+                phone = generation_prefix + str(candidate).zfill(suffix_digits)
+                if phone not in used and self._is_valid_generated_phone(phone, normalized_country):
+                    return phone
+                candidate = (candidate + 1) % capacity
         raise ValueError(
             f"No se pudo generar un telefono unico con formato valido para {country_label}."
         )
+
+    def _synthetic_prefix_pool(self, normalized_country: str) -> tuple[str, ...]:
+        """Devuelve el pool de prefijos aplicable a un alias de país."""
+
+        aliases = self.COUNTRY_POOL_ALIASES.get(
+            normalized_country,
+            (normalized_country,),
+        )
+        for alias in aliases:
+            prefixes = self.SYNTHETIC_GENERATION_PREFIX_POOLS.get(alias)
+            if prefixes:
+                return prefixes
+        return ()
 
     def _is_valid_generated_phone(self, phone: str, normalized_country: str) -> bool:
         """Comprueba el plan nacional en el modo sintético de envío real."""

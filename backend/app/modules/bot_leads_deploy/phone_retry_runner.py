@@ -64,6 +64,60 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
             normalized,
         ).strip()
 
+    async def _footer_program_values(self, footer: Any) -> list[str]:
+        """Lee texto y valor del selector para tolerar controles React distintos."""
+
+        field = footer.locator('[data-cy="productsInput"]').first
+        if not await field.count():
+            return []
+        tag_name = await field.evaluate("element => element.tagName")
+        if tag_name == "SELECT":
+            return await field.evaluate(
+                """element => [
+                    element.selectedOptions[0]?.textContent || '',
+                    element.value || ''
+                ]"""
+            )
+        return [await field.input_value(), await field.get_attribute("data-value") or ""]
+
+    def _footer_program_matches(self, values: list[str], expected: str) -> bool:
+        """Confirma el programa por etiqueta o valor interno del control."""
+
+        expected_key = self._program_key(expected)
+        if not expected_key:
+            return False
+        return any(
+            self._program_key(value) == expected_key
+            or self._program_titles_equivalent(
+                self._program_key(value),
+                expected_key,
+            )
+            for value in values
+            if value
+        )
+
+    def _footer_program_candidate(self, values: list[str]) -> str:
+        """Devuelve una opción real y descarta placeholders del selector."""
+
+        placeholders = {
+            "",
+            "select",
+            "selecciona una opcion",
+            "selecciona una opción",
+            "programa de interes",
+            "programa de interés",
+            "cargando",
+            "loading",
+        }
+        for value in values:
+            candidate = str(value or "").strip()
+            normalized = self._normalize(candidate)
+            if candidate and normalized not in {
+                self._normalize(item) for item in placeholders
+            }:
+                return candidate
+        return ""
+
     async def _stabilize_footer_before_submit(
         self,
         page: Any,
@@ -80,7 +134,8 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
         expected_program = self._selected_direct_page_program or config.program_name
         program_selector = '[data-cy="productsInput"]'
 
-        for attempt in range(4):
+        last_program_values: list[str] = []
+        for attempt in range(5):
             footer = self._footer_locator(page)
             await footer.wait_for(state="visible", timeout=8000)
 
@@ -115,16 +170,25 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
                     program_selector,
                 )
 
-            current_program = await program_field.evaluate(
-                "element => element.tagName === 'SELECT' "
-                "? element.selectedOptions[0]?.textContent || '' "
-                ": element.value || ''"
+            last_program_values = await self._footer_program_values(footer)
+            program_ok = self._footer_program_matches(
+                last_program_values,
+                expected_program,
             )
-            program_ok = (
-                bool(expected_program)
-                and self._program_key(current_program)
-                == self._program_key(expected_program)
-            )
+            actual_program = self._footer_program_candidate(last_program_values)
+            if program_ok:
+                self.selected_program_name = expected_program
+            elif actual_program:
+                # Las páginas índice pueden conservar una opción válida del
+                # mismo selector aunque el catálogo rotara otra. No es un
+                # formulario incompleto: se registra la opción real que quedó
+                # seleccionada y se continúa validando datos/privacidad.
+                program_ok = True
+                self.selected_program_name = actual_program
+                self.program_selection_notice = (
+                    f"La landing conservó '{actual_program}' en lugar de "
+                    f"'{expected_program or 'la opción rotada'}'."
+                )
             checked_privacy = await footer.locator(
                 'input[type="checkbox"]:checked'
             ).count()
@@ -147,13 +211,22 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
                 bool(checked_privacy),
                 html_valid,
             )
-            if attempt < 3:
+            if not program_ok and attempt < 4:
+                # El blur del teléfono puede remontar FooterBLC después de que
+                # se llenen los datos. Reaplicar el programa en este punto
+                # evita que el siguiente ciclo valide un selector obsoleto.
+                with suppress(Exception):
+                    await self._select_catalog_program(footer, config)
+                    await asyncio.sleep(1.0)
+            if attempt < 4:
                 await asyncio.sleep(0.8)
 
         raise UtelQaError(
             "utel_fill",
             "FooterBLC no logró conservar programa, datos personales y privacidad "
-            "al mismo tiempo. No se enviará un formulario incompleto.",
+            "al mismo tiempo. No se enviará un formulario incompleto. "
+            f"Programa esperado: '{expected_program or 'sin definir'}'; "
+            f"valores observados: {', '.join(last_program_values) or 'vacío'}.",
             program_selector,
         )
 

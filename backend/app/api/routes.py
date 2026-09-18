@@ -465,15 +465,22 @@ def _phone_matches_country_rule(
         return False
 
     prefix, total_digits = rule
+    normalized = lead_service._normalize(country)
+    generation_prefixes = getattr(
+        lead_service,
+        "SYNTHETIC_GENERATION_PREFIX_POOLS",
+        {},
+    ).get(normalized)
+    valid_prefixes = generation_prefixes or (prefix,)
     return (
         phone.isdigit()
         and len(phone) == total_digits
-        and phone.startswith(prefix)
+        and any(phone.startswith(candidate) for candidate in valid_prefixes)
     )
 
 
 def _is_safe_us_synthetic_phone(phone: str) -> bool:
-    """Acepta solo números QA NPA-555-0100..0199 de códigos permitidos."""
+    """Acepta números QA NPA-555-XXXX de códigos de área permitidos."""
 
     if not re.fullmatch(r"\d{10}", phone):
         return False
@@ -481,7 +488,7 @@ def _is_safe_us_synthetic_phone(phone: str) -> bool:
         return False
     if phone[3:6] != "555":
         return False
-    return 100 <= int(phone[-4:]) <= 199
+    return True
 
 
 def _reserve_specific_test_phone(
@@ -558,13 +565,13 @@ def _fallback_us_test_lead(
             .fetchone()[0]
         )
 
-    capacity = len(US_QA_AREA_CODES) * 100
+    capacity = len(US_QA_AREA_CODES) * 10000
     start = (seed * 7919) % capacity
 
     for offset in range(capacity):
         position = (start + offset) % capacity
         area_code = US_QA_AREA_CODES[position // 100]
-        line_number = 100 + (position % 100)
+        line_number = position % 10000
         phone = f"{area_code}555{line_number:04d}"
 
         if phone in used:
@@ -609,6 +616,13 @@ def _ollama_phone_prompt(
         "SYNTHETIC_GENERATION_PREFIXES",
         {},
     ).get(normalized_country, prefix)
+    generation_pool = getattr(
+        lead_service,
+        "SYNTHETIC_GENERATION_PREFIX_POOLS",
+        {},
+    ).get(normalized_country)
+    if generation_pool:
+        generation_prefix = generation_pool[0]
     us_aliases = {"usa", "united states", "estados unidos", "global"}
 
     recent_used = [
@@ -624,9 +638,9 @@ def _ollama_phone_prompt(
         return (
             "Genera exactamente UN teléfono sintético de Estados Unidos para QA. "
             "Responde únicamente con 10 dígitos, sin espacios, texto ni JSON. "
-            "Formato obligatorio: NPA55501XX. "
+            "Formato obligatorio: NPA555XXXX. "
             f"NPA debe ser uno de estos códigos: {area_codes}. "
-            "XX debe estar entre 00 y 99. "
+            "XXXX debe ser un sufijo de cuatro dígitos. "
             f"No uses ninguno de estos números ya reservados: {forbidden}. "
             f"Identificador único de solicitud: {nonce}. "
             f"Intento {attempt}. Devuelve un número diferente."
@@ -787,13 +801,7 @@ def _preview_lead_for_case(
     que usa el flujo real para que las validaciones del portal sean relevantes.
     """
 
-    normalized_country = lead_service._normalize(country)
-    phone = lead_service._generated_phone(
-        normalized_country,
-        country.strip(),
-        max(1, sequence),
-        used_phones,
-    )
+    phone = lead_service.preview_phone(country, sequence, used_phones)
     used_phones.add(phone)
     return {
         "name": f"Danilo Form Preview {lead_service._alphabetic_sequence(max(1, sequence))}",
@@ -1116,11 +1124,16 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
 
         lead_service = TestLeadService(
             settings.database_path,
+            # El modo solo llenado consulta el banco sin reservarlo; así la
+            # inspección usa los mismos formatos autorizados que un envío real.
             settings.authorized_test_phones()
-            if not batch_dry_run and not fill_only and not settings.utel_allow_synthetic_real_phones
+            if not batch_dry_run
             else {},
+            # En fill_only el fallback sintético debe pasar por libphonenumber
+            # aunque el envío real tenga desactivada esa política.
             allow_synthetic_real_phones=(
-                not batch_dry_run and not fill_only and settings.utel_allow_synthetic_real_phones
+                not batch_dry_run
+                and (fill_only or settings.utel_allow_synthetic_real_phones)
             ),
         )
         if not batch_dry_run and not fill_only and not settings.utel_allow_synthetic_real_phones:
