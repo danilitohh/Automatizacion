@@ -28,6 +28,7 @@ const FILE_COUNTRIES = {
   AR: "argentina", MX: "mexico", SV: "el-salvador", US: "usa", DO: "republica-dominicana",
   PA: "panama", BO: "bolivia", CL: "chile", CO: "colombia", EC: "ecuador", PE: "peru", PY: "paraguay",
 };
+FILE_COUNTRIES.USA = FILE_COUNTRIES.US;
 
 export function initializeStrapiProductsModule({ api, showToast }) {
   const country = document.querySelector("#strapi-products-country");
@@ -60,7 +61,7 @@ export function initializeStrapiProductsModule({ api, showToast }) {
   }).catch((error) => { status.textContent = error.message; });
 
   file.addEventListener("change", () => {
-    const match = file.files[0]?.name.match(/^\s*\[([A-Za-z]{2})\]/);
+    const match = file.files[0]?.name.match(/^\s*\[([A-Za-z]{2,3})\]/);
     const countryValue = match ? FILE_COUNTRIES[match[1].toUpperCase()] : null;
     if (countryValue) {
       country.value = countryValue;

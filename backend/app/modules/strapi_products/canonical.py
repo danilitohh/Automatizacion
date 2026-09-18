@@ -29,7 +29,8 @@ def add_country_to_canonical(
     parsed = urlsplit(canonical.strip())
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValueError("LinkCanonical no es una URL valida.")
-    if parsed.hostname.casefold() != expected_host.casefold():
+    allowed_hosts = {expected_host.casefold(), "utel.edu.mx", "cms.utel.edu.mx"}
+    if parsed.hostname.casefold() not in allowed_hosts:
         raise ValueError(f"El host del canonical no es el esperado: {parsed.netloc}")
 
     country_slug = normalize_country_slug(country, country_slugs)

@@ -27,6 +27,25 @@ def test_canonical_is_safe_and_idempotent():
     assert add_country_to_canonical(expected, "México", COUNTRIES) == expected
 
 
+@pytest.mark.parametrize(
+    ("canonical", "country", "expected"),
+    [
+        (
+            "https://cms.utel.edu.mx/licenciatura-en-educacion-para-la-sustentabilidad",
+            "USA",
+            "https://cms.utel.edu.mx/usa/licenciatura-en-educacion-para-la-sustentabilidad",
+        ),
+        (
+            "https://cms.utel.edu.mx/licenciatura-en-educacion-para-la-sustentabilidad",
+            "Argentina",
+            "https://cms.utel.edu.mx/argentina/licenciatura-en-educacion-para-la-sustentabilidad",
+        ),
+    ],
+)
+def test_canonical_adds_country_slug_and_preserves_cms_host(canonical, country, expected):
+    assert add_country_to_canonical(canonical, country, COUNTRIES) == expected
+
+
 def test_canonical_rejects_invalid_host_or_empty_value():
     with pytest.raises(ValueError):
         add_country_to_canonical("https://example.com/programa", "México", COUNTRIES)
@@ -39,6 +58,13 @@ def test_country_is_detected_from_filename():
     assert country.label == "Argentina"
     assert country.locale == "es-AR"
     assert country.slug == "argentina"
+
+
+def test_usa_country_is_detected_from_three_letter_filename_code():
+    country = detect_country_from_filename("[USA] Nuevos Productos (1).xlsx")
+    assert country.code == "US"
+    assert country.label == "USA"
+    assert country.locale == "es-US"
 
 
 def test_country_filename_requires_supported_code():

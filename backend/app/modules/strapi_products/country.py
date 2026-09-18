@@ -33,11 +33,14 @@ def detect_country_from_filename(filename: str) -> CountryConfig:
     """Detect a country code from a filename such as '[AR] Nuevos Productos.xlsx'."""
 
     name = Path(filename).name
-    match = re.match(r"^\s*\[([A-Za-z]{2})\]", name)
+    match = re.match(r"^\s*\[([A-Za-z]{2,3})\]", name)
     if not match:
         raise ValueError("El archivo debe comenzar con un codigo de pais, por ejemplo [AR].")
 
     code = match.group(1).upper()
+    # The USA workbook convention uses [USA], while the configured country key is US.
+    if code == "USA":
+        code = "US"
     country = COUNTRIES.get(code)
     if country is None:
         raise ValueError(f"El codigo de pais [{code}] no esta configurado.")
