@@ -25,6 +25,10 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
     async def _maximize_visible_browser(self, page: Any) -> None:
         """Maximiza Chrome antes de cargar UTEL, nunca después de llenar el form."""
 
+        # La ventana pertenece al lote; no repetir CDP ni esperas en cada fila.
+        shared_browser = self._current_browser
+        if shared_browser is not None and shared_browser.window_maximized:
+            return
         try:
             session = await page.context.new_cdp_session(page)
             window = await session.send("Browser.getWindowForTarget")
@@ -39,6 +43,8 @@ class LeadsDeployPhoneRetryRunner(LeadsDeployDualCrmRunner):
                 )
                 await asyncio.sleep(0.35)
             await session.detach()
+            if shared_browser is not None:
+                shared_browser.window_maximized = True
         except Exception:
             return
 

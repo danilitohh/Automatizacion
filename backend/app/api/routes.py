@@ -5,6 +5,7 @@ import asyncio
 import io
 import os
 import re
+from contextlib import AsyncExitStack
 from datetime import date, datetime
 from uuid import uuid4
 from typing import Any
@@ -892,6 +893,8 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
         else max(0, int(settings.batch_delay_seconds))
     )
     results: list[dict[str, Any]] = []
+    browser_resources = AsyncExitStack()
+    shared_runner = None
     logger.info(
         "Lote %s en tandas de %s filas, sin pausa interna y con %ss entre tandas",
         job_id,
@@ -1127,6 +1130,16 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 [config.country for _, config in prepared_rows]
             )
 
+        if is_leads_deploy and prepared_rows:
+            # Un único lote de Leads Deploy usa el perfil a la vez. El mismo
+            # runner conserva navegador y pestañas durante todas sus filas.
+            if not hasattr(application.state, "leads_deploy_browser_lock"):
+                application.state.leads_deploy_browser_lock = asyncio.Lock()
+            job["phase"] = "Esperando navegador de Leads Deploy"
+            await browser_resources.enter_async_context(application.state.leads_deploy_browser_lock)
+            shared_runner = runner_cls(settings)
+            await browser_resources.enter_async_context(shared_runner.batch_browser(prepared_rows[0][1]))
+
         if not batch_dry_run and not fill_only:
             # Se valida login y acceso a Contactos para cada CRM distinto antes
             # del primer clic. Así una contraseña vencida o una caída regional
@@ -1149,7 +1162,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     "current_program": f"Validación CRM: {preflight_config.country}",
                     "current_row": row["row_number"],
                 })
-                await runner_cls(settings).preflight_inconcert(preflight_config)
+                await (shared_runner or runner_cls(settings)).preflight_inconcert(preflight_config)
                 checked_crm_urls.add(preflight_config.inconcert_url)
 
         verification_queue = []
@@ -1304,7 +1317,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
             attempts_used = 0
             for retry_number in range(3):
                 attempts_used += 1
-                result = await runner_cls(settings).run(config)
+                result = await (shared_runner or runner_cls(settings)).run(config)
                 serializable_result = {
                     **result,
                     "stages": [stage.model_dump() for stage in result["stages"]],
@@ -1413,7 +1426,10 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     job["phase"] = f"UTEL: procesando tanda {completed_batch + 1}"
 
         if temporary_block_queue and not job.get("cancel_requested"):
-            job["phase"] = "UTEL: reintentando casos seguros en navegador visible"
+            job["phase"] = (
+                "UTEL: reintentando casos seguros en la misma sesión"
+                if is_leads_deploy else "UTEL: reintentando casos seguros en navegador visible"
+            )
             for result_index, blocked_config in temporary_block_queue:
                 row = results[result_index]["row"]
                 job.update({
@@ -1422,14 +1438,17 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     "current_lead_name": blocked_config.lead.name,
                     "current_lead_email": blocked_config.lead.email,
                     "current_lead_phone": blocked_config.lead.phone,
-                    "last_error": "Reintentando fila previa al envío en Chrome visible.",
+                    "last_error": (
+                        "Reintentando fila previa al envío en la misma sesión."
+                        if is_leads_deploy else "Reintentando fila previa al envío en Chrome visible."
+                    ),
                 })
                 # Un bloqueo UTEL antes del clic es seguro para reintentar.
-                # Se deja enfriar la sesión y se usa el perfil persistente de
-                # Chrome para reducir bloqueos repetidos del sitio.
+                # Leads Deploy conserva su navegador y sesión también aquí.
+                # Los demás módulos mantienen el navegador de recuperación.
                 await asyncio.sleep(20)
                 retry_config = blocked_config.model_copy(
-                    update={
+                    update={} if is_leads_deploy else {
                         "browser": _new_products_retry_browser(
                             results[result_index]["result"],
                             is_leads_deploy=(is_leads_deploy or is_weekly_forms),
@@ -1437,7 +1456,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                         "headless": False,
                     }
                 )
-                retry_result = await runner_cls(settings).run(retry_config)
+                retry_result = await (shared_runner or runner_cls(settings)).run(retry_config)
                 serializable_retry = {
                     **retry_result,
                     "stages": [stage.model_dump() for stage in retry_result["stages"]],
@@ -1473,12 +1492,12 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     "current_lead_phone": verify_config.lead.phone,
                     "last_error": "",
                 })
-                # Esta fase es verification_only: puede cambiar de navegador
-                # sin riesgo de volver a enviar UTEL.
+                # Leads Deploy reutiliza la sesión; el resto conserva su
+                # recuperación en Chrome. Esta fase nunca vuelve a enviar UTEL.
                 verify_config = verify_config.model_copy(
-                    update={"browser": "chrome", "headless": False}
+                    update={} if is_leads_deploy else {"browser": "chrome", "headless": False}
                 )
-                verification = await runner_cls(settings).run(verify_config)
+                verification = await (shared_runner or runner_cls(settings)).run(verify_config)
                 serializable_verification = {**verification, "stages": [stage.model_dump() for stage in verification["stages"]]}
                 submission = results[result_index]["result"]
                 results[result_index]["result"] = _merge_utel_and_crm_results(
@@ -1552,6 +1571,9 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
         logger.exception("No se pudo completar el lote UTEL/InConcert %s", job_id)
         _save_utel_batch_report(settings, job_id, filename, content, mapping, results)
         job.update({"status": "FAIL", "finished_at": datetime.now().isoformat(timespec="seconds"), "summary": str(error)})
+    finally:
+        # Cierra el navegador al terminar/cancelar y libera el turno del lote.
+        await browser_resources.aclose()
 
 
 @router.post("/bots/utel-inconcert/batch-run", status_code=202)

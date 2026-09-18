@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .automations.generic_bot.recorder import RecorderManager
 from .automations.utel_inconcert.runner import UtelInconcertRunner
+from .automations.leads_deploy.runner import LeadsDeployRunner
 from .api.routes import router
 from .api.leads_deploy_routes import router as leads_deploy_router
 from .api.strapi_product_routes import router as strapi_product_router
@@ -44,6 +45,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         if bot_tasks:
             await asyncio.gather(*bot_tasks, return_exceptions=True)
         await UtelInconcertRunner._close_open_session()
+        await LeadsDeployRunner._close_open_session()
         await application.state.recorder_manager.close_all()
 
 

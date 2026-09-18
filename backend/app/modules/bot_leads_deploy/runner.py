@@ -19,6 +19,7 @@ from ...schemas.bot import UtelQaConfig, UtelQaStageResult
 from ...services.logging_service import get_logger
 from ...services.doctorate_link_catalog import DoctorateLinkCatalog
 from ...services.program_rotation_service import ProgramRotationService
+from .browser_session import LeadsDeployBrowserSession
 
 
 class UtelQaError(RuntimeError):
@@ -100,10 +101,13 @@ class UtelInconcertRunner:
         "filipinas": ("philippines",),
         "philippines": ("philippines",),
     }
-    _open_session: dict[str, Any] | None = None
+    _open_session: LeadsDeployBrowserSession | None = None
 
     def __init__(self, settings: Settings):
         self.settings = settings
+        self._batch_browser: LeadsDeployBrowserSession | None = None
+        self._batch_browser_config: UtelQaConfig | None = None
+        self._current_browser: LeadsDeployBrowserSession | None = None
         self.logger = get_logger()
         self.stage_results: list[UtelQaStageResult] = []
         self.screenshots: list[str] = []
@@ -176,318 +180,65 @@ class UtelInconcertRunner:
         try:
             self._validate_config(config)
             self._raise_if_stop_requested(should_stop)
-            try:
-                from playwright.async_api import TimeoutError as PlaywrightTimeoutError
-                from playwright.async_api import async_playwright
-            except ImportError as error:
-                raise RuntimeError(
-                    "Playwright no esta instalado. Ejecuta `python -m pip install -r backend/requirements.txt` "
-                    "y despues `python -m playwright install chromium`."
-                ) from error
-
-            await self._close_open_session()
-            keep_open = {"value": config.keep_browser_open}
-            async with self._playwright(async_playwright, keep_open) as playwright:
-                browser = None
-                context = None
-                launch_headless = False if config.keep_browser_open else config.headless
-                if config.browser in {"chrome", "brave"}:
-                    profile_directory = self.settings.storage_dir / "browser_profiles" / "chrome-qa"
-                    profile_directory.mkdir(parents=True, exist_ok=True)
-                    launch_options = {"headless": launch_headless, "viewport": {"width": 1440, "height": 900}}
-                    if config.browser == "brave":
-                        launch_options["executable_path"] = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
-                    else:
-                        launch_options["channel"] = "chrome"
-                    context = await playwright.chromium.launch_persistent_context(str(profile_directory), **launch_options)
-                else:
-                    browser_type = getattr(playwright, config.browser)
-                    browser = await browser_type.launch(headless=launch_headless)
-                    context = await browser.new_context(viewport={"width": 1440, "height": 900})
-                try:
-                    if config.verification_only:
-                        self.status_flags["utel_submission"] = "skipped"
-                        self.status_flags["utel_submission_message"] = "Envio ya realizado en la fase UTEL."
-                        if self._lead_origin_is_balanceador(config):
-                            balancer_page = await context.new_page()
-                            page = balancer_page
-                            balancer_page.set_default_timeout(30000)
-                            await self._run_stage(
-                                1,
-                                "lead_balancer_search",
-                                "Lead localizado en Balanceador",
-                                balancer_page,
-                                lambda: self._search_lead_balancer(
-                                    balancer_page, config.lead.email, config.lead.name
-                                ),
-                            )
-                            self.status_flags["lead_source"] = "balanceador"
-                            self.status_flags["lead_found"] = "success"
-                            self._balancer_lead_url = self.lead_url
-                            self._first_crm_source = "balanceador"
-                            self.status_flags["conversion_found"] = "skipped"
-                            return self._build_result(config, started_at, timer)
-                        inconcert_page = await context.new_page()
-                        page = inconcert_page
-                        inconcert_page.set_default_timeout(30000)
-                        await self._run_stage(1, "inconcert_open", "InConcert disponible para verificacion", inconcert_page, lambda: self._open_inconcert(inconcert_page, config))
-                        await self._run_stage(2, "inconcert_login", "Login de InConcert completado", inconcert_page, lambda: self._login_inconcert(inconcert_page))
-                        self.status_flags["inconcert_login"] = "success"
-                        await self._run_stage(3, "inconcert_contacts", "Contactos listos para buscar", inconcert_page, lambda: self._open_contacts(inconcert_page))
-                        try:
-                            await self._run_stage(4, "inconcert_search", "Lead localizado y verificado", inconcert_page, lambda: self._search_lead(inconcert_page, config.lead.email, config.lead.name))
-                            self.status_flags["lead_source"] = "inconcert"
-                            self.status_flags["lead_found"] = "success"
-                            self._inconcert_lead_url = self.lead_url
-                            self._first_crm_source = "inconcert"
-                            inconcert_page = await self._run_stage(
-                                5,
-                                "inconcert_manage",
-                                "Gestionar abierto, actividad cargada y email confirmado",
-                                inconcert_page,
-                                lambda: self._open_manage(
-                                    inconcert_page,
-                                    config.lead.name,
-                                    config.lead.email,
-                                ),
-                            )
-                            page = inconcert_page
-                        except UtelQaError as search_error:
-                            if search_error.stage != "inconcert_search":
-                                raise
-                            balancer_page = await context.new_page()
-                            page = balancer_page
-                            balancer_page.set_default_timeout(30000)
-                            try:
-                                await self._run_stage(5, "lead_balancer_search", "Lead localizado en Balanceador", balancer_page, lambda: self._search_lead_balancer(balancer_page, config.lead.email, config.lead.name))
-                            except LeadNotFoundError:
-                                # InConcert y el Balanceador agotaron sus ventanas
-                                # de indexación: esta ausencia sí es concluyente.
-                                self.status_flags["lead_found"] = "failed"
-                                raise
-                            self.status_flags["lead_source"] = "balanceador"
-                            self.status_flags["lead_found"] = "success"
-                            self._balancer_lead_url = self.lead_url
-                            self._first_crm_source = "balanceador"
-                            self.status_flags["conversion_found"] = "skipped"
-                            return self._build_result(config, started_at, timer)
-                        if config.workflow_mode == "form_validation":
-                            self.status_flags["conversion_found"] = "skipped"
-                            return self._build_result(config, started_at, timer)
-                        await self._run_stage(6, "inconcert_conversion", "Conversion encontrada y programa validado", inconcert_page, lambda: self._confirm_conversion(inconcert_page, config))
-                        self.status_flags["conversion_found"] = "success"
-                        return self._build_result(config, started_at, timer)
-                    utel_page = await context.new_page()
-                    page = utel_page
-                    utel_page.set_default_timeout(18000)
-                    await self._run_stage(1, "utel_open", "UTEL abierta", utel_page, lambda: self._open_utel(utel_page, config), "01_utel_inicio")
-                    self._raise_if_stop_requested(should_stop)
-                    await self._run_stage(2, "utel_navigation", "Modalidad, nivel y programa resueltos", utel_page, lambda: self._navigate_utel(utel_page, config))
-                    self._raise_if_stop_requested(should_stop)
-                    form = await self._run_stage(3, "utel_form", "Formulario identificado", utel_page, lambda: self._find_utel_form(utel_page, config))
-                    await self._run_stage(4, "utel_fill", "Formulario rellenado", utel_page, lambda: self._fill_utel_form(utel_page, form, config), "02_formulario_lleno")
-                    self._raise_if_stop_requested(should_stop)
-                    if config.fill_only:
-                        # El modo de inspección permite revisar visualmente cada
-                        # selector y dato obligatorio sin crear un lead real.
-                        # Se detiene antes del primer clic y, por tanto, tampoco
-                        # abre InConcert ni Balanceador.
-                        await self._run_stage(
-                            5,
-                            "fill_only_stop",
-                            "Formulario listo; envío omitido (solo llenado)",
-                            utel_page,
-                            self._fill_only_stop,
-                            "03_solo_llenado_pre_envio",
-                        )
-                        self._submission_attempted = False
-                        self.status_flags.update({
-                            "utel_submission": "skipped",
-                            "utel_submission_message": "No enviado: modo solo llenado activo.",
-                            "inconcert_login": "skipped",
-                            "lead_found": "skipped",
-                            "lead_source": "skipped",
-                            "conversion_found": "skipped",
-                        })
-                        return self._build_result(config, started_at, timer)
-                    if config.dry_run:
-                        await self._run_stage(5, "dry_run_stop", "Dry run: formulario listo, envio omitido", utel_page, lambda: self._dry_run_stop(), "03_dry_run_pre_envio")
-                        self.status_flags = {key: "skipped" for key in self.status_flags}
-                        return self._build_result(config, started_at, timer)
-                    # La fila se envía en UTEL antes de abrir o consultar el CRM.
-                    # El preflight del lote es una comprobación separada: no busca correos.
-                    page = utel_page
-                    await self._show_active_page(utel_page)
-                    self._raise_if_stop_requested(should_stop)
-
-                    post_submit_signal = None
-                    verification_destination = (
-                        "Balanceador"
-                        if self._lead_origin_is_balanceador(config)
-                        else "InConcert"
-                    )
-                    submit_success_message = (
-                        "Formulario enviado; verificación pendiente al final del lote"
-                        if config.defer_crm_verification
-                        else f"Formulario enviado; se verificará en {verification_destination}"
-                    )
-                    try:
-                        await self._run_stage(
-                            5,
-                            "utel_submit",
-                            submit_success_message,
-                            utel_page,
-                            lambda: self._submit_utel_form(utel_page, form, should_stop),
-                            "03_formulario_enviado",
-                        )
-                    except RejectedSubmission:
-                        # UTEL rechazo explícitamente el formulario (por ejemplo,
-                        # "Error al enviar / Contacta a soporte"). Aunque hubo POST,
-                        # no existe un lead válido que consultar en CRM.
-                        raise
-                    except PostSubmitSignal as error:
-                        # _submit_utel_form solo emite esta señal después de observar
-                        # el POST real. Por seguridad se consulta CRM sin reenviar.
-                        post_submit_signal = error
-                        self.logger.warning(
-                            "%s Se verificará en CRM sin reenviar el formulario.",
-                            error,
-                        )
-
-                    # Defensa adicional: ninguna búsqueda puede comenzar sin haber
-                    # observado primero la solicitud POST /api/forms de UTEL.
-                    if not self._submission_attempted:
-                        raise UtelQaError(
-                            "utel_submit",
-                            "UTEL no generó POST /api/forms. El formulario no se considera "
-                            "enviado y no se consultará InConcert ni Balanceador.",
-                            'button[type="submit"], input[type="submit"]',
-                        )
-
-                    self.status_flags["utel_submission"] = (
-                        "pending" if post_submit_signal else "success"
-                    )
-                    self.status_flags["utel_submission_message"] = (
-                        str(post_submit_signal)
-                        if post_submit_signal
-                        else "Formulario enviado y confirmado correctamente."
-                    )
-
-                    if config.defer_crm_verification:
-                        self.status_flags["inconcert_login"] = "skipped"
-                        self.status_flags["lead_found"] = "pending"
-                        self.status_flags["conversion_found"] = "pending"
-                        return self._build_result(config, started_at, timer)
-
-                    if (
-                        config.parallel_crm_search
-                        and config.lead_search_destination in {"auto", "both"}
-                        and not self._lead_origin_is_balanceador(config)
-                    ):
-                        # Form Validation consulta ambos sistemas en páginas
-                        # independientes para reducir la latencia y conservar
-                        # los dos enlaces cuando el lead aparece en ambos.
-                        return await self._verify_crm_parallel(
-                            context,
-                            config,
-                            post_submit_signal,
-                            started_at,
-                            timer,
-                        )
-
+            async with self._browser_context(config) as context:
+                if config.verification_only:
+                    self.status_flags["utel_submission"] = "skipped"
+                    self.status_flags["utel_submission_message"] = "Envio ya realizado en la fase UTEL."
                     if self._lead_origin_is_balanceador(config):
-                        balancer_page = await context.new_page()
+                        balancer_page = await self._session_page(context, "balancer")
                         page = balancer_page
                         balancer_page.set_default_timeout(30000)
-                        await self._show_active_page(balancer_page)
                         await self._run_stage(
-                            6,
+                            1,
                             "lead_balancer_search",
                             "Lead localizado en Balanceador",
                             balancer_page,
                             lambda: self._search_lead_balancer(
                                 balancer_page, config.lead.email, config.lead.name
                             ),
-                            "05_lead_balanceador",
                         )
                         self.status_flags["lead_source"] = "balanceador"
                         self.status_flags["lead_found"] = "success"
                         self._balancer_lead_url = self.lead_url
+                        self._first_crm_source = "balanceador"
                         self.status_flags["conversion_found"] = "skipped"
-                        self._mark_submission_verified(post_submit_signal)
                         return self._build_result(config, started_at, timer)
-
-                    # Solo después de confirmar el POST de UTEL se abre InConcert.
-                    inconcert_page = await context.new_page()
+                    inconcert_page = await self._session_page(context, "inconcert")
                     page = inconcert_page
                     inconcert_page.set_default_timeout(30000)
-                    await self._run_stage(
-                        6,
-                        "inconcert_open",
-                        "InConcert disponible después del envío",
-                        inconcert_page,
-                        lambda: self._open_inconcert(inconcert_page, config),
-                    )
-                    await self._run_stage(
-                        7,
-                        "inconcert_login",
-                        "Login de InConcert completado",
-                        inconcert_page,
-                        lambda: self._login_inconcert(inconcert_page),
-                        "04_inconcert_login",
-                    )
+                    await self._run_stage(1, "inconcert_open", "InConcert disponible para verificacion", inconcert_page, lambda: self._open_inconcert(inconcert_page, config))
+                    await self._run_stage(2, "inconcert_login", "Login de InConcert completado", inconcert_page, lambda: self._login_inconcert(inconcert_page))
                     self.status_flags["inconcert_login"] = "success"
-                    await self._run_stage(
-                        8,
-                        "inconcert_contacts",
-                        "Contactos listos para buscar el lead enviado",
-                        inconcert_page,
-                        lambda: self._open_contacts(inconcert_page),
-                    )
-
-                    page = inconcert_page
-                    await self._show_active_page(inconcert_page)
+                    await self._run_stage(3, "inconcert_contacts", "Contactos listos para buscar", inconcert_page, lambda: self._open_contacts(inconcert_page))
                     try:
-                        await self._run_stage(
-                            9,
-                            "inconcert_search",
-                            "Lead localizado y verificado",
-                            inconcert_page,
-                            lambda: self._search_lead(
-                                inconcert_page,
-                                config.lead.email,
-                                config.lead.name,
-                            ),
-                            "05_lead_encontrado",
-                        )
+                        await self._run_stage(4, "inconcert_search", "Lead localizado y verificado", inconcert_page, lambda: self._search_lead(inconcert_page, config.lead.email, config.lead.name))
                         self.status_flags["lead_source"] = "inconcert"
+                        self.status_flags["lead_found"] = "success"
                         self._inconcert_lead_url = self.lead_url
+                        self._first_crm_source = "inconcert"
+                        inconcert_page = await self._run_stage(
+                            5,
+                            "inconcert_manage",
+                            "Gestionar abierto, actividad cargada y email confirmado",
+                            inconcert_page,
+                            lambda: self._open_manage(
+                                inconcert_page,
+                                config.lead.name,
+                                config.lead.email,
+                            ),
+                        )
+                        page = inconcert_page
                     except UtelQaError as search_error:
                         if search_error.stage != "inconcert_search":
                             raise
-                        self.logger.warning(
-                            "El lead %s no apareció en InConcert; se consultará el "
-                            "Balanceador como respaldo.",
-                            config.lead.email,
-                        )
-                        balancer_page = await context.new_page()
-                        balancer_page.set_default_timeout(30000)
+                        balancer_page = await self._session_page(context, "balancer")
                         page = balancer_page
-                        await self._show_active_page(balancer_page)
+                        balancer_page.set_default_timeout(30000)
                         try:
-                            await self._run_stage(
-                                10,
-                                "lead_balancer_search",
-                                "Lead localizado en Balanceador",
-                                balancer_page,
-                                lambda: self._search_lead_balancer(
-                                    balancer_page,
-                                    config.lead.email,
-                                    config.lead.name,
-                                ),
-                                "05_lead_balanceador",
-                            )
+                            await self._run_stage(5, "lead_balancer_search", "Lead localizado en Balanceador", balancer_page, lambda: self._search_lead_balancer(balancer_page, config.lead.email, config.lead.name))
                         except LeadNotFoundError:
+                            # InConcert y el Balanceador agotaron sus ventanas
+                            # de indexación: esta ausencia sí es concluyente.
                             self.status_flags["lead_found"] = "failed"
                             raise
                         self.status_flags["lead_source"] = "balanceador"
@@ -495,63 +246,263 @@ class UtelInconcertRunner:
                         self._balancer_lead_url = self.lead_url
                         self._first_crm_source = "balanceador"
                         self.status_flags["conversion_found"] = "skipped"
-                        self._mark_submission_verified(post_submit_signal)
                         return self._build_result(config, started_at, timer)
-
-                    self.status_flags["lead_found"] = "success"
-                    inconcert_page = await self._run_stage(
-                        10,
-                        "inconcert_manage",
-                        "Gestionar abierto, actividad cargada y email confirmado",
-                        inconcert_page,
-                        lambda: self._open_manage(
-                            inconcert_page,
-                            config.lead.name,
-                            config.lead.email,
-                        ),
-                        "06_gestionar",
-                    )
-                    page = inconcert_page
-                    self._inconcert_lead_url = self.lead_url
-                    self._first_crm_source = "inconcert"
-                    self._mark_submission_verified(post_submit_signal)
                     if config.workflow_mode == "form_validation":
                         self.status_flags["conversion_found"] = "skipped"
                         return self._build_result(config, started_at, timer)
-                    await self._run_stage(
-                        11,
-                        "inconcert_conversion",
-                        "Conversion encontrada y programa validado",
-                        inconcert_page,
-                        lambda: self._confirm_conversion(inconcert_page, config),
-                        "07_conversion",
-                    )
+                    await self._run_stage(6, "inconcert_conversion", "Conversion encontrada y programa validado", inconcert_page, lambda: self._confirm_conversion(inconcert_page, config))
                     self.status_flags["conversion_found"] = "success"
-                finally:
-                    current_task = asyncio.current_task()
-                    task_is_cancelling = bool(
-                        current_task is not None and current_task.cancelling()
+                    return self._build_result(config, started_at, timer)
+                utel_page = await self._session_page(context, "utel")
+                page = utel_page
+                utel_page.set_default_timeout(18000)
+                await self._run_stage(1, "utel_open", "UTEL abierta", utel_page, lambda: self._open_utel(utel_page, config), "01_utel_inicio")
+                self._raise_if_stop_requested(should_stop)
+                await self._run_stage(2, "utel_navigation", "Modalidad, nivel y programa resueltos", utel_page, lambda: self._navigate_utel(utel_page, config))
+                self._raise_if_stop_requested(should_stop)
+                form = await self._run_stage(3, "utel_form", "Formulario identificado", utel_page, lambda: self._find_utel_form(utel_page, config))
+                await self._run_stage(4, "utel_fill", "Formulario rellenado", utel_page, lambda: self._fill_utel_form(utel_page, form, config), "02_formulario_lleno")
+                self._raise_if_stop_requested(should_stop)
+                if config.fill_only:
+                    # El modo de inspección permite revisar visualmente cada
+                    # selector y dato obligatorio sin crear un lead real.
+                    # Se detiene antes del primer clic y, por tanto, tampoco
+                    # abre InConcert ni Balanceador.
+                    await self._run_stage(
+                        5,
+                        "fill_only_stop",
+                        "Formulario listo; envío omitido (solo llenado)",
+                        utel_page,
+                        self._fill_only_stop,
+                        "03_solo_llenado_pre_envio",
                     )
-                    if (
-                        config.keep_browser_open
-                        and not self._cancelled_before_submit
-                        and not self._cancelled
-                        and not task_is_cancelling
-                    ):
-                        keep_open["value"] = True
-                        # Guardar en la misma clase que consulta _close_open_session.
-                        # El adaptador LeadsDeployRunner puede tener estado propio;
-                        # escribir en la base dejaba el perfil de Chrome ocupado.
-                        type(self)._open_session = {
-                            "playwright": playwright,
-                            "context": context,
-                            "browser": browser,
-                        }
-                        self.logger.info("El navegador quedo abierto para revision manual.")
-                    else:
-                        await context.close()
-                        if browser is not None:
-                            await browser.close()
+                    self._submission_attempted = False
+                    self.status_flags.update({
+                        "utel_submission": "skipped",
+                        "utel_submission_message": "No enviado: modo solo llenado activo.",
+                        "inconcert_login": "skipped",
+                        "lead_found": "skipped",
+                        "lead_source": "skipped",
+                        "conversion_found": "skipped",
+                    })
+                    return self._build_result(config, started_at, timer)
+                if config.dry_run:
+                    await self._run_stage(5, "dry_run_stop", "Dry run: formulario listo, envio omitido", utel_page, lambda: self._dry_run_stop(), "03_dry_run_pre_envio")
+                    self.status_flags = {key: "skipped" for key in self.status_flags}
+                    return self._build_result(config, started_at, timer)
+                # La fila se envía en UTEL antes de abrir o consultar el CRM.
+                # El preflight del lote es una comprobación separada: no busca correos.
+                page = utel_page
+                await self._show_active_page(utel_page)
+                self._raise_if_stop_requested(should_stop)
+
+                post_submit_signal = None
+                verification_destination = (
+                    "Balanceador"
+                    if self._lead_origin_is_balanceador(config)
+                    else "InConcert"
+                )
+                submit_success_message = (
+                    "Formulario enviado; verificación pendiente al final del lote"
+                    if config.defer_crm_verification
+                    else f"Formulario enviado; se verificará en {verification_destination}"
+                )
+                try:
+                    await self._run_stage(
+                        5,
+                        "utel_submit",
+                        submit_success_message,
+                        utel_page,
+                        lambda: self._submit_utel_form(utel_page, form, should_stop),
+                        "03_formulario_enviado",
+                    )
+                except RejectedSubmission:
+                    # UTEL rechazo explícitamente el formulario (por ejemplo,
+                    # "Error al enviar / Contacta a soporte"). Aunque hubo POST,
+                    # no existe un lead válido que consultar en CRM.
+                    raise
+                except PostSubmitSignal as error:
+                    # _submit_utel_form solo emite esta señal después de observar
+                    # el POST real. Por seguridad se consulta CRM sin reenviar.
+                    post_submit_signal = error
+                    self.logger.warning(
+                        "%s Se verificará en CRM sin reenviar el formulario.",
+                        error,
+                    )
+
+                # Defensa adicional: ninguna búsqueda puede comenzar sin haber
+                # observado primero la solicitud POST /api/forms de UTEL.
+                if not self._submission_attempted:
+                    raise UtelQaError(
+                        "utel_submit",
+                        "UTEL no generó POST /api/forms. El formulario no se considera "
+                        "enviado y no se consultará InConcert ni Balanceador.",
+                        'button[type="submit"], input[type="submit"]',
+                    )
+
+                self.status_flags["utel_submission"] = (
+                    "pending" if post_submit_signal else "success"
+                )
+                self.status_flags["utel_submission_message"] = (
+                    str(post_submit_signal)
+                    if post_submit_signal
+                    else "Formulario enviado y confirmado correctamente."
+                )
+
+                if config.defer_crm_verification:
+                    self.status_flags["inconcert_login"] = "skipped"
+                    self.status_flags["lead_found"] = "pending"
+                    self.status_flags["conversion_found"] = "pending"
+                    return self._build_result(config, started_at, timer)
+
+                if (
+                    config.parallel_crm_search
+                    and config.lead_search_destination in {"auto", "both"}
+                    and not self._lead_origin_is_balanceador(config)
+                ):
+                    # Form Validation consulta ambos sistemas en páginas
+                    # independientes para reducir la latencia y conservar
+                    # los dos enlaces cuando el lead aparece en ambos.
+                    return await self._verify_crm_parallel(
+                        context,
+                        config,
+                        post_submit_signal,
+                        started_at,
+                        timer,
+                    )
+
+                if self._lead_origin_is_balanceador(config):
+                    balancer_page = await self._session_page(context, "balancer")
+                    page = balancer_page
+                    balancer_page.set_default_timeout(30000)
+                    await self._show_active_page(balancer_page)
+                    await self._run_stage(
+                        6,
+                        "lead_balancer_search",
+                        "Lead localizado en Balanceador",
+                        balancer_page,
+                        lambda: self._search_lead_balancer(
+                            balancer_page, config.lead.email, config.lead.name
+                        ),
+                        "05_lead_balanceador",
+                    )
+                    self.status_flags["lead_source"] = "balanceador"
+                    self.status_flags["lead_found"] = "success"
+                    self._balancer_lead_url = self.lead_url
+                    self.status_flags["conversion_found"] = "skipped"
+                    self._mark_submission_verified(post_submit_signal)
+                    return self._build_result(config, started_at, timer)
+
+                # Solo después de confirmar el POST de UTEL se abre InConcert.
+                inconcert_page = await self._session_page(context, "inconcert")
+                page = inconcert_page
+                inconcert_page.set_default_timeout(30000)
+                await self._run_stage(
+                    6,
+                    "inconcert_open",
+                    "InConcert disponible después del envío",
+                    inconcert_page,
+                    lambda: self._open_inconcert(inconcert_page, config),
+                )
+                await self._run_stage(
+                    7,
+                    "inconcert_login",
+                    "Login de InConcert completado",
+                    inconcert_page,
+                    lambda: self._login_inconcert(inconcert_page),
+                    "04_inconcert_login",
+                )
+                self.status_flags["inconcert_login"] = "success"
+                await self._run_stage(
+                    8,
+                    "inconcert_contacts",
+                    "Contactos listos para buscar el lead enviado",
+                    inconcert_page,
+                    lambda: self._open_contacts(inconcert_page),
+                )
+
+                page = inconcert_page
+                await self._show_active_page(inconcert_page)
+                try:
+                    await self._run_stage(
+                        9,
+                        "inconcert_search",
+                        "Lead localizado y verificado",
+                        inconcert_page,
+                        lambda: self._search_lead(
+                            inconcert_page,
+                            config.lead.email,
+                            config.lead.name,
+                        ),
+                        "05_lead_encontrado",
+                    )
+                    self.status_flags["lead_source"] = "inconcert"
+                    self._inconcert_lead_url = self.lead_url
+                except UtelQaError as search_error:
+                    if search_error.stage != "inconcert_search":
+                        raise
+                    self.logger.warning(
+                        "El lead %s no apareció en InConcert; se consultará el "
+                        "Balanceador como respaldo.",
+                        config.lead.email,
+                    )
+                    balancer_page = await self._session_page(context, "balancer")
+                    balancer_page.set_default_timeout(30000)
+                    page = balancer_page
+                    await self._show_active_page(balancer_page)
+                    try:
+                        await self._run_stage(
+                            10,
+                            "lead_balancer_search",
+                            "Lead localizado en Balanceador",
+                            balancer_page,
+                            lambda: self._search_lead_balancer(
+                                balancer_page,
+                                config.lead.email,
+                                config.lead.name,
+                            ),
+                            "05_lead_balanceador",
+                        )
+                    except LeadNotFoundError:
+                        self.status_flags["lead_found"] = "failed"
+                        raise
+                    self.status_flags["lead_source"] = "balanceador"
+                    self.status_flags["lead_found"] = "success"
+                    self._balancer_lead_url = self.lead_url
+                    self._first_crm_source = "balanceador"
+                    self.status_flags["conversion_found"] = "skipped"
+                    self._mark_submission_verified(post_submit_signal)
+                    return self._build_result(config, started_at, timer)
+
+                self.status_flags["lead_found"] = "success"
+                inconcert_page = await self._run_stage(
+                    10,
+                    "inconcert_manage",
+                    "Gestionar abierto, actividad cargada y email confirmado",
+                    inconcert_page,
+                    lambda: self._open_manage(
+                        inconcert_page,
+                        config.lead.name,
+                        config.lead.email,
+                    ),
+                    "06_gestionar",
+                )
+                page = inconcert_page
+                self._inconcert_lead_url = self.lead_url
+                self._first_crm_source = "inconcert"
+                self._mark_submission_verified(post_submit_signal)
+                if config.workflow_mode == "form_validation":
+                    self.status_flags["conversion_found"] = "skipped"
+                    return self._build_result(config, started_at, timer)
+                await self._run_stage(
+                    11,
+                    "inconcert_conversion",
+                    "Conversion encontrada y programa validado",
+                    inconcert_page,
+                    lambda: self._confirm_conversion(inconcert_page, config),
+                    "07_conversion",
+                )
+                self.status_flags["conversion_found"] = "success"
         except UtelRunCancelled:
             raise
         except UtelQaError as error:
@@ -581,7 +532,7 @@ class UtelInconcertRunner:
         started = perf_counter()
 
         async def search_inconcert() -> tuple[str | None, bool, float | None]:
-            page = await context.new_page()
+            page = await self._session_page(context, "inconcert")
             page.set_default_timeout(30000)
             login_completed = False
             try:
@@ -638,7 +589,7 @@ class UtelInconcertRunner:
                 return None, False, None
 
         async def search_balancer() -> tuple[str | None, bool, float | None]:
-            page = await context.new_page()
+            page = await self._session_page(context, "balancer")
             page.set_default_timeout(30000)
             try:
                 await self._run_stage(
@@ -825,46 +776,12 @@ class UtelInconcertRunner:
         )
         self._validate_config(safe_config)
         try:
-            from playwright.async_api import async_playwright
-        except ImportError as error:
-            raise UtelQaError(
-                "inconcert_preflight",
-                "No se inició ningún envío: Playwright no está instalado para validar InConcert.",
-            ) from error
-
-        await self._close_open_session()
-        browser = None
-        context = None
-        keep_open = {"value": False}
-        try:
-            async with self._playwright(async_playwright, keep_open) as playwright:
-                try:
-                    if safe_config.browser in {"chrome", "brave"}:
-                        profile_directory = self.settings.storage_dir / "browser_profiles" / "chrome-qa"
-                        profile_directory.mkdir(parents=True, exist_ok=True)
-                        launch_options = {"headless": safe_config.headless, "viewport": {"width": 1440, "height": 900}}
-                        if safe_config.browser == "brave":
-                            launch_options["executable_path"] = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
-                        else:
-                            launch_options["channel"] = "chrome"
-                        context = await playwright.chromium.launch_persistent_context(str(profile_directory), **launch_options)
-                    else:
-                        browser_type = getattr(playwright, safe_config.browser)
-                        browser = await browser_type.launch(headless=safe_config.headless)
-                        context = await browser.new_context(viewport={"width": 1440, "height": 900})
-                    page = await context.new_page()
-                    page.set_default_timeout(30000)
-                    await self._open_inconcert(page, safe_config)
-                    await self._login_inconcert(page)
-                    await self._open_contacts(page)
-                finally:
-                    # Cierra navegador y contexto antes de detener Playwright.
-                    if context is not None:
-                        with suppress(Exception):
-                            await context.close()
-                    if browser is not None:
-                        with suppress(Exception):
-                            await browser.close()
+            async with self._browser_context(safe_config) as context:
+                page = await self._session_page(context, "inconcert")
+                page.set_default_timeout(30000)
+                await self._open_inconcert(page, safe_config)
+                await self._login_inconcert(page)
+                await self._open_contacts(page)
         except UtelQaError as error:
             raise UtelQaError(
                 "inconcert_preflight",
@@ -877,34 +794,75 @@ class UtelInconcertRunner:
             ) from error
 
     @asynccontextmanager
-    async def _playwright(self, async_playwright, keep_open: dict[str, bool]):
-        playwright = await async_playwright().start()
+    async def batch_browser(self, config: UtelQaConfig):
+        """Asigna un navegador al lote completo, incluyendo validaciones y CRM."""
+
+        if self._batch_browser is not None:
+            yield
+            return
+        await self._close_open_session()
+        session = LeadsDeployBrowserSession(self.settings)
+        self._batch_browser = session
+        self._batch_browser_config = config
+        completed = False
         try:
-            yield playwright
+            yield
+            completed = True
+        except Exception:
+            # Un fallo de negocio puede dejar evidencia para revisión manual;
+            # CancelledError queda excluido y siempre libera el navegador.
+            completed = True
+            raise
         finally:
-            if not keep_open["value"]:
-                await playwright.stop()
+            self._batch_browser = None
+            self._batch_browser_config = None
+            task = asyncio.current_task()
+            # La cancelación cierra recursos; la revisión manual se conserva
+            # únicamente al terminar, nunca entre filas.
+            if (
+                completed and config.keep_browser_open
+                and not self._cancelled and not self._cancelled_before_submit
+                and not (task and task.cancelling())
+                and session.context is not None
+            ):
+                type(self)._open_session = session
+                self.logger.info("El navegador del lote quedó abierto para revisión manual.")
+            else:
+                await session.close()
+
+    @asynccontextmanager
+    async def _browser_context(self, config: UtelQaConfig):
+        """Comparte el contexto del lote o crea uno para una ejecución individual."""
+
+        if self._batch_browser is None:
+            async with self.batch_browser(config):
+                async with self._browser_context(config) as context:
+                    yield context
+            return
+        session = self._batch_browser
+        await session.start(self._batch_browser_config or config)
+        await session.discard_detail_tabs()
+        self._current_browser = session
+        try:
+            yield session.context
+        finally:
+            self._current_browser = None
+
+    async def _session_page(self, context: Any, role: str) -> Any:
+        """Obtiene la pestaña por función sin compartir campos entre los dos CRM."""
+
+        if self._current_browser is not None:
+            return await self._current_browser.page(role)
+        return await context.new_page()
 
     @classmethod
     async def _close_open_session(cls) -> None:
-        """Cierra una sesion visible que quedo abierta en una ejecucion anterior."""
+        """Cierra el navegador conservado para revisión al finalizar el lote."""
 
         session = cls._open_session
         cls._open_session = None
-        if not session:
-            return
-        try:
-            if session.get("context") is not None:
-                await session["context"].close()
-            if session.get("browser") is not None:
-                await session["browser"].close()
-        except Exception:
-            pass
-        finally:
-            try:
-                await session["playwright"].stop()
-            except Exception:
-                pass
+        if session is not None:
+            await session.close()
 
     async def _run_stage(
         self,
@@ -2482,6 +2440,13 @@ class UtelInconcertRunner:
     async def _open_inconcert(self, page: Any, config: UtelQaConfig) -> None:
         parsed = urlparse(config.inconcert_url)
         self._crm_origin = f"{parsed.scheme}://{parsed.netloc}"
+        current = urlparse(page.url)
+        if (
+            (current.scheme, current.netloc) == (parsed.scheme, parsed.netloc)
+            and self._is_crm_route(page.url)
+            and not await self._is_inconcert_login(page)
+        ):
+            return
         last_error: Exception | None = None
         for attempt in range(3):
             try:
@@ -2591,6 +2556,11 @@ class UtelInconcertRunner:
     async def _open_contacts(self, page: Any) -> None:
         current = urlparse(page.url)
         contacts_url = f"{current.scheme}://{current.netloc}/mas/contact/people"
+        # El listado conservado sirve para otro correo sin recargar la aplicación.
+        if current.path.rstrip("/") == "/mas/contact/people" and not await self._is_inconcert_login(page):
+            search_input = await self._resolve_inconcert_search_input(page)
+            if search_input is not None and await search_input.is_visible():
+                return
         last_error: Exception | None = None
         for attempt in range(3):
             try:
@@ -2689,6 +2659,20 @@ class UtelInconcertRunner:
             f"No se encontro el lead por email ({email}) despues de esperar su indexacion.",
         )
 
+    async def _balancer_list_ready(self, page: Any, base_url: str) -> bool:
+        """Comprueba que la pestaña conservada permite una nueva búsqueda."""
+
+        current, expected = urlparse(page.url), urlparse(base_url)
+        if (current.scheme, current.netloc, current.path.rstrip("/")) != (
+            expected.scheme, expected.netloc, "/leads"
+        ):
+            return False
+        if await page.locator("input[type='password']:visible").count():
+            return False
+        email_input = page.get_by_label(re.compile(r"^Email$", re.I)).first
+        search = page.get_by_role("button", name=re.compile(r"^Buscar$", re.I)).first
+        return await email_input.is_visible() and await search.is_visible()
+
     async def _search_lead_balancer(self, page: Any, email: str, expected_name: str) -> None:
         """Busca el lead en el Balanceador y conserva la URL de su detalle."""
 
@@ -2699,7 +2683,11 @@ class UtelInconcertRunner:
         # La búsqueda siempre comienza en el listado oficial, aunque .env
         # contenga por error la URL de login u otra ruta del mismo dominio.
         base_url = f"{parsed.scheme}://{parsed.netloc}/leads/"
-        response = await page.goto(base_url, wait_until="domcontentloaded", timeout=60000)
+        # Reutilizar el listado exige comprobar tanto la ruta como sus controles;
+        # un login vencido o una página de bloqueo deben seguir la recuperación.
+        response = None
+        if not await self._balancer_list_ready(page, base_url):
+            response = await page.goto(base_url, wait_until="domcontentloaded", timeout=60000)
         challenge_detected = (
             (response is not None and response.status in {401, 403})
             or "__cf_chl" in page.url
