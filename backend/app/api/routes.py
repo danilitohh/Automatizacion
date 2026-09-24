@@ -570,7 +570,8 @@ def _fallback_us_test_lead(
 
     for offset in range(capacity):
         position = (start + offset) % capacity
-        area_code = US_QA_AREA_CODES[position // 100]
+        # Cada código de área tiene 10 000 terminaciones posibles (0000-9999).
+        area_code = US_QA_AREA_CODES[position // 10000]
         line_number = position % 10000
         phone = f"{area_code}555{line_number:04d}"
 

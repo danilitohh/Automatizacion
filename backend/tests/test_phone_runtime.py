@@ -1,6 +1,9 @@
+import asyncio
 import httpx
 import sqlite3
+from types import SimpleNamespace
 import pytest
+from backend.app.api.routes import _fallback_us_test_lead, _reserve_lead_for_case
 from backend.app.services.test_lead_service import TestLeadService
 from backend.app.services.ai_service import AIService
 
@@ -27,6 +30,47 @@ def test_usa_generator_expands_beyond_legacy_single_prefix(tmp_path):
         for prefix in service.SYNTHETIC_GENERATION_PREFIX_POOLS["usa"]
     )
     assert service._is_valid_generated_phone(phone, "usa")
+
+
+def test_usa_fallback_reserves_valid_unique_numbers(tmp_path):
+    """El respaldo local recorre códigos de área sin exceder su índice."""
+
+    database_path = tmp_path / "usa-fallback.db"
+    service = TestLeadService(database_path, allow_synthetic_real_phones=True)
+    settings = SimpleNamespace(database_path=database_path)
+
+    first = _fallback_us_test_lead(settings, service, "USA", "usa")
+    second = _fallback_us_test_lead(settings, service, "USA", "usa")
+
+    assert first["phone"] != second["phone"]
+    assert all(
+        service._is_valid_generated_phone(lead["phone"], "usa")
+        for lead in (first, second)
+    )
+    with sqlite3.connect(database_path) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM test_leads").fetchone()[0] == 2
+
+
+def test_usa_reservation_uses_local_fallback_when_ollama_fails(tmp_path, monkeypatch):
+    """Weekly Forms puede reservar el lead de USA sin depender de Ollama."""
+
+    async def unavailable(*args, **kwargs):
+        raise RuntimeError("Ollama no disponible")
+
+    monkeypatch.setattr(AIService, "generate", unavailable)
+    database_path = tmp_path / "usa-weekly-forms.db"
+    service = TestLeadService(database_path, allow_synthetic_real_phones=True)
+    settings = SimpleNamespace(database_path=database_path, ollama_local_model="qa")
+
+    lead = asyncio.run(
+        _reserve_lead_for_case(
+            settings, service, "USA", require_authorized_phone=False
+        )
+    )
+
+    assert service._is_valid_generated_phone(lead["phone"], "usa")
+    with sqlite3.connect(database_path) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM test_leads").fetchone()[0] == 1
 
 
 def test_preview_phone_reads_authorized_bank_without_consuming_it(tmp_path):

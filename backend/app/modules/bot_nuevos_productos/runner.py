@@ -724,6 +724,10 @@ class UtelInconcertRunner:
         expected_program = direct_program.get("page_title", direct_program["text"]) if direct_program else config.program_name
         if expected_program:
             await self._validate_program_heading(page, expected_program)
+            # La PDP es la fuente de verdad para los productos nuevos. Algunas
+            # variantes del formulario todavía cargan un catálogo genérico y
+            # no incluyen el producto recién publicado en ``productsInput``.
+            self._selected_direct_page_program = expected_program
 
     def _select_direct_doctorate_program(self, config: UtelQaConfig) -> dict[str, str] | None:
         """Selecciona una PDP directa para Doctorados de Leads Deploy."""
@@ -1194,7 +1198,21 @@ class UtelInconcertRunner:
 
         # _set_dynamic_field busca primero el texto completo y luego la versión
         # sin prefijo académico: “Maestría en Ingeniería…” -> “Ingeniería…”.
-        await self._set_dynamic_field(form, selector, config.program_name)
+        try:
+            await self._set_dynamic_field(form, selector, config.program_name)
+        except UtelQaError as error:
+            if (
+                "opcion equivalente" not in self._normalize(str(error))
+                or not await self._can_recover_direct_program(config, field)
+            ):
+                raise
+            await self._inject_direct_program_option(field, config.program_name)
+            self.program_selection_notice = (
+                "Incidencia corregida: el formulario de UTEL no incluía el "
+                f"producto nuevo '{config.program_name}', pero la PDP fue validada "
+                "por su título y se agregó esa opción al selector."
+            )
+            self.logger.warning(self.program_selection_notice)
         selected_value = (await field.input_value()).strip()
         if not selected_value:
             raise UtelQaError(
@@ -1204,11 +1222,46 @@ class UtelInconcertRunner:
             )
 
         self.selected_program_name = config.program_name
-        self.program_selection_notice = (
-            "Incidencia corregida: UTEL abrió el campo Programa de interés sin "
-            f"preselección; el Bot seleccionó automáticamente '{config.program_name}'."
+        if not self.program_selection_notice:
+            self.program_selection_notice = (
+                "Incidencia corregida: UTEL abrió el campo Programa de interés sin "
+                f"preselección; el Bot seleccionó automáticamente '{config.program_name}'."
+            )
+            self.logger.warning(self.program_selection_notice)
+
+    async def _can_recover_direct_program(self, config: UtelQaConfig, field: Any) -> bool:
+        """Permite reparar solo tarjetas de PDP nuevas ya validadas por H1."""
+
+        if config.workflow_mode != "product_release" or config.form_type != "tarjeta":
+            return False
+        if not self._selected_direct_page_program:
+            return False
+        if self._normalize(self._selected_direct_page_program) != self._normalize(config.program_name):
+            return False
+        try:
+            return (await field.evaluate("element => element.tagName.toLowerCase()")) == "select"
+        except Exception:
+            return False
+
+    async def _inject_direct_program_option(self, field: Any, program_name: str) -> None:
+        """Agrega temporalmente el producto de la PDP a un catálogo atrasado."""
+
+        await field.evaluate(
+            """(element, value) => {
+                const existing = [...element.options].find(option => option.value === value);
+                if (!existing) {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    element.appendChild(option);
+                }
+                element.value = value;
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+            }""",
+            program_name,
         )
-        self.logger.warning(self.program_selection_notice)
+        await field.select_option(value=program_name)
 
     def _should_rotate_philippines_master(self, config: UtelQaConfig) -> bool:
         """Rota los másteres del lateral filipino cuando Excel no fija programa."""
