@@ -160,15 +160,29 @@ export function initializeLeadSubmissionModule(dependencies, options) {
     fileInput.addEventListener("change", () => {
       state.file = fileInput.files?.[0] || null;
       state.mapping = null;
-      run.disabled = !hasInput();
+      // Un archivo seleccionado todavía no es ejecutable: falta validar su mapeo.
+      run.disabled = true;
       download.hidden = true;
       element("file-name").textContent = state.file?.name || config.readyMessage;
+      const status = element("status");
+      status.className = "bot-run-status";
+      status.textContent = hasInput() ? "Archivo listo para analizar." : "Carga y analiza el Excel para comenzar.";
+      setTerminal(hasInput() ? "[SISTEMA] Excel seleccionado. Pulsa Analizar Excel." : "[SISTEMA] Esperando Excel.");
     });
 
     urlsInput?.addEventListener("input", () => {
       state.manualUrls = urlsInput.value.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
       state.mapping = null;
-      run.disabled = !hasInput();
+      // Las URLs pegadas también deben pasar por la vista previa antes del envío.
+      run.disabled = true;
+      const status = element("status");
+      status.className = "bot-run-status";
+      status.textContent = state.manualUrls.length
+        ? "URLs listas para analizar."
+        : "Carga y analiza el Excel para comenzar.";
+      setTerminal(state.manualUrls.length
+        ? "[SISTEMA] URLs seleccionadas. Pulsa Analizar Excel."
+        : "[SISTEMA] Esperando Excel o URLs.");
       if (state.manualUrls.length) {
         state.file = null;
         fileInput.value = "";
@@ -184,16 +198,27 @@ export function initializeLeadSubmissionModule(dependencies, options) {
           ? await config.preview(state.file)
           : await config.previewManualUrls(state.manualUrls);
         const sheet = preview.sheets?.[0];
-        if (!sheet) throw new Error("No se encontraron URLs UTEL permitidas para procesar.");
+        if (!sheet) throw new Error("No se encontró una hoja compatible. Revisa las columnas de URL, país, formulario y lead, o las URLs permitidas.");
         state.mapping = sheet.mapping;
-        run.disabled = false;
         // El backend agrega hojas espejo y descarta Leads ya existentes antes
         // de calcular el total real que se ejecutará.
         const total = preview.total_rows ?? sheet.total_rows ?? sheet.rows?.length ?? 0;
         const invalid = sheet.invalid_rows?.length || 0;
+        run.disabled = total === 0;
+        const status = element("status");
+        status.className = "bot-run-status";
+        status.textContent = total
+          ? `${total} filas pendientes listas para ejecutar.`
+          : "No hay filas pendientes; revisa las URLs y la columna de leads.";
         setTerminal(`[ANÁLISIS] ${total} filas pendientes detectadas en ${sheet.name}.\n[REGLA] 5 procesos + pausa de 60 segundos.${invalid ? `\n[AVISO] ${invalid} URLs omitidas por dominio o formato.` : ""}`);
         dependencies.showToast(`${total} filas de ${config.title} listas.`, "info");
       } catch (error) {
+        state.mapping = null;
+        run.disabled = true;
+        const status = element("status");
+        status.className = "bot-run-status error";
+        status.textContent = `No se pudo analizar la entrada: ${error.message}`;
+        setTerminal(`[ERROR] ${error.message}`);
         dependencies.showToast(error.message, "error");
       } finally {
         analyze.disabled = false;

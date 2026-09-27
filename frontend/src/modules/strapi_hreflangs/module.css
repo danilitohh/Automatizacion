@@ -1,0 +1,12 @@
+/* Estilos propios del panel de hreflangs para evitar alterar los demás módulos. */
+#view-hreflangs .hreflang-layout { grid-template-areas: "config flow"; }
+#view-hreflangs .hreflang-warning { margin-top: 16px; }
+#view-hreflangs .hreflang-actions { justify-content: flex-start; }
+#view-hreflangs .hreflang-actions #hreflang-report { margin-left: auto; }
+#view-hreflangs .hreflang-terminal { min-height: 220px; max-height: 360px; margin-top: 13px; overflow: auto; white-space: pre-wrap; }
+#view-hreflangs .hreflang-result { padding: 10px 11px; border-bottom: 1px solid var(--line); }
+#view-hreflangs .hreflang-result strong, #view-hreflangs .hreflang-result small { display: block; }
+#view-hreflangs .hreflang-result strong { color: var(--ink); font-size: 11px; }
+#view-hreflangs .hreflang-result small { margin-top: 4px; color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
+#view-hreflangs .hreflang-result.error strong { color: var(--danger); }
+@media (max-width: 920px) { #view-hreflangs .hreflang-layout { grid-template-areas: "config" "flow"; } }

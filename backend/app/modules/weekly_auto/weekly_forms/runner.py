@@ -23,6 +23,10 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
     """Detecta controles por semántica y reutiliza la búsqueda dual de CRM."""
 
     GENERIC_FORM_TIMEOUT_MS = 30000
+    DOCUMENT_FIELD_PATTERN = (
+        r"document|identificaci[oó]n|identificacion|identidad|identity|"
+        r"c[eé]dula|cedula|\bdni\b|passport|numero.*documento|document.*number"
+    )
 
     def _is_generic_lp(self, config: WeeklyFormsCaseConfig | None = None) -> bool:
         current = config or getattr(self, "_rotation_config", None)
@@ -88,6 +92,8 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         return best[1] if best else None
 
     async def _fill_utel_form(self, page: Any, form: Any, config: WeeklyFormsCaseConfig) -> None:
+        # El campo puede aparecer en cualquier variante de formulario del lote.
+        await self._fill_document_number(form, config)
         if not self._is_generic_lp(config):
             if config.program_name:
                 await super()._fill_utel_form(page, form, config)
@@ -121,20 +127,28 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                 continue
             descriptor = self._normalize(await self._control_descriptor(field))
             if re.search(r"programa|program|carrera|curso|producto|licenciatura|maestria|master", descriptor):
-                selected = await self._select_semantic_option(field, config.level, "program")
+                selected = await self._select_semantic_option(
+                    field,
+                    config.program_name or config.level,
+                    "program",
+                )
                 if selected:
                     self.selected_program_name = selected
+            elif re.search(r"bachiller|titulo|t[ií]tulo|graduaste|secundaria|high.?school", descriptor):
+                await self._select_semantic_option(field, "si", "first")
             elif re.search(r"area|nivel|level|grado|interes", descriptor):
                 await self._select_semantic_option(field, config.level, "level")
                 # React suele cargar el catálogo de programas de forma
                 # asíncrona después del cambio de nivel.
                 await asyncio.sleep(0.8)
-            elif re.search(r"codigo.*pais|country.*code|indicativo|lada|prefix", descriptor):
+            elif re.search(r"codigo.*pais|country.*code|indicativo|lada|prefix|pais|country", descriptor):
                 await self._select_semantic_option(field, config.country, "country")
-            elif re.search(r"estado|state|ciudad|city|provincia|residencia", descriptor):
+            elif re.search(r"estado|state|ciudad|city|provincia|residencia|location|ubicacion", descriptor):
                 await self._select_semantic_option(field, "", "first")
-            elif re.search(r"bachiller|titulo|t[ií]tulo|graduaste|canal|contacto", descriptor):
-                await self._select_semantic_option(field, "si", "first")
+            elif re.search(r"horario|hora|time|schedule", descriptor):
+                await self._select_semantic_option(field, "", "first")
+            elif re.search(r"canal|contacto|contact.?method", descriptor):
+                await self._select_semantic_option(field, "", "first")
 
         # Radios y selects no etiquetados que sean obligatorios también reciben
         # una opción válida. Así se cubren LP antiguas con nombres input_9.
@@ -144,25 +158,63 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                 await self._select_semantic_option(field, config.level, "first")
 
         radios = form.locator('input[type="radio"]:not(:checked)')
-        if await form.locator('input[type="radio"]:checked').count() == 0 and await radios.count():
+        for index in range(await radios.count()):
+            radio = radios.nth(index)
+            if await radio.get_attribute("required") is None:
+                continue
+            descriptor = self._normalize(await self._control_descriptor(radio))
+            if re.search(r"privacidad|privacy|marketing|publicidad|promocion|promoción|contact", descriptor):
+                continue
             with suppress(Exception):
-                await radios.first.check(force=True)
+                await radio.check(force=True)
+            if await form.locator('input[type="radio"]:checked').count():
+                break
 
         checkboxes = form.locator('input[type="checkbox"]')
-        checked = 0
         for index in range(await checkboxes.count()):
             checkbox = checkboxes.nth(index)
             if not await checkbox.is_visible():
                 continue
             descriptor = self._normalize(await self._control_descriptor(checkbox))
-            if re.search(r"privacidad|privacy|termin|aviso|acepto|agree|consent", descriptor):
+            if re.search(r"privacidad|privacy|politica|policy|terminos|terms|aviso", descriptor):
                 await self._ensure_checkbox_checked(checkbox)
-                checked += 1
-        if checked == 0 and await checkboxes.count() == 1:
-            await self._ensure_checkbox_checked(checkboxes.first)
 
         await asyncio.sleep(0.8)
         await self._validate_generic_form(form)
+
+    async def _fill_document_number(self, form: Any, config: WeeklyFormsCaseConfig) -> None:
+        """Completa documentos visibles en cualquier variante de Weekly Forms."""
+
+        controls = form.locator(
+            'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea'
+        )
+        for index in range(await controls.count()):
+            field = controls.nth(index)
+            if not await field.is_visible() or await field.is_disabled():
+                continue
+            descriptor = self._normalize(await self._control_descriptor(field))
+            if not re.search(self.DOCUMENT_FIELD_PATTERN, descriptor, re.I):
+                continue
+
+            # No se inventa identidad nacional salvo el QA sintético habilitado
+            # por el lote colombiano; el Excel puede proporcionar uno aprobado.
+            value = str(getattr(config.lead, "document_number", "") or "").strip()
+            required = (
+                (config.qa_document_required and self._normalize(config.country) == "colombia")
+                or await field.get_attribute("required") is not None
+                or await field.get_attribute("aria-required") == "true"
+            )
+            if value:
+                await field.fill(value)
+                await field.press("Tab")
+            elif required:
+                raise UtelQaError(
+                    "utel_fill",
+                    "La landing solicita número de documento y esta fila no tiene un dato QA. "
+                    "Agrega el valor autorizado en la columna Documento de prueba.",
+                    self.DOCUMENT_FIELD_PATTERN,
+                )
+            return
 
     async def _fill_blc_without_catalog_program(
         self,
@@ -259,8 +311,10 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                   || element.closest('label')?.innerText
                   || (element.id ? document.querySelector(`label[for="${CSS.escape(element.id)}"]`)?.innerText : '')
                   || element.parentElement?.innerText || '';
+                const labelledBy = element.getAttribute('aria-labelledby')
+                  ?.split(/\\s+/).map(id => document.getElementById(id)?.innerText || '').join(' ') || '';
                 return [element.name, element.id, element.type, element.placeholder,
-                  element.getAttribute('aria-label'), element.dataset?.cy, label]
+                  element.getAttribute('aria-label'), labelledBy, element.dataset?.cy, label]
                   .filter(Boolean).join(' ');
             }"""
         )
@@ -308,8 +362,17 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         return bool(value and label and not placeholder.search(label))
 
     async def _select_semantic_option(self, field: Any, expected: str, kind: str) -> str:
-        if await self._has_real_select_value(field):
-            return (await field.evaluate("element => element.selectedOptions[0]?.textContent || ''")).strip()
+        # Los formularios pueden iniciar con un país distinto al de la fila;
+        # solo se conserva la selección previa para los demás campos.
+        has_current_value = await self._has_real_select_value(field)
+        current_value = await field.input_value() if has_current_value else ""
+        current_label = (
+            await field.evaluate("element => element.selectedOptions[0]?.textContent || ''")
+            if has_current_value
+            else ""
+        ).strip()
+        if has_current_value and kind != "country":
+            return current_label
         deadline = perf_counter() + (12 if kind == "program" else 2)
         real = []
         while perf_counter() < deadline:
@@ -339,16 +402,44 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                 aliases += ["diplomado", "educacion continua"]
         elif kind == "country":
             country_codes = {
-                "mexico": ("mexico", "+52"), "usa": ("estados unidos", "united states", "+1"),
-                "colombia": ("colombia", "+57"), "ecuador": ("ecuador", "+593"),
-                "peru": ("peru", "+51"), "argentina": ("argentina", "+54"),
-                "filipinas": ("philippines", "+63"), "indonesia": ("indonesia", "+62"),
+                "mexico": ("méxico", "+52"),
+                "usa": ("estados unidos", "united states", "+1"),
+                "united states": ("estados unidos", "usa", "+1"),
+                "estados unidos": ("united states", "usa", "+1"),
+                "colombia": ("colombia", "+57"),
+                "ecuador": ("ecuador", "+593"),
+                "peru": ("perú", "+51"),
+                "argentina": ("argentina", "+54"),
+                "bolivia": ("bolivia", "+591"),
+                "dominicana": ("republica dominicana", "dominican republic", "+1"),
+                "republica dominicana": ("dominicana", "dominican republic", "+1"),
+                "chile": ("chile", "+56"),
+                "paraguay": ("paraguay", "+595"),
+                "guatemala": ("guatemala", "+502"),
+                "panama": ("panamá", "+507"),
+                "el salvador": ("el salvador", "+503"),
+                "filipinas": ("philippines", "+63"),
+                "philippines": ("filipinas", "+63"),
+                "indonesia": ("indonesia", "+62"),
+                "vietnam": ("vietnam", "viet nam", "+84"),
+                "india": ("india", "+91"), "singapur": ("singapore", "singapur", "+65"),
+                "singapore": ("singapur", "+65"),
             }
             aliases += list(country_codes.get(normalized_expected, ()))
         matching = [
             item for item in real
             if any(alias and alias in self._normalize(item["text"]) for alias in aliases)
         ]
+        if kind == "country" and not matching:
+            raise UtelQaError(
+                "utel_fill",
+                f"No se encontró la opción del país {expected!r} en el formulario; se detuvo para no enviar el lead a otro país.",
+                await self._control_descriptor(field),
+            )
+        if kind == "country" and current_value and any(
+            item["value"] == current_value for item in matching
+        ):
+            return current_label
         # Form Validation puede probar opciones reales distintas entre URLs; si
         # no se solicita aleatoriedad se conserva la selección histórica exacta.
         if getattr(getattr(self, "_rotation_config", None), "randomize_academic_selections", False) and kind in {"level", "program"}:

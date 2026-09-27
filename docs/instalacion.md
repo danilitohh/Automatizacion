@@ -7,11 +7,11 @@ El backend utiliza Python, FastAPI, Uvicorn, Pydantic Settings, HTTPX, cloudscra
 ## Nuevo equipo Windows
 
 1. Copiar o clonar el proyecto sin .venv, node_modules, .env ni perfiles privados de storage.
-2. Abrir Iniciar.cmd. No necesita Node ni Python para mostrar el asistente.
+2. Abrir Iniciar.cmd. No necesita Node ni Python para mostrar el asistente; al terminar prepara y abre la versión de escritorio.
 3. Leer la lista de instalaciones y escribir SI para autorizarlas. Cancelar no instala nada y no inicia la app.
-4. El asistente instala los runtimes faltantes mediante winget, crea .venv, instala los requisitos Python y Chromium, y comprueba dependencias. Electron se requiere únicamente al iniciar el modo escritorio con npm start. Puede aparecer el aviso de permisos de Windows. Si winget falta, muestra instrucciones y se detiene.
+4. El asistente instala los runtimes faltantes mediante winget, crea .venv, instala los requisitos Python, Chromium, las dependencias npm y Electron, y comprueba dependencias. Puede aparecer el aviso de permisos de Windows. Si winget falta, muestra instrucciones y se detiene.
 5. Configurar las credenciales propias en .env e iniciar sesión en los CRM cuando corresponda. Las claves, sesiones y permisos externos no se pueden crear instalando librerías.
-6. Cuando la consola indique que el servidor está listo, abrir http://127.0.0.1:8000.
+6. Iniciar.cmd abre la ventana de escritorio. Para usar el modo web, ejecuta `npm run web` y abre http://127.0.0.1:8000 cuando el servidor esté listo; este modo no requiere Electron.
 
 Cada arranque con Iniciar.cmd, npm run web o npm start comprueba las dependencias instaladas, sus versiones admitidas y Chromium. El modo web no exige Electron. Un registro ausente, antiguo o con distinta firma no provoca una reinstalación si las dependencias funcionan. Sólo solicita autorización cuando falla la comprobación de un requisito. Ejecutar Uvicorn directamente omite este asistente.
 

@@ -13,6 +13,12 @@ from .program_rotation_service import ProgramRotationService
 
 class BotSpreadsheetService:
     DEFAULT_CATALOG_PATH = Path(__file__).resolve().parents[3] / "backend" / "data" / "Programas_UTEL_Todos_los_Paises.xlsx"
+    # Filipinas, India y Singapur comparten un tenant InConcert. Sus alias no
+    # deben caer en el respaldo genérico de Mercados Emergentes.
+    SINGAPORE_INCONCERT_URL = "https://mas-utel-singapur.infunnel.inconcert.cloud/"
+    SINGAPORE_INCONCERT_COUNTRIES = frozenset({
+        "filipinas", "philippines", "india", "singapur", "singapore",
+    })
     # Agrega nuevos paises aqui cuando se incorporen nuevos balanceadores.
     INCONCERT_BY_COUNTRY = {
         "mexico": "https://mas-utel.inconcertcc.com/login?redirect=%2Fmas%2Fhome",
@@ -31,7 +37,11 @@ class BotSpreadsheetService:
         "el salvador": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people",
         "dominicana": "https://mas-utel-dom.inconcertcc.com/login?redirect=%2Fmas%2Fhome",
         "republica dominicana": "https://mas-utel-dom.inconcertcc.com/login?redirect=%2Fmas%2Fhome",
-        "filipinas": "https://mas-utel-singapur.infunnel.inconcert.cloud/",
+        "filipinas": SINGAPORE_INCONCERT_URL,
+        "philippines": SINGAPORE_INCONCERT_URL,
+        "india": SINGAPORE_INCONCERT_URL,
+        "singapur": SINGAPORE_INCONCERT_URL,
+        "singapore": SINGAPORE_INCONCERT_URL,
     }
 
     def __init__(self, catalog_path: Path | str | None = None):
@@ -165,6 +175,21 @@ class BotSpreadsheetService:
     def default_inconcert_url(cls, country: str) -> str:
         normalized = cls._normalize(country)
         return cls.INCONCERT_BY_COUNTRY.get(normalized, "")
+
+    @classmethod
+    def inconcert_url_for_case(
+        cls, country: str, lead_origin_hint: str = "", row_hint: str = ""
+    ) -> str:
+        """Resuelve el CRM del país y descarta hints obsoletos del tenant asiático.
+
+        Fuera de Filipinas/India/Singapur se conserva la prioridad histórica de
+        la URL explícita del Excel para no cambiar otros flujos existentes.
+        """
+
+        country_url = cls.default_inconcert_url(country)
+        if cls._normalize(country) in cls.SINGAPORE_INCONCERT_COUNTRIES:
+            return country_url
+        return lead_origin_hint or country_url or row_hint
 
     """Detecta encabezados por significado y devuelve filas normalizadas."""
 

@@ -16,6 +16,7 @@ from .automations.leads_deploy.runner import LeadsDeployRunner
 from .api.routes import router
 from .api.leads_deploy_routes import router as leads_deploy_router
 from .api.strapi_product_routes import router as strapi_product_router
+from .api.strapi_hreflang_routes import router as strapi_hreflang_router
 from .api.weekly_performance_routes import router as weekly_performance_router
 from .config.settings import Settings, get_settings
 from .database.connection import initialize_database
@@ -94,11 +95,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.weekly_auto_jobs = {}
     application.state.weekly_performance_jobs = {}
     application.state.strapi_product_jobs = {}
+    # Estado separado para los trabajos de hreflangs, sin mezclar resultados con PDP.
+    application.state.strapi_hreflang_jobs = {}
     application.state.bot_tasks = {}
     application.include_router(router)
     application.include_router(leads_deploy_router)
     application.include_router(weekly_performance_router)
     application.include_router(strapi_product_router)
+    application.include_router(strapi_hreflang_router)
     # Las capturas se guardan bajo storage y deben ser accesibles desde los
     # enlaces que devuelve Weekly Auto y los demás runners.
     application.state.settings.ensure_directories()

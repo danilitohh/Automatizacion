@@ -7,6 +7,7 @@ import { initializeBotModule } from "./bot-module.js?v=new-products-lead-destina
 import { initializeLeadsDeployModule } from "./leads-deploy-module.js?v=leads-deploy-isolated-4";
 import { initializeWeeklyAutoModule } from "./weekly-auto-module.js";
 import { initializeStrapiProductsModule } from "./strapi-products-module.js?v=pdp-integrated-schema-1";
+import { initializeHreflangsModule } from "../modules/strapi_hreflangs/module.js";
 import { initializeGooeyButtons } from "./gooey-buttons.js";
 import { initializeOptionWheel } from "./option-wheel.js";
 import { initializeLiquidButtons } from "./liquid-buttons.js";
@@ -21,6 +22,7 @@ const runtimeMode = window.desktop ? "desktop" : "web";
 const viewMeta = {
   dashboard: { title: "Dashboard", description: "Resumen operativo" },
   excel: { title: "Strapi productos", description: "Sincronización PDP" },
+  hreflangs: { title: "AGREGAR HREFLANGS", description: "SEO internacional" },
   bot: { title: "Bot de nuevos productos", description: "Automatizaciones" },
   "leads-deploy": { title: "Bot Leads Deploy", description: "Automatizaciones" },
   "weekly-auto": { title: "Weekly Auto", description: "Automatizaciones" },
@@ -220,6 +222,15 @@ function navigate(viewName) {
   if (!viewMeta[viewName]) return;
   state.activeView = viewName;
   localStorage.setItem(LAST_VIEW_KEY, viewName);
+  // El nuevo módulo tiene enlace directo; el enrutamiento previo queda intacto.
+  const url = new URL(window.location.href);
+  if (viewName === "hreflangs") {
+    url.searchParams.set("view", viewName);
+    window.history.replaceState({}, "", url);
+  } else if (url.searchParams.get("view") === "hreflangs") {
+    url.searchParams.delete("view");
+    window.history.replaceState({}, "", url);
+  }
   if (WEEKLY_AUTO_VIEWS.has(viewName)) setWeeklyAutoExpanded(true);
   else if (viewName !== "weekly-auto") setWeeklyAutoExpanded(false);
   elements.navigation.forEach((item) => {
@@ -312,6 +323,7 @@ initializeWeeklyAutoModule({
   weeklyLeadsDownloadUrl: api.weeklyLeadsDownloadUrl,
 });
 initializeStrapiProductsModule({ api, showToast });
+initializeHreflangsModule();
 initializeLiquidButtons();
 refreshDashboard();
 window.setInterval(refreshDashboard, 30000);

@@ -24,7 +24,7 @@ Electron arranca FastAPI automáticamente cuando se inicia la aplicación deskto
 
 ## Instalación
 
-En un equipo Windows nuevo, abre **Iniciar.cmd**. El asistente solicita autorización para instalar las dependencias faltantes y luego inicia el modo web. También se comprueba la preparación al ejecutar `npm run web` o `npm start`. Consulta [tecnologías, instalación y compatibilidad](docs/instalacion.md).
+En un equipo Windows nuevo, abre **Iniciar.cmd**. El asistente solicita autorización para instalar las dependencias faltantes —incluido Electron— y luego abre la aplicación de escritorio. También se comprueba la preparación al ejecutar `npm run web` o `npm start`. Consulta [tecnologías, instalación y compatibilidad](docs/instalacion.md).
 
 Desde la raíz del proyecto:
 

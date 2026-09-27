@@ -93,6 +93,7 @@ class UtelLead(BaseModel):
     name: str = Field(default="pending", min_length=1, max_length=160)
     email: str = Field(default="pending@testingUtel.com", min_length=3, max_length=254)
     phone: str = Field(default="900000000", min_length=5, max_length=30)
+    document_number: str = Field(default="", max_length=80)
 
     @field_validator("name", mode="before")
     @classmethod

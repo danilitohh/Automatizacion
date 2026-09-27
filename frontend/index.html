@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="./src/renderer/gooey-buttons.css" />
     <link rel="stylesheet" href="./src/renderer/option-wheel.css?v=option-wheel-2" />
     <link rel="stylesheet" href="./src/renderer/liquid-buttons.css?v=liquid-button-1" />
+    <link rel="stylesheet" href="./src/modules/strapi_hreflangs/module.css" />
     <title>UTEL QA Automation</title>
   </head>
   <body>
@@ -40,6 +41,11 @@
             <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h2m2 0h4M8 16h2m2 0h4"/></svg></span>
             <span>Strapi productos</span>
             <span class="nav-phase">PDP</span>
+          </button>
+          <button class="nav-item" data-view="hreflangs">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16"/><path d="m8 2-4 3 4 3m8 8 4 3-4 3"/></svg></span>
+            <span>AGREGAR HREFLANGS</span>
+            <span class="nav-phase">SEO</span>
           </button>
           <button class="nav-item" data-view="bot">
             <span class="nav-icon"><img class="nav-icon-image" src="./src/renderer/assets/module-icons/bot-nuevos-productos.png" alt="" aria-hidden="true" /></span>
@@ -259,6 +265,29 @@
               <div class="bot-run-status" id="strapi-products-status">Selecciona país y Excel para comenzar.</div>
               <div class="pdp-summary" id="strapi-products-summary"></div>
               <div id="strapi-products-results" class="recent-list">Sin resultados todavía.</div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="view-hreflangs" data-view-panel="hreflangs">
+          <div class="section-intro"><p class="eyebrow accent">Strapi · SEO internacional</p><h2>AGREGAR HREFLANGS</h2><p class="muted">Identifica productos equivalentes en cada locale y prepara el componente MultipleHrefLangs.</p></div>
+          <div class="bot-layout hreflang-layout">
+            <article class="panel bot-config-panel">
+              <div class="panel-header"><div><p class="eyebrow">Configuración</p><h3>Sincronizar un locale</h3><p class="panel-subtitle">La simulación no escribe en Strapi. El módulo solo actualiza el locale elegido.</p></div><span class="status-badge pending" id="hreflang-config-status">Verificando</span></div>
+              <div class="bot-fields">
+                <label class="field full"><span>Entorno Strapi configurado</span><input id="hreflang-target-host" type="text" readonly value="Consultando configuración…" /><small>El token permanece exclusivamente en el backend.</small></label>
+                <label class="field"><span>Locale fuente</span><select id="hreflang-locale" disabled><option value="">Cargando locales…</option></select><small>Solo este locale podrá recibir cambios.</small></label>
+                <label class="field"><span>Alcance</span><select id="hreflang-scope"><option value="all">Todos los productos del locale</option><option value="limit">Limitar productos</option></select><input id="hreflang-limit" type="number" min="1" max="100000" value="10" hidden /><small>La simulación completa y el reporte indicarán qué se agregaría.</small></label>
+              </div>
+              <div class="security-note hreflang-warning"><span>!</span><p>Primero ejecuta una simulación y revisa el Excel. Para escribir, confirma el hostname exacto de Strapi. Los enlaces se agregan sin borrar los existentes y solo si el destino responde HTTP 200.</p></div>
+              <div class="bot-flow-actions hreflang-actions"><button class="secondary-button" id="hreflang-dry-run" type="button" disabled>Simular cambios</button><button class="primary-button" id="hreflang-apply" type="button" disabled>Aplicar cambios →</button><a class="secondary-button" id="hreflang-report" hidden download>Descargar reporte</a></div>
+            </article>
+            <article class="panel bot-flow-panel">
+              <div class="panel-header"><div><p class="eyebrow">Ejecución</p><h3 id="hreflang-run-title">Esperando configuración</h3></div><span class="step-count" id="hreflang-mode">Solo lectura</span></div>
+              <div class="bot-run-status" id="hreflang-status" role="status" aria-live="polite">Verificando la configuración de Strapi.</div>
+              <div class="pdp-summary" id="hreflang-summary"></div>
+              <pre class="bot-terminal hreflang-terminal" id="hreflang-progress" aria-live="polite">Esperando una ejecución.</pre>
+              <div id="hreflang-results" class="recent-list">No hay resultados todavía.</div>
             </article>
           </div>
         </section>

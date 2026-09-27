@@ -32,6 +32,10 @@ class BotSpreadsheetService:
         "dominicana": "https://mas-utel-dom.inconcertcc.com/login?redirect=%2Fmas%2Fhome",
         "republica dominicana": "https://mas-utel-dom.inconcertcc.com/login?redirect=%2Fmas%2Fhome",
         "filipinas": "https://mas-utel-singapur.infunnel.inconcert.cloud/",
+        "philippines": "https://mas-utel-singapur.infunnel.inconcert.cloud/",
+        "india": "https://mas-utel-singapur.infunnel.inconcert.cloud/",
+        "singapur": "https://mas-utel-singapur.infunnel.inconcert.cloud/",
+        "singapore": "https://mas-utel-singapur.infunnel.inconcert.cloud/",
     }
 
     def __init__(self, catalog_path: Path | str | None = None):

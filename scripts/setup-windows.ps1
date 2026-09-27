@@ -88,5 +88,9 @@ try {
         Invoke-Checked $venvPython @((Join-Path $PSScriptRoot 'prepare-resources.py'), '--prepare')
     } elseif ($resourceStatus -ne 0) { throw 'Faltan recursos de la app o su configuracion es invalida. Revise el mensaje anterior.' }
     Write-Host 'Dependencias y recursos locales preparados. CRM e IA requieren credenciales propias; Ollama local es opcional.'
-    if ($Launch) { Invoke-Checked 'node' @('scripts/launch-web.js') }
+    # Inicia el lanzador correspondiente al modo ya preparado por este asistente.
+    if ($Launch) {
+        $launcher = if ($Mode -eq 'desktop') { 'scripts/launch-electron.js' } else { 'scripts/launch-web.js' }
+        Invoke-Checked 'node' @($launcher)
+    }
 } catch { Write-Host "No se pudo preparar UTEL QA: $_" -ForegroundColor Red; exit 1 }

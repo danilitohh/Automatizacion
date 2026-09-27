@@ -9,4 +9,5 @@ from ....schemas.bot import UtelQaConfig
 
 class WeeklyFormsCaseConfig(UtelQaConfig):
     weekly_form_type: Literal["form_lp", "lateral", "tarjeta", "footer"] = "form_lp"
+    qa_document_required: bool = False
     client: str = Field(default="", max_length=160)

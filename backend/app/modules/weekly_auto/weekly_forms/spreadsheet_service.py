@@ -24,12 +24,24 @@ class WeeklyFormsSpreadsheetService(BotSpreadsheetService):
         "lead_url": (
             "lead",
             "url lead",
+            "url leads",
             "link lead",
             "enlace lead",
             "url del lead",
             "lead url",
         ),
         "client": ("cliente", "client"),
+        "document_number": (
+            "documento de prueba",
+            "numero de documento",
+            "número de documento",
+            "document number",
+            "documento",
+            "identificacion",
+            "identificación",
+            "cedula",
+            "cédula",
+        ),
     }
 
     @classmethod
@@ -55,8 +67,8 @@ class WeeklyFormsSpreadsheetService(BotSpreadsheetService):
 
     @classmethod
     def infer_level(cls, value: str, url: str) -> str:
-        if str(value or "").strip():
-            return str(value).strip()
+        # Prioriza el nivel que identifica inequívocamente la URL si la matriz
+        # conserva una etiqueta general o contradictoria en la columna Nivel.
         source = cls._normalize(url)
         rules = (
             (r"doctor", "Doctorado"),
@@ -68,27 +80,87 @@ class WeeklyFormsSpreadsheetService(BotSpreadsheetService):
         for pattern, level in rules:
             if re.search(pattern, source):
                 return level
+        supplied_level = cls._normalize(value)
+        for pattern, level in rules:
+            if re.search(pattern, supplied_level):
+                return level
+        if str(value or "").strip():
+            return str(value).strip()
         # El nivel solo sirve para escoger controles académicos. En una LP sin
         # esa información elegiremos una opción real del formulario.
         return "Licenciatura"
 
     @classmethod
+    def infer_country(cls, url: str) -> str:
+        """Infiere países de URL cuando la celda está vacía y no es combinada."""
+
+        parsed = urlparse(url)
+        host = (parsed.hostname or "").casefold()
+        path = cls._normalize(parsed.path)
+        country_paths = {
+            "argentina": "Argentina",
+            "bolivia": "Bolivia",
+            "colombia": "Colombia",
+            "dominicana": "Dominicana",
+            "republica-dominicana": "Dominicana",
+            "ecuador": "Ecuador",
+            "el-salvador": "El Salvador",
+            "guatemala": "Guatemala",
+            "india": "India",
+            "indonesia": "Indonesia",
+            "philippines": "Filipinas",
+            "filipinas": "Filipinas",
+            "peru": "Peru",
+            "panama": "Panama",
+            "paraguay": "Paraguay",
+            "chile": "Chile",
+            "singapur": "Singapur",
+            "singapore": "Singapur",
+            "usa": "USA",
+            "vietnam": "Vietnam",
+        }
+        for segment, country in country_paths.items():
+            if re.search(rf"(?:^|/){segment}(?:/|$)", path):
+                return country
+        if host == "utlenlinea.com" or host.endswith(".utlenlinea.com"):
+            return "Peru"
+        if re.search(r"(?:^|/)global(?:/|$)", path):
+            return "Global"
+        if host == "utel.edu.mx" or host.endswith(".utel.edu.mx"):
+            return "Mexico"
+        return ""
+
+    @classmethod
     def effective_country(cls, country: str, level: str, url: str) -> str:
         if cls._normalize(country) != "global":
             return country
-        source = cls._normalize(url)
-        for token, resolved in (
-            ("/usa/", "USA"),
-            ("/philippines", "Filipinas"),
-            ("/indonesia", "Indonesia"),
-            ("/colombia", "Colombia"),
-            ("/ecuador", "Ecuador"),
-            ("/argentina", "Argentina"),
-            ("/peru", "Peru"),
+        # Algunas matrices agrupan Asia bajo Global y ponen el país en Nivel;
+        # resolverlo antes de la ruta /global evita escoger otro tenant CRM.
+        level_key = cls._normalize(level)
+        for pattern, resolved in (
+            (r"\b(filipinas|philippines)\b", "Filipinas"),
+            (r"\bindia\b", "India"),
+            (r"\b(singapur|singapore)\b", "Singapur"),
+            (r"\bindonesia\b", "Indonesia"),
+            (r"\bvietnam\b", "Vietnam"),
         ):
-            if token in source:
+            if re.search(pattern, level_key):
                 return resolved
-        # Los dominios institucionales sin carpeta de país son operados desde
+        path = cls._normalize(urlparse(url).path)
+        for segment, resolved in (
+            ("usa", "USA"),
+            ("philippines", "Filipinas"),
+            ("indonesia", "Indonesia"),
+            ("colombia", "Colombia"),
+            ("ecuador", "Ecuador"),
+            ("argentina", "Argentina"),
+            ("peru", "Peru"),
+        ):
+            if re.search(rf"(?:^|/){segment}(?:/|$)", path):
+                return resolved
+        if re.search(r"(?:^|/)global(?:/|$)", path, re.I):
+            return "Global"
+        # Los dominios institucionales sin carpeta de país corresponden a
         # México en esta matriz (p. ej. Educación Continua).
         return "Mexico"
 
@@ -177,8 +249,13 @@ class WeeklyFormsSpreadsheetService(BotSpreadsheetService):
                 last_country = country
             else:
                 country = last_country
+            raw_level = self._cell(row_values, indexes.get("level"))
+            level = self.infer_level(raw_level, url)
+            if not country:
+                country = self.infer_country(url)
             if not country:
                 continue
+            country = self.effective_country(country, raw_level, url)
 
             existing_lead = self._cell(row_values, indexes.get("lead_url"))
             if existing_lead.lower().startswith(("http://", "https://")):
@@ -186,7 +263,6 @@ class WeeklyFormsSpreadsheetService(BotSpreadsheetService):
 
             raw_location = self._cell(row_values, indexes.get("form_type"))
             form_type, weekly_form_type = self._weekly_form_type(raw_location, url)
-            level = self.infer_level(self._cell(row_values, indexes.get("level")), url)
             rows.append(
                 {
                     "sheet": worksheet.title,
@@ -199,6 +275,7 @@ class WeeklyFormsSpreadsheetService(BotSpreadsheetService):
                     "weekly_form_type": weekly_form_type,
                     "program_name": self._cell(row_values, indexes.get("program_name")),
                     "client": self._cell(row_values, indexes.get("client")),
+                    "document_number": self._cell(row_values, indexes.get("document_number")),
                     "inconcert_url": self._cell(row_values, indexes.get("inconcert_url")),
                     "lead_origin_url": self._cell(row_values, indexes.get("lead_origin_url")),
                     "workflow_mode": "form_validation",
