@@ -1,0 +1,1523 @@
+[
+  {
+    "row": 48,
+    "country": "Global",
+    "level": "Filipinas Bachelor",
+    "url": "https://utel.edu.mx/global/?utm_campaign=friday_off&utm_source=facebook_source&utm_medium=Email_medium",
+    "location": "Lateral",
+    "identities": [
+      {
+        "country": "Filipinas",
+        "name": "Danilo Prueba BKO",
+        "email": "Testing2026-09-25N20@testingUtel.com",
+        "phone": "9176423440",
+        "level": "Bachelor's Degree",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N20@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      },
+      {
+        "country": "Filipinas",
+        "name": "Danilo Prueba BKP",
+        "email": "Testing2026-09-25N21@testingUtel.com",
+        "phone": "9176431359",
+        "level": "Master's Degree",
+        "status": "success",
+        "error": null
+      },
+      {
+        "country": "India",
+        "name": "Danilo Prueba BKQ",
+        "email": "Testing2026-09-25N22@testingUtel.com",
+        "phone": "9346439278",
+        "level": "Bachelor's Degree",
+        "status": "success",
+        "error": null
+      },
+      {
+        "country": "India",
+        "name": "Danilo Prueba BKR",
+        "email": "Testing2026-09-25N23@testingUtel.com",
+        "phone": "9346447197",
+        "level": "Master's Degree",
+        "status": "success",
+        "error": null
+      },
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BKS",
+        "email": "Testing2026-09-25N24@testingUtel.com",
+        "phone": "5546455116",
+        "level": "Bachelor's Degree",
+        "status": "pending",
+        "error": "El Excel pide México, pero paisesPIVI solo ofrece Philippines, India y Vietnam. No se cambió el país ni se envió el formulario."
+      },
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BKT",
+        "email": "Testing2026-09-25N25@testingUtel.com",
+        "phone": "5546463035",
+        "level": "Master's Degree",
+        "status": "pending",
+        "error": "Misma URL global que fila 8. El selector de residencia no ofrece México. Se necesita una URL compatible o corregir el país y sus datos QA."
+      }
+    ]
+  },
+  {
+    "row": 52,
+    "country": "Global",
+    "level": "Vietnam Bachelor",
+    "url": "https://utel.edu.mx/global/?utm_campaign=friday_off&utm_source=facebook_source&utm_medium=Email_medium",
+    "location": "Lateral",
+    "identities": [
+      {
+        "country": "Filipinas",
+        "name": "Danilo Prueba BKO",
+        "email": "Testing2026-09-25N20@testingUtel.com",
+        "phone": "9176423440",
+        "level": "Bachelor's Degree",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N20@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      },
+      {
+        "country": "Filipinas",
+        "name": "Danilo Prueba BKP",
+        "email": "Testing2026-09-25N21@testingUtel.com",
+        "phone": "9176431359",
+        "level": "Master's Degree",
+        "status": "success",
+        "error": null
+      },
+      {
+        "country": "India",
+        "name": "Danilo Prueba BKQ",
+        "email": "Testing2026-09-25N22@testingUtel.com",
+        "phone": "9346439278",
+        "level": "Bachelor's Degree",
+        "status": "success",
+        "error": null
+      },
+      {
+        "country": "India",
+        "name": "Danilo Prueba BKR",
+        "email": "Testing2026-09-25N23@testingUtel.com",
+        "phone": "9346447197",
+        "level": "Master's Degree",
+        "status": "success",
+        "error": null
+      },
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BKS",
+        "email": "Testing2026-09-25N24@testingUtel.com",
+        "phone": "5546455116",
+        "level": "Bachelor's Degree",
+        "status": "pending",
+        "error": "El Excel pide México, pero paisesPIVI solo ofrece Philippines, India y Vietnam. No se cambió el país ni se envió el formulario."
+      },
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BKT",
+        "email": "Testing2026-09-25N25@testingUtel.com",
+        "phone": "5546463035",
+        "level": "Master's Degree",
+        "status": "pending",
+        "error": "Misma URL global que fila 8. El selector de residencia no ofrece México. Se necesita una URL compatible o corregir el país y sus datos QA."
+      }
+    ],
+    "old_row": 8,
+    "name": "Danilo Prueba BKS",
+    "email": "Testing2026-09-25N24@testingUtel.com",
+    "phone": "5546455116",
+    "prior_status": "pending",
+    "prior_error": "El Excel pide México, pero paisesPIVI solo ofrece Philippines, India y Vietnam. No se cambió el país ni se envió el formulario."
+  },
+  {
+    "row": 53,
+    "country": "Global",
+    "level": "Vietnam Master",
+    "url": "https://utel.edu.mx/global/?utm_campaign=friday_off&utm_source=facebook_source&utm_medium=Email_medium",
+    "location": "Lateral",
+    "identities": [
+      {
+        "country": "Filipinas",
+        "name": "Danilo Prueba BKO",
+        "email": "Testing2026-09-25N20@testingUtel.com",
+        "phone": "9176423440",
+        "level": "Bachelor's Degree",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N20@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      },
+      {
+        "country": "Filipinas",
+        "name": "Danilo Prueba BKP",
+        "email": "Testing2026-09-25N21@testingUtel.com",
+        "phone": "9176431359",
+        "level": "Master's Degree",
+        "status": "success",
+        "error": null
+      },
+      {
+        "country": "India",
+        "name": "Danilo Prueba BKQ",
+        "email": "Testing2026-09-25N22@testingUtel.com",
+        "phone": "9346439278",
+        "level": "Bachelor's Degree",
+        "status": "success",
+        "error": null
+      },
+      {
+        "country": "India",
+        "name": "Danilo Prueba BKR",
+        "email": "Testing2026-09-25N23@testingUtel.com",
+        "phone": "9346447197",
+        "level": "Master's Degree",
+        "status": "success",
+        "error": null
+      },
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BKS",
+        "email": "Testing2026-09-25N24@testingUtel.com",
+        "phone": "5546455116",
+        "level": "Bachelor's Degree",
+        "status": "pending",
+        "error": "El Excel pide México, pero paisesPIVI solo ofrece Philippines, India y Vietnam. No se cambió el país ni se envió el formulario."
+      },
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BKT",
+        "email": "Testing2026-09-25N25@testingUtel.com",
+        "phone": "5546463035",
+        "level": "Master's Degree",
+        "status": "pending",
+        "error": "Misma URL global que fila 8. El selector de residencia no ofrece México. Se necesita una URL compatible o corregir el país y sus datos QA."
+      }
+    ],
+    "old_row": 9,
+    "name": "Danilo Prueba BKT",
+    "email": "Testing2026-09-25N25@testingUtel.com",
+    "phone": "5546463035",
+    "prior_status": "pending",
+    "prior_error": "Misma URL global que fila 8. El selector de residencia no ofrece México. Se necesita una URL compatible o corregir el país y sus datos QA."
+  },
+  {
+    "row": 56,
+    "country": "México",
+    "level": "Maestría",
+    "url": "https://universidad.utel.edu.mx/posgrados-en-linea-search",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "México",
+        "name": "Danilo Prueba BKW",
+        "email": "Testing2026-09-25N28@testingUtel.com",
+        "phone": "5546486792",
+        "level": "Maestria",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N28@testingUtel.com) despues de esperar su indexacion."
+      }
+    ]
+  },
+  {
+    "row": 61,
+    "country": "México",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/ebook-ventajas-de-estudiar-en-linea/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "México",
+        "name": "Danilo Prueba BKX",
+        "email": "Testing2026-09-25N29@testingUtel.com",
+        "phone": "5546494711",
+        "level": "Licenciatura",
+        "status": "pending",
+        "error": "El formulario conserva campos obligatorios sin completar: FechaNacimiento-input"
+      }
+    ],
+    "old_row": 12,
+    "name": "Danilo Prueba BKX",
+    "email": "Testing2026-09-25N29@testingUtel.com",
+    "phone": "5546494711",
+    "prior_status": "pending",
+    "prior_error": "El formulario conserva campos obligatorios sin completar: FechaNacimiento-input"
+  },
+  {
+    "row": 67,
+    "country": "México",
+    "level": "Maestría",
+    "url": "https://universidad.utel.edu.mx/maestrias-executive-search/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "México",
+        "name": "Danilo Prueba BKY",
+        "email": "Testing2026-09-25N30@testingUtel.com",
+        "phone": "5546502630",
+        "level": "Maestria",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N30@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ],
+    "old_row": 13,
+    "name": "Danilo Prueba BKY",
+    "email": "Testing2026-09-25N30@testingUtel.com",
+    "phone": "5546502630",
+    "prior_status": "success",
+    "prior_error": "No se encontro el lead por email (Testing2026-09-25N30@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+  },
+  {
+    "row": 68,
+    "country": "México",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/criminologia",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "México",
+        "name": "Danilo Prueba BKZ",
+        "email": "Testing2026-09-25N31@testingUtel.com",
+        "phone": "5546510549",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N31@testingUtel.com) despues de esperar su indexacion."
+      }
+    ]
+  },
+  {
+    "row": 77,
+    "country": "México",
+    "level": "Maestría",
+    "url": "https://universidad.utel.edu.mx/maestrias-executive",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "México",
+        "name": "Danilo Prueba BLA",
+        "email": "Testing2026-09-25N32@testingUtel.com",
+        "phone": "5546518468",
+        "level": "Maestria",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N32@testingUtel.com) despues de esperar su indexacion."
+      }
+    ]
+  },
+  {
+    "row": 80,
+    "country": "México",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/licenciaturas-y-maestrias-executive/",
+    "location": "Tarjeta",
+    "identities": [
+      {
+        "country": "México",
+        "name": "Danilo Prueba BLB",
+        "email": "Testing2026-09-25N33@testingUtel.com",
+        "phone": "5546526387",
+        "level": "Licenciatura",
+        "status": "pending",
+        "error": "El listado se abrio, pero no se encontro una tarjeta o enlace valido de programa."
+      }
+    ],
+    "old_row": 14,
+    "name": "Danilo Prueba BLB",
+    "email": "Testing2026-09-25N33@testingUtel.com",
+    "phone": "5546526387",
+    "prior_status": "pending",
+    "prior_error": "El listado se abrio, pero no se encontro una tarjeta o enlace valido de programa."
+  },
+  {
+    "row": 87,
+    "country": "Colombia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/colombia/carreras-online-branding",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Colombia",
+        "name": "Danilo Prueba BLD",
+        "email": "Testing2026-09-25N35@testingUtel.com",
+        "phone": "3216542225",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N35@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ],
+    "old_row": 16,
+    "name": "Danilo Prueba BLD",
+    "email": "Testing2026-09-25N35@testingUtel.com",
+    "phone": "3216542225",
+    "prior_status": "success",
+    "prior_error": "No se encontro el lead por email (Testing2026-09-25N35@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+  },
+  {
+    "row": 88,
+    "country": "Colombia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/colombia/carreras-online-clerkon",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Colombia",
+        "name": "Danilo Prueba BLE",
+        "email": "Testing2026-09-25N36@testingUtel.com",
+        "phone": "3216550144",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 17,
+    "name": "Danilo Prueba BLE",
+    "email": "Testing2026-09-25N36@testingUtel.com",
+    "phone": "3216550144",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 89,
+    "country": "Colombia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/colombia/carreras-online-display",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Colombia",
+        "name": "Danilo Prueba BLF",
+        "email": "Testing2026-09-25N37@testingUtel.com",
+        "phone": "3216558063",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 18,
+    "name": "Danilo Prueba BLF",
+    "email": "Testing2026-09-25N37@testingUtel.com",
+    "phone": "3216558063",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 94,
+    "country": "Colombia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/colombia/carreras-ejecutivas-display",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Colombia",
+        "name": "Danilo Prueba BLK",
+        "email": "Testing2026-09-25N42@testingUtel.com",
+        "phone": "3216597658",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 23,
+    "name": "Danilo Prueba BLK",
+    "email": "Testing2026-09-25N42@testingUtel.com",
+    "phone": "3216597658",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 96,
+    "country": "Colombia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/colombia/maestrias-online",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Colombia",
+        "name": "Danilo Prueba BLM",
+        "email": "Testing2026-09-25N44@testingUtel.com",
+        "phone": "3216613496",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 25,
+    "name": "Danilo Prueba BLM",
+    "email": "Testing2026-09-25N44@testingUtel.com",
+    "phone": "3216613496",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 98,
+    "country": "Colombia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/colombia/maestrias-online-search",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Colombia",
+        "name": "Danilo Prueba BLO",
+        "email": "Testing2026-09-25N46@testingUtel.com",
+        "phone": "3216629334",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 27,
+    "name": "Danilo Prueba BLO",
+    "email": "Testing2026-09-25N46@testingUtel.com",
+    "phone": "3216629334",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 103,
+    "country": "Colombia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/colombia/psicologia-organizacional/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Colombia",
+        "name": "Danilo Prueba BLT",
+        "email": "Testing2026-09-25N51@testingUtel.com",
+        "phone": "3216668929",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 32,
+    "name": "Danilo Prueba BLT",
+    "email": "Testing2026-09-25N51@testingUtel.com",
+    "phone": "3216668929",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 106,
+    "country": "Colombia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/colombia/contaduria",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Colombia",
+        "name": "Danilo Prueba BLW",
+        "email": "Testing2026-09-25N54@testingUtel.com",
+        "phone": "3216692686",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 35,
+    "name": "Danilo Prueba BLW",
+    "email": "Testing2026-09-25N54@testingUtel.com",
+    "phone": "3216692686",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 112,
+    "country": "Peru",
+    "level": "Licenciatura",
+    "url": "https://universidad.utlenlinea.com/carreras-online-activaciones",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Peru",
+        "name": "Danilo Prueba BLY",
+        "email": "Testing2026-09-25N56@testingUtel.com",
+        "phone": "946708524",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N56@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ]
+  },
+  {
+    "row": 131,
+    "country": "Dominicana",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/dominicana/maestrias-online",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Dominicana",
+        "name": "Danilo Prueba BMF",
+        "email": "Testing2026-09-25N63@testingUtel.com",
+        "phone": "8095553957",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 43,
+    "name": "Danilo Prueba BMF",
+    "email": "Testing2026-09-25N63@testingUtel.com",
+    "phone": "8095553957",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 132,
+    "country": "Dominicana",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/dominicana/maestrias-online-display",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Dominicana",
+        "name": "Danilo Prueba BMG",
+        "email": "Testing2026-09-25N64@testingUtel.com",
+        "phone": "8095551876",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 44,
+    "name": "Danilo Prueba BMG",
+    "email": "Testing2026-09-25N64@testingUtel.com",
+    "phone": "8095551876",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 133,
+    "country": "Dominicana",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/dominicana/maestrias-online-search",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Dominicana",
+        "name": "Danilo Prueba BMH",
+        "email": "Testing2026-09-25N65@testingUtel.com",
+        "phone": "8095559795",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 45,
+    "name": "Danilo Prueba BMH",
+    "email": "Testing2026-09-25N65@testingUtel.com",
+    "phone": "8095559795",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 135,
+    "country": "Dominicana",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/dominicana/ingenieria-en-sistemas-computacionales/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Dominicana",
+        "name": "Danilo Prueba BMJ",
+        "email": "Testing2026-09-25N67@testingUtel.com",
+        "phone": "8095555633",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 47,
+    "name": "Danilo Prueba BMJ",
+    "email": "Testing2026-09-25N67@testingUtel.com",
+    "phone": "8095555633",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 147,
+    "country": "Ecuador",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/ecuador/criminologia",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Ecuador",
+        "name": "Danilo Prueba BMO",
+        "email": "Testing2026-09-25N72@testingUtel.com",
+        "phone": "966835228",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N72@testingUtel.com) despues de esperar su indexacion."
+      }
+    ]
+  },
+  {
+    "row": 152,
+    "country": "Ecuador",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/ecuador/ingenieria-en-sistemas-computacionales",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Ecuador",
+        "name": "Danilo Prueba BMP",
+        "email": "Testing2026-09-25N73@testingUtel.com",
+        "phone": "966843147",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N73@testingUtel.com) despues de esperar su indexacion."
+      }
+    ]
+  },
+  {
+    "row": 158,
+    "country": "Ecuador",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/ecuador/pedagogia",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Ecuador",
+        "name": "Danilo Prueba BMQ",
+        "email": "Testing2026-09-25N74@testingUtel.com",
+        "phone": "966851066",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N74@testingUtel.com) despues de esperar su indexacion."
+      }
+    ]
+  },
+  {
+    "row": 160,
+    "country": "USA",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/usa/doctorados/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "USA",
+        "name": "Danilo Prueba BMR",
+        "email": "Testing2026-09-25N75@testingUtel.com",
+        "phone": "4695555652",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 52,
+    "name": "Danilo Prueba BMR",
+    "email": "Testing2026-09-25N75@testingUtel.com",
+    "phone": "4695555652",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 162,
+    "country": "USA",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/usa/licenciaturas-online-bing",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "USA",
+        "name": "Danilo Prueba BMT",
+        "email": "Testing2026-09-25N77@testingUtel.com",
+        "phone": "6175551490",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N77@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ],
+    "old_row": 54,
+    "name": "Danilo Prueba BMT",
+    "email": "Testing2026-09-25N77@testingUtel.com",
+    "phone": "6175551490",
+    "prior_status": "success",
+    "prior_error": "No se encontro el lead por email (Testing2026-09-25N77@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+  },
+  {
+    "row": 163,
+    "country": "USA",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/usa/licenciaturas-online-display",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "USA",
+        "name": "Danilo Prueba BMU",
+        "email": "Testing2026-09-25N78@testingUtel.com",
+        "phone": "6175559409",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N78@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ],
+    "old_row": 55,
+    "name": "Danilo Prueba BMU",
+    "email": "Testing2026-09-25N78@testingUtel.com",
+    "phone": "6175559409",
+    "prior_status": "success",
+    "prior_error": "No se encontro el lead por email (Testing2026-09-25N78@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+  },
+  {
+    "row": 164,
+    "country": "USA",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/usa/licenciaturas-online-search",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "USA",
+        "name": "Danilo Prueba BMV",
+        "email": "Testing2026-09-25N79@testingUtel.com",
+        "phone": "6465557328",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N79@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ],
+    "old_row": 56,
+    "name": "Danilo Prueba BMV",
+    "email": "Testing2026-09-25N79@testingUtel.com",
+    "phone": "6465557328",
+    "prior_status": "success",
+    "prior_error": "No se encontro el lead por email (Testing2026-09-25N79@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+  },
+  {
+    "row": 165,
+    "country": "USA",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/usa/licenciaturas-online-whatsapp",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "USA",
+        "name": "Danilo Prueba BMW",
+        "email": "Testing2026-09-25N80@testingUtel.com",
+        "phone": "7025555247",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 57,
+    "name": "Danilo Prueba BMW",
+    "email": "Testing2026-09-25N80@testingUtel.com",
+    "phone": "7025555247",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 167,
+    "country": "USA",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/usa/maestrias-online/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "USA",
+        "name": "Danilo Prueba BMY",
+        "email": "Testing2026-09-25N82@testingUtel.com",
+        "phone": "7135551085",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 59,
+    "name": "Danilo Prueba BMY",
+    "email": "Testing2026-09-25N82@testingUtel.com",
+    "phone": "7135551085",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 168,
+    "country": "USA",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/usa/maestrias-online-display",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "USA",
+        "name": "Danilo Prueba BMZ",
+        "email": "Testing2026-09-25N83@testingUtel.com",
+        "phone": "7135559004",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 60,
+    "name": "Danilo Prueba BMZ",
+    "email": "Testing2026-09-25N83@testingUtel.com",
+    "phone": "7135559004",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 169,
+    "country": "USA",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/usa/maestrias-online-search",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "USA",
+        "name": "Danilo Prueba BNA",
+        "email": "Testing2026-09-25N84@testingUtel.com",
+        "phone": "7185556923",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 61,
+    "name": "Danilo Prueba BNA",
+    "email": "Testing2026-09-25N84@testingUtel.com",
+    "phone": "7185556923",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 171,
+    "country": "USA",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/usa/ingenieria-en-sistemas-computacionales/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "USA",
+        "name": "Danilo Prueba BNC",
+        "email": "Testing2026-09-25N86@testingUtel.com",
+        "phone": "9175552761",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N86@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ],
+    "old_row": 63,
+    "name": "Danilo Prueba BNC",
+    "email": "Testing2026-09-25N86@testingUtel.com",
+    "phone": "9175552761",
+    "prior_status": "success",
+    "prior_error": "No se encontro el lead por email (Testing2026-09-25N86@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+  },
+  {
+    "row": 172,
+    "country": "USA",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/usa/pedagogia/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "USA",
+        "name": "Danilo Prueba BND",
+        "email": "Testing2026-09-25N87@testingUtel.com",
+        "phone": "9295550680",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N87@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ],
+    "old_row": 64,
+    "name": "Danilo Prueba BND",
+    "email": "Testing2026-09-25N87@testingUtel.com",
+    "phone": "9295550680",
+    "prior_status": "success",
+    "prior_error": "No se encontro el lead por email (Testing2026-09-25N87@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+  },
+  {
+    "row": 173,
+    "country": "USA",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/usa/psicologia-organizacional/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "USA",
+        "name": "Danilo Prueba BNE",
+        "email": "Testing2026-09-25N88@testingUtel.com",
+        "phone": "9295558599",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N88@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ],
+    "old_row": 65,
+    "name": "Danilo Prueba BNE",
+    "email": "Testing2026-09-25N88@testingUtel.com",
+    "phone": "9295558599",
+    "prior_status": "success",
+    "prior_error": "No se encontro el lead por email (Testing2026-09-25N88@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+  },
+  {
+    "row": 175,
+    "country": "Argentina",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/argentina/licenciaturas-online-display",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Argentina",
+        "name": "Danilo Prueba BNG",
+        "email": "Testing2026-09-25N90@testingUtel.com",
+        "phone": "1146977770",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 67,
+    "name": "Danilo Prueba BNG",
+    "email": "Testing2026-09-25N90@testingUtel.com",
+    "phone": "1146977770",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 178,
+    "country": "Argentina",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/argentina/maestrias-online/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Argentina",
+        "name": "Danilo Prueba BNJ",
+        "email": "Testing2026-09-25N93@testingUtel.com",
+        "phone": "1147001527",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 70,
+    "name": "Danilo Prueba BNJ",
+    "email": "Testing2026-09-25N93@testingUtel.com",
+    "phone": "1147001527",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 179,
+    "country": "Argentina",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/argentina/maestrias-online-display",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Argentina",
+        "name": "Danilo Prueba BNK",
+        "email": "Testing2026-09-25N94@testingUtel.com",
+        "phone": "1147009446",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 71,
+    "name": "Danilo Prueba BNK",
+    "email": "Testing2026-09-25N94@testingUtel.com",
+    "phone": "1147009446",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 180,
+    "country": "Argentina",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/argentina/maestrias-online-search",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Argentina",
+        "name": "Danilo Prueba BNL",
+        "email": "Testing2026-09-25N95@testingUtel.com",
+        "phone": "1147017365",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 72,
+    "name": "Danilo Prueba BNL",
+    "email": "Testing2026-09-25N95@testingUtel.com",
+    "phone": "1147017365",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 186,
+    "country": "Bolivia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/bolivia/carreras-online/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Bolivia",
+        "name": "Danilo Prueba BNR",
+        "email": "Testing2026-09-25N101@testingUtel.com",
+        "phone": "67064879",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 78,
+    "name": "Danilo Prueba BNR",
+    "email": "Testing2026-09-25N101@testingUtel.com",
+    "phone": "67064879",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 187,
+    "country": "Bolivia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/bolivia/carreras-online-display",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Bolivia",
+        "name": "Danilo Prueba BNS",
+        "email": "Testing2026-09-25N102@testingUtel.com",
+        "phone": "67072798",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N102@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ],
+    "old_row": 79,
+    "name": "Danilo Prueba BNS",
+    "email": "Testing2026-09-25N102@testingUtel.com",
+    "phone": "67072798",
+    "prior_status": "success",
+    "prior_error": "No se encontro el lead por email (Testing2026-09-25N102@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+  },
+  {
+    "row": 188,
+    "country": "Bolivia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/bolivia/carreras-online-search",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Bolivia",
+        "name": "Danilo Prueba BNT",
+        "email": "Testing2026-09-25N103@testingUtel.com",
+        "phone": "67080717",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 80,
+    "name": "Danilo Prueba BNT",
+    "email": "Testing2026-09-25N103@testingUtel.com",
+    "phone": "67080717",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 189,
+    "country": "Bolivia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/bolivia/maestrias-online/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Bolivia",
+        "name": "Danilo Prueba BNU",
+        "email": "Testing2026-09-25N104@testingUtel.com",
+        "phone": "67088636",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 81,
+    "name": "Danilo Prueba BNU",
+    "email": "Testing2026-09-25N104@testingUtel.com",
+    "phone": "67088636",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 190,
+    "country": "Bolivia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/bolivia/maestrias-online-display",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Bolivia",
+        "name": "Danilo Prueba BNV",
+        "email": "Testing2026-09-25N105@testingUtel.com",
+        "phone": "67096555",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 82,
+    "name": "Danilo Prueba BNV",
+    "email": "Testing2026-09-25N105@testingUtel.com",
+    "phone": "67096555",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 191,
+    "country": "Bolivia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/bolivia/maestrias-online-search",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Bolivia",
+        "name": "Danilo Prueba BNW",
+        "email": "Testing2026-09-25N106@testingUtel.com",
+        "phone": "67104474",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 83,
+    "name": "Danilo Prueba BNW",
+    "email": "Testing2026-09-25N106@testingUtel.com",
+    "phone": "67104474",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 192,
+    "country": "Bolivia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/bolivia/criminologia/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Bolivia",
+        "name": "Danilo Prueba BNX",
+        "email": "Testing2026-09-25N107@testingUtel.com",
+        "phone": "67112393",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 84,
+    "name": "Danilo Prueba BNX",
+    "email": "Testing2026-09-25N107@testingUtel.com",
+    "phone": "67112393",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 193,
+    "country": "Bolivia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/bolivia/ingenieria-en-sistemas-computacionales",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Bolivia",
+        "name": "Danilo Prueba BNY",
+        "email": "Testing2026-09-25N108@testingUtel.com",
+        "phone": "67120312",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 85,
+    "name": "Danilo Prueba BNY",
+    "email": "Testing2026-09-25N108@testingUtel.com",
+    "phone": "67120312",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 194,
+    "country": "Bolivia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/bolivia/pedagogia",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Bolivia",
+        "name": "Danilo Prueba BNZ",
+        "email": "Testing2026-09-25N109@testingUtel.com",
+        "phone": "67128231",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 86,
+    "name": "Danilo Prueba BNZ",
+    "email": "Testing2026-09-25N109@testingUtel.com",
+    "phone": "67128231",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 195,
+    "country": "Bolivia",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/bolivia/psicologia-organizacional",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Bolivia",
+        "name": "Danilo Prueba BOA",
+        "email": "Testing2026-09-25N110@testingUtel.com",
+        "phone": "67136150",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+      }
+    ],
+    "old_row": 87,
+    "name": "Danilo Prueba BOA",
+    "email": "Testing2026-09-25N110@testingUtel.com",
+    "phone": "67136150",
+    "prior_status": "failed",
+    "prior_error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+  },
+  {
+    "row": 196,
+    "country": "El Salvador",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/elsalvador/licenciaturas-online/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "El Salvador",
+        "name": "Danilo Prueba BOB",
+        "email": "Testing2026-09-25N111@testingUtel.com",
+        "phone": "77144069",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N111@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ]
+  },
+  {
+    "row": 197,
+    "country": "Guatemala",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/guatemala/licenciaturas-online/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Guatemala",
+        "name": "Danilo Prueba BOC",
+        "email": "Testing2026-09-25N112@testingUtel.com",
+        "phone": "57151988",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "No se encontro el lead por email (Testing2026-09-25N112@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+      }
+    ]
+  },
+  {
+    "row": 199,
+    "country": "Global",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/global/campus47",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BOD",
+        "email": "Testing2026-09-25N113@testingUtel.com",
+        "phone": "5547159907",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El formulario no tiene un botón de envío visible."
+      }
+    ],
+    "old_row": 88,
+    "name": "Danilo Prueba BOD",
+    "email": "Testing2026-09-25N113@testingUtel.com",
+    "phone": "5547159907",
+    "prior_status": "failed",
+    "prior_error": "El formulario no tiene un botón de envío visible."
+  },
+  {
+    "row": 200,
+    "country": "Global",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/global/campus48/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BOE",
+        "email": "Testing2026-09-25N114@testingUtel.com",
+        "phone": "5547167826",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El formulario no tiene un botón de envío visible."
+      }
+    ],
+    "old_row": 89,
+    "name": "Danilo Prueba BOE",
+    "email": "Testing2026-09-25N114@testingUtel.com",
+    "phone": "5547167826",
+    "prior_status": "failed",
+    "prior_error": "El formulario no tiene un botón de envío visible."
+  },
+  {
+    "row": 201,
+    "country": "Global",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/global/campus50/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BOF",
+        "email": "Testing2026-09-25N115@testingUtel.com",
+        "phone": "5547175745",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El formulario no tiene un botón de envío visible."
+      }
+    ],
+    "old_row": 90,
+    "name": "Danilo Prueba BOF",
+    "email": "Testing2026-09-25N115@testingUtel.com",
+    "phone": "5547175745",
+    "prior_status": "failed",
+    "prior_error": "El formulario no tiene un botón de envío visible."
+  },
+  {
+    "row": 202,
+    "country": "Global",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/global/lp-global/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BOG",
+        "email": "Testing2026-09-25N116@testingUtel.com",
+        "phone": "5547183664",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El formulario no tiene un botón de envío visible."
+      },
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BOH",
+        "email": "Testing2026-09-25N117@testingUtel.com",
+        "phone": "5547191583",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El formulario no tiene un botón de envío visible."
+      }
+    ]
+  },
+  {
+    "row": 203,
+    "country": "Global",
+    "level": "Licenciatura",
+    "url": "https://universidad.utel.edu.mx/global/lp-global/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BOG",
+        "email": "Testing2026-09-25N116@testingUtel.com",
+        "phone": "5547183664",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El formulario no tiene un botón de envío visible."
+      },
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BOH",
+        "email": "Testing2026-09-25N117@testingUtel.com",
+        "phone": "5547191583",
+        "level": "Licenciatura",
+        "status": "failed",
+        "error": "El formulario no tiene un botón de envío visible."
+      }
+    ]
+  },
+  {
+    "row": 207,
+    "country": "Global",
+    "level": "Licenciatura",
+    "url": "https://expansionprofesional.utel.edu.mx/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BOI",
+        "email": "Testing2026-09-25N118@testingUtel.com",
+        "phone": "5547199502",
+        "level": "Licenciatura",
+        "status": "pending",
+        "error": "Se revisó la página Expansión Profesional. No muestra formulario de contacto utilizable en esta URL. No se realizó envío."
+      }
+    ],
+    "old_row": 93,
+    "name": "Danilo Prueba BOI",
+    "email": "Testing2026-09-25N118@testingUtel.com",
+    "phone": "5547199502",
+    "prior_status": "pending",
+    "prior_error": "Se revisó la página Expansión Profesional. No muestra formulario de contacto utilizable en esta URL. No se realizó envío."
+  },
+  {
+    "row": 208,
+    "country": "Global",
+    "level": "Licenciatura",
+    "url": "https://utelx.io/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BOJ",
+        "email": "Testing2026-09-25N119@testingUtel.com",
+        "phone": "5547207421",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "UTEL X muestra un formulario HubSpot de newsletter. Al llenar la identidad original aparece: Ingresa una dirección de correo válida. No se volvió a pulsar Suscríbete. La integración de este newsletter con inConcert/Balancer no está confirmada."
+      }
+    ],
+    "old_row": 94,
+    "name": "Danilo Prueba BOJ",
+    "email": "Testing2026-09-25N119@testingUtel.com",
+    "phone": "5547207421",
+    "prior_status": "success",
+    "prior_error": "UTEL X muestra un formulario HubSpot de newsletter. Al llenar la identidad original aparece: Ingresa una dirección de correo válida. No se volvió a pulsar Suscríbete. La integración de este newsletter con inConcert/Balancer no está confirmada."
+  },
+  {
+    "row": 209,
+    "country": "Global",
+    "level": "Licenciatura",
+    "url": "https://ucamp.io/",
+    "location": "Form Lp",
+    "identities": [
+      {
+        "country": "Mexico",
+        "name": "Danilo Prueba BOK",
+        "email": "Testing2026-09-25N120@testingUtel.com",
+        "phone": "5547215340",
+        "level": "Licenciatura",
+        "status": "success",
+        "error": "UCamp: nombre Danilo, apellidos Prueba BOK, correo y teléfono originales, Fundamentos de desarrollo web y privacidad completos. Los controles pasan la validación HTML. No se repitió el envío ya registrado como success. No se encontró el correo en inConcert México ni Balancer."
+      }
+    ],
+    "old_row": 95,
+    "name": "Danilo Prueba BOK",
+    "email": "Testing2026-09-25N120@testingUtel.com",
+    "phone": "5547215340",
+    "prior_status": "success",
+    "prior_error": "UCamp: nombre Danilo, apellidos Prueba BOK, correo y teléfono originales, Fundamentos de desarrollo web y privacidad completos. Los controles pasan la validación HTML. No se repitió el envío ya registrado como success. No se encontró el correo en inConcert México ni Balancer."
+  }
+]
