@@ -47,6 +47,22 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             candidate = await self._best_semantic_form(page)
             if candidate is not None:
                 await candidate.scroll_into_view_if_needed()
+                # Las LP de UTEL renderizan primero el HTML y habilitan el
+                # botón cuando termina de cargar su librería de formularios.
+                # Esperar aquí evita pulsar un botón visualmente presente pero
+                # todavía marcado con ``data-ic-button-disabled``.
+                with suppress(Exception):
+                    await page.wait_for_function(
+                        """() => {
+                          const button = document.querySelector(
+                            'form button[type="submit"], form input[type="submit"]'
+                          );
+                          return button && !button.disabled
+                            && !button.hasAttribute('data-ic-button-disabled')
+                            && button.getClientRects().length > 0;
+                        }""",
+                        timeout=12000,
+                    )
                 return candidate
             await asyncio.sleep(0.5)
         raise UtelQaError(
@@ -70,6 +86,13 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                             continue
                         score = await candidate.evaluate(
                             """element => {
+                                const style = getComputedStyle(element);
+                                const box = element.getBoundingClientRect();
+                                // Algunas LP montan una variante desktop/móvil oculta
+                                // que Playwright considera visible por tener layout.
+                                if (style.display === 'none' || style.visibility === 'hidden'
+                                  || Number.parseFloat(style.opacity || '1') === 0
+                                  || box.width === 0 || box.height === 0) return -100;
                                 const controls = [...element.querySelectorAll('input, select, textarea')];
                                 const text = (element.innerText || '').toLowerCase();
                                 const signature = controls.map(control => [
@@ -90,6 +113,22 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                     if score >= 14 and (best is None or score > best[0]):
                         best = (score, candidate)
         return best[1] if best else None
+
+    async def _is_rendered_control(self, field: Any) -> bool:
+        """Evita duplicados ocultos que comparten los mismos nombres de campo."""
+
+        try:
+            return bool(await field.evaluate(
+                """element => {
+                  const style = getComputedStyle(element);
+                  const box = element.getBoundingClientRect();
+                  return style.display !== 'none' && style.visibility !== 'hidden'
+                    && Number.parseFloat(style.opacity || '1') > 0
+                    && box.width > 0 && box.height > 0;
+                }"""
+            ))
+        except Exception:
+            return await field.is_visible()
 
     async def _fill_utel_form(self, page: Any, form: Any, config: WeeklyFormsCaseConfig) -> None:
         # El campo puede aparecer en cualquier variante de formulario del lote.
@@ -119,28 +158,18 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             config.lead.phone,
             required=False,
         )
+        await self._fill_required_date_fields(form)
 
         selects = form.locator("select")
         for index in range(await selects.count()):
             field = selects.nth(index)
-            if not await field.is_visible():
+            if not await field.is_visible() or not await self._is_rendered_control(field):
                 continue
             descriptor = self._normalize(await self._control_descriptor(field))
-            if re.search(r"programa|program|carrera|curso|producto|licenciatura|maestria|master", descriptor):
-                selected = await self._select_semantic_option(
-                    field,
-                    config.program_name or config.level,
-                    "program",
-                )
-                if selected:
-                    self.selected_program_name = selected
-            elif re.search(r"bachiller|titulo|t[ií]tulo|graduaste|secundaria|high.?school", descriptor):
+            # Varias LP rotulan horario, bachillerato y lada como Licenciaturas.
+            # Reconocer primero esos controles evita sobrescribir el programa.
+            if re.search(r"bachiller|titulo|t[ií]tulo|graduaste|secundaria|high.?school", descriptor):
                 await self._select_semantic_option(field, "si", "first")
-            elif re.search(r"area|nivel|level|grado|interes", descriptor):
-                await self._select_semantic_option(field, config.level, "level")
-                # React suele cargar el catálogo de programas de forma
-                # asíncrona después del cambio de nivel.
-                await asyncio.sleep(0.8)
             elif re.search(r"codigo.*pais|country.*code|indicativo|lada|prefix|pais|country", descriptor):
                 await self._select_semantic_option(field, config.country, "country")
             elif re.search(r"estado|state|ciudad|city|provincia|residencia|location|ubicacion", descriptor):
@@ -149,18 +178,28 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                 await self._select_semantic_option(field, "", "first")
             elif re.search(r"canal|contacto|contact.?method", descriptor):
                 await self._select_semantic_option(field, "", "first")
+            elif re.search(r"programa|program|carrera|curso|producto|licenciatura|maestria|master", descriptor):
+                selected = await self._select_semantic_option(
+                    field, config.program_name or config.level, "program",
+                )
+                if selected:
+                    self.selected_program_name = selected
+            elif re.search(r"area|nivel|level|grado|interes", descriptor):
+                await self._select_semantic_option(field, config.level, "level")
+                # Espera el catálogo dependiente del nivel seleccionado.
+                await asyncio.sleep(0.8)
 
         # Radios y selects no etiquetados que sean obligatorios también reciben
         # una opción válida. Así se cubren LP antiguas con nombres input_9.
         for index in range(await selects.count()):
             field = selects.nth(index)
-            if await field.is_visible() and not await self._has_real_select_value(field):
+            if await field.is_visible() and await self._is_rendered_control(field) and not await self._has_real_select_value(field):
                 await self._select_semantic_option(field, config.level, "first")
 
         radios = form.locator('input[type="radio"]:not(:checked)')
         for index in range(await radios.count()):
             radio = radios.nth(index)
-            if await radio.get_attribute("required") is None:
+            if not await self._is_rendered_control(radio) or await radio.get_attribute("required") is None:
                 continue
             descriptor = self._normalize(await self._control_descriptor(radio))
             if re.search(r"privacidad|privacy|marketing|publicidad|promocion|promoción|contact", descriptor):
@@ -173,7 +212,7 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         checkboxes = form.locator('input[type="checkbox"]')
         for index in range(await checkboxes.count()):
             checkbox = checkboxes.nth(index)
-            if not await checkbox.is_visible():
+            if not await checkbox.is_visible() or not await self._is_rendered_control(checkbox):
                 continue
             descriptor = self._normalize(await self._control_descriptor(checkbox))
             if re.search(r"privacidad|privacy|politica|policy|terminos|terms|aviso", descriptor):
@@ -181,6 +220,31 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
 
         await asyncio.sleep(0.8)
         await self._validate_generic_form(form)
+
+    async def _fill_required_date_fields(self, form: Any) -> None:
+        """Completa fechas QA obligatorias que algunas LP agregan al formulario."""
+
+        # Algunas LP declaran la fecha como texto (por ejemplo
+        # ``FechaNacimiento-input``) aunque la validación HTML la trate como
+        # obligatoria; por eso se inspeccionan también inputs semánticos.
+        fields = form.locator("input, textarea")
+        for index in range(await fields.count()):
+            field = fields.nth(index)
+            if not await field.is_visible() or not await self._is_rendered_control(field) or await field.is_disabled():
+                continue
+            input_type = (await field.get_attribute("type") or "text").lower()
+            if input_type in {"hidden", "checkbox", "radio", "file", "submit", "button"}:
+                continue
+            descriptor = self._normalize(await self._control_descriptor(field))
+            required = await field.get_attribute("required") is not None
+            if not required and not re.search(r"fecha|nacimiento|birth|date", descriptor):
+                continue
+            if (await field.input_value()).strip():
+                continue
+            # Fecha adulta sintética y estable para validaciones QA; no representa
+            # la identidad de una persona real.
+            await field.fill("1990-01-15")
+            await field.press("Tab")
 
     async def _fill_document_number(self, form: Any, config: WeeklyFormsCaseConfig) -> None:
         """Completa documentos visibles en cualquier variante de Weekly Forms."""
@@ -287,7 +351,7 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         matches = []
         for index in range(await controls.count()):
             field = controls.nth(index)
-            if not await field.is_visible() or await field.is_disabled():
+            if not await field.is_visible() or not await self._is_rendered_control(field) or await field.is_disabled():
                 continue
             descriptor = self._normalize(await self._control_descriptor(field))
             if re.search(pattern, descriptor, re.I):
@@ -305,16 +369,25 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         await field.press("Tab")
 
     async def _control_descriptor(self, field: Any) -> str:
+        """Describe solo el control; un contenedor compartido no es su etiqueta."""
         return await field.evaluate(
             """element => {
+                const parent = element.parentElement;
+                // Las LP antiguas agrupan todo el formulario en un mismo div.
+                // Solo usar su texto cuando pertenece a un único control.
+                const localText = parent?.querySelectorAll('input, select, textarea').length === 1
+                  ? [...parent.childNodes].filter(node => node.nodeType === 3)
+                      .map(node => node.textContent).join(' ') : '';
                 const label = element.labels?.[0]?.innerText
                   || element.closest('label')?.innerText
                   || (element.id ? document.querySelector(`label[for="${CSS.escape(element.id)}"]`)?.innerText : '')
-                  || element.parentElement?.innerText || '';
+                  || localText;
                 const labelledBy = element.getAttribute('aria-labelledby')
                   ?.split(/\\s+/).map(id => document.getElementById(id)?.innerText || '').join(' ') || '';
                 return [element.name, element.id, element.type, element.placeholder,
-                  element.getAttribute('aria-label'), labelledBy, element.dataset?.cy, label]
+                  element.getAttribute('aria-label'), labelledBy, element.dataset?.cy, label,
+                  element.tagName === 'SELECT' && !element.options[0]?.value
+                    ? element.options[0]?.textContent : '']
                   .filter(Boolean).join(' ');
             }"""
         )
@@ -452,19 +525,27 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         return chosen["text"]
 
     async def _validate_generic_form(self, form: Any) -> None:
+        """Comprueba restricciones HTML y rechazos visibles del validador de la LP."""
         invalid = await form.evaluate(
             """element => {
               const owner = element.matches('form') ? element : element.querySelector('form') || element.closest('form');
               if (!owner) return [];
-              return [...owner.querySelectorAll(':invalid')].filter(field => field.getClientRects().length)
+              const visible = field => field.getClientRects().length && getComputedStyle(field).visibility !== 'hidden';
+              const fields = [...owner.querySelectorAll(':invalid, [aria-invalid="true"]')].filter(visible)
                 .map(field => field.name || field.id || field.placeholder || field.type);
+              // Los validadores externos pueden rechazar datos válidos para HTML.
+              // Ignorar mensajes ocultos o informativos evita falsos bloqueos.
+              const messages = [...owner.querySelectorAll('[role="alert"]')].filter(visible)
+                .map(alert => (alert.innerText || '').trim())
+                .filter(text => /error|invalid|incorrect|requerid|required|obligatori|ingresa.*v[aá]lid|enter.*valid/i.test(text));
+              return [...new Set([...fields, ...messages])];
             }"""
         )
         if invalid:
             raise UtelQaError(
                 "utel_fill",
-                "El formulario conserva campos obligatorios sin completar: " + ", ".join(invalid[:8]),
-                ":invalid",
+                "El formulario conserva campos incompletos o rechazados: " + ", ".join(invalid[:8]),
+                ':invalid, [aria-invalid="true"], [role="alert"]',
             )
 
     async def _submit_utel_form(
@@ -478,14 +559,26 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             return
 
         await self._validate_generic_form(form)
-        submit = form.locator('button[type="submit"], input[type="submit"]').first
-        if not await submit.count():
+        submit = form.locator('button[type="submit"], input[type="submit"]')
+        rendered_submit = None
+        for index in range(await submit.count()):
+            candidate = submit.nth(index)
+            if await candidate.is_visible() and await self._is_rendered_control(candidate) and not await candidate.is_disabled():
+                rendered_submit = candidate
+                break
+        if rendered_submit is None:
             submit = form.get_by_role(
                 "button",
                 name=re.compile(r"enviar|solicitar|registr|acceder|contact|send|submit", re.I),
-            ).first
-        if not await submit.count() or not await submit.is_visible():
+            )
+            for index in range(await submit.count()):
+                candidate = submit.nth(index)
+                if await candidate.is_visible() and await self._is_rendered_control(candidate) and not await candidate.is_disabled():
+                    rendered_submit = candidate
+                    break
+        if rendered_submit is None:
             raise UtelQaError("utel_submit", "El formulario no tiene un botón de envío visible.", 'button[type="submit"]')
+        submit = rendered_submit
 
         self._raise_if_stop_requested(should_stop)
         loop = asyncio.get_running_loop()
@@ -513,7 +606,17 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         page.on("response", capture_response)
         try:
             await submit.scroll_into_view_if_needed()
-            await submit.click(force=True, timeout=12000)
+            try:
+                await submit.click(force=True, timeout=12000)
+            except Exception as error:
+                # Algunos contenedores Chakra mantienen el botón fuera del
+                # viewport lógico aunque sea el botón visible. El click nativo
+                # conserva sus handlers y evita perder el envío por geometría.
+                if "outside of the viewport" not in str(error).lower():
+                    raise
+                await submit.evaluate(
+                    "element => { element.scrollIntoView({block: 'center', inline: 'nearest'}); element.click(); }"
+                )
             deadline = perf_counter() + 20
             while not request_future.done() and perf_counter() < deadline:
                 self._raise_if_stop_requested(should_stop)
@@ -541,6 +644,13 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             status = int(getattr(response, "status", 0) or 0)
             if 200 <= status < 400:
                 return
+            # Las LP genéricas también pueden registrar el lead antes de un 5xx.
+            if status >= 500 or status == 0:
+                raise UnconfirmedSubmission(
+                    "utel_submit",
+                    f"La landing respondió HTTP {status or 'desconocido'} después del POST. "
+                    "Se verificará el mismo lead en CRM sin reenviar.",
+                )
             raise RejectedSubmission(
                 "utel_submit",
                 f"La landing rechazó el envío con HTTP {status}. No se consultará CRM.",

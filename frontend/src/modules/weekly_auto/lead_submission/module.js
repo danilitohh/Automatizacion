@@ -18,11 +18,13 @@ export function initializeLeadSubmissionModule(dependencies, options) {
     downloadUrl: dependencies.weeklyFormsDownloadUrl,
     viewId: "view-weekly-forms",
     allowManualUrls: false,
+    manualCountryOptions: [],
+    manualCountryRequired: false,
     previewManualUrls: null,
     runManualUrls: null,
     ...(options || {}),
   };
-  const state = { file: null, manualUrls: [], mapping: null, jobId: null, pollTimer: null };
+  const state = { file: null, manualUrls: [], manualCountry: "", mapping: null, jobId: null, pollTimer: null };
   const selector = (suffix) => `#${config.key}-${suffix}`;
   const element = (suffix) => document.querySelector(selector(suffix));
 
@@ -35,10 +37,27 @@ export function initializeLeadSubmissionModule(dependencies, options) {
   function mount() {
     const view = document.querySelector(`#${config.viewId}`);
     if (!view || document.querySelector(selector("panel"))) return;
+    // Todos los flujos de formularios usan sesiones temporales sin perfiles guardados.
+    const privateBrowserOption = '<option value="chrome_incognito" selected>Google Chrome - Incógnito</option>';
+    const privateBrowserHelp = '<small>Sesión temporal, sin perfiles personales ni corporativos. Usa las credenciales configuradas de los CRM.</small>';
+    const inputReadyMessage = config.allowManualUrls
+      ? "Carga un Excel o pega URLs para comenzar."
+      : "Carga y analiza el Excel para comenzar.";
+    const countryInput = config.allowManualUrls && config.manualCountryOptions.length
+      ? `
+          <label class="field full"><span>País de los links</span>
+            <select id="${config.key}-manual-country">
+              <option value="">Selecciona el país</option>
+              ${config.manualCountryOptions.map((country) => `<option value="${escapeHtml(country.value)}">${escapeHtml(country.label)}</option>`).join("")}
+            </select>
+            <small>Se aplicará a todos los links pegados en este lote.</small>
+          </label>`
+      : "";
     const manualInput = config.allowManualUrls ? `
+          ${countryInput}
           <label class="pdp-file-field full"><span>URLs de landings QA (una por línea)</span>
             <textarea id="${config.key}-urls" rows="4" placeholder="https://utel.edu.mx/colombia/...\nhttps://utlenlinea.com/..." aria-label="URLs de landings QA"></textarea>
-            <small>El país se infiere desde la URL cuando el Excel no lo incluye.</small>
+            <small>${config.manualCountryRequired ? "Indica el país y pega un link por línea." : "El país se infiere desde la URL cuando no lo indicas."}</small>
           </label>` : "";
     const timeoutInput = config.allowManualUrls ? `
           <label class="field"><span>Tiempo máximo de búsqueda (segundos)</span>
@@ -65,8 +84,9 @@ export function initializeLeadSubmissionModule(dependencies, options) {
             <option value="both">InConcert y Balanceador</option><option value="inconcert">Solo InConcert</option><option value="balanceador">Solo Balanceador</option>
           </select></label>
           <label class="field"><span>Navegador</span><select id="${config.key}-browser">
-            <option value="chrome">Google Chrome - Perfil QA</option><option value="chromium">Chromium aislado</option><option value="firefox">Firefox</option>
-          </select></label>
+            ${privateBrowserOption}
+            <option value="chromium">Chromium aislado</option><option value="firefox">Firefox</option>
+          </select>${privateBrowserHelp}</label>
           ${timeoutInput}
           ${fillOnlyInput}
           <label class="toggle-field full-toggle"><input id="${config.key}-visible" type="checkbox" checked />
@@ -74,13 +94,13 @@ export function initializeLeadSubmissionModule(dependencies, options) {
           </label>
         </div>
         <div class="bot-flow-actions" style="margin-top:12px;">
-          <div><button class="secondary-button" id="${config.key}-analyze" type="button">Analizar Excel</button>
+          <div><button class="secondary-button" id="${config.key}-analyze" type="button">Analizar entrada</button>
             <button class="secondary-button" id="${config.key}-download" type="button" hidden>Descargar Excel actualizado</button></div>
           <div><button class="danger-button" id="${config.key}-stop" type="button" hidden>Detener</button>
             <button class="primary-button" id="${config.key}-run" type="button" disabled>${config.runLabel} <span>→</span></button></div>
         </div>
-        <div class="bot-run-status" id="${config.key}-status">Carga y analiza el Excel para comenzar.</div>
-        <pre class="bot-terminal" id="${config.key}-terminal" aria-live="polite">[SISTEMA] Esperando Excel.</pre>
+        <div class="bot-run-status" id="${config.key}-status">${inputReadyMessage}</div>
+        <pre class="bot-terminal" id="${config.key}-terminal" aria-live="polite">[SISTEMA] ${config.allowManualUrls ? "Esperando Excel o URLs." : "Esperando Excel."}</pre>
         <div id="${config.key}-summary" class="pdp-summary" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;"></div>
       </article>`);
   }
@@ -154,6 +174,7 @@ export function initializeLeadSubmissionModule(dependencies, options) {
     const stop = element("stop");
     const download = element("download");
     const urlsInput = config.allowManualUrls ? element("urls") : null;
+    const manualCountryInput = config.allowManualUrls ? element("manual-country") : null;
 
     const hasInput = () => Boolean(state.file || state.manualUrls.length);
 
@@ -190,13 +211,23 @@ export function initializeLeadSubmissionModule(dependencies, options) {
       }
     });
 
+    manualCountryInput?.addEventListener("change", () => {
+      state.manualCountry = manualCountryInput.value;
+      state.mapping = null;
+      run.disabled = true;
+      if (state.manualUrls.length) setTerminal("[SISTEMA] País actualizado. Pulsa Analizar entrada.");
+    });
+
     analyze.addEventListener("click", async () => {
       if (!hasInput()) return dependencies.showToast(`Selecciona un Excel o pega URLs para ${config.title}.`, "error");
       analyze.disabled = true;
       try {
+        if (!state.file && config.manualCountryRequired && !manualCountryInput?.value) {
+          throw new Error("Selecciona el país de los links antes de analizar.");
+        }
         const preview = state.file
           ? await config.preview(state.file)
-          : await config.previewManualUrls(state.manualUrls);
+          : await config.previewManualUrls(state.manualUrls, state.manualCountry);
         const sheet = preview.sheets?.[0];
         if (!sheet) throw new Error("No se encontró una hoja compatible. Revisa las columnas de URL, país, formulario y lead, o las URLs permitidas.");
         state.mapping = sheet.mapping;
@@ -243,7 +274,7 @@ export function initializeLeadSubmissionModule(dependencies, options) {
         };
         const job = state.file
           ? await config.runBatch(state.file, batchConfig, state.mapping)
-          : await config.runManualUrls(state.manualUrls, batchConfig);
+          : await config.runManualUrls(state.manualUrls, batchConfig, state.manualCountry);
         state.jobId = job.job_id;
         renderJob(job);
         await watch();

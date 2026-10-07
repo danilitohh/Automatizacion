@@ -55,10 +55,7 @@ class FormValidationReportService(BotReportService):
             for item in items:
                 row_number = item["row"]["row_number"]
                 result = item.get("result", {})
-                failure = next(
-                    (stage.get("message", "") for stage in result.get("stages", []) if stage.get("status") == "FAIL"),
-                    "",
-                )
+                failure = self.failure_detail(result)
                 values = {
                     "URL": item["row"].get("utel_url", ""),
                     "País": result.get("country") or item["row"].get("country", ""),
@@ -88,10 +85,7 @@ class FormValidationReportService(BotReportService):
         summary_sheet.append(list(self.COLUMNS))
         for item in results:
             result = item.get("result", {})
-            failure = next(
-                (stage.get("message", "") for stage in result.get("stages", []) if stage.get("status") == "FAIL"),
-                "",
-            )
+            failure = self.failure_detail(result)
             summary_sheet.append([
                 item.get("row", {}).get("utel_url", ""),
                 result.get("country") or item.get("row", {}).get("country", ""),

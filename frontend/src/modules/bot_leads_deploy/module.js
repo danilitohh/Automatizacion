@@ -23,7 +23,7 @@ const state = {
     program_name: "",
     submit_success_pattern: "Env\u00edo correcto|Pronto recibir\u00e1s informaci\u00f3n",
     submit_error_pattern: "Error al enviar|Contacta a soporte|error|invalido|inválido|obligatorio|requerido|fall",
-    browser: "chromium",
+    browser: "chrome",
     headless: true,
     keep_browser_open: false,
     lead: { name: "pending", email: "pending@testingUtel.com", phone: "900000000" },
@@ -100,7 +100,7 @@ function renderModuleShell() {
           <label class="field full"><span>Nombre exacto del programa</span><input id="leads-deploy-program-name" type="text" placeholder="Obligatorio con coincidencia exacta" /></label>
           <label class="field full"><span>Patron de confirmacion (opcional)</span><input id="leads-deploy-success-pattern" type="text" placeholder="Ej. gracias|exito" /></label>
           <label class="field full"><span>Patron de error</span><input id="leads-deploy-error-pattern" type="text" /></label>
-          <label class="field"><span>Navegador</span><select id="leads-deploy-browser"><option value="chromium">Chromium aislado</option><option value="chrome">Google Chrome - Perfil QA</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select></label>
+          <label class="field"><span>Navegador</span><select id="leads-deploy-browser"><option value="chromium">Chromium aislado</option><option value="chrome">Google Chrome - Incógnito</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select></label>
           <label class="toggle-field"><input id="leads-deploy-headless" type="checkbox" checked /><span><strong>Ejecutar en segundo plano</strong><small>Sin controlar tu navegador de trabajo</small></span></label>
           <label class="toggle-field full-toggle"><input id="leads-deploy-keep-browser-open" type="checkbox" /><span><strong>Modo debug visible</strong><small>Muestra el navegador durante la ejecucion y lo deja abierto al final</small></span></label>
         </div>
@@ -1202,7 +1202,7 @@ export function initializeLeadsDeployModule({ showToast, runUtelInconcertBot, ut
       program_name: "",
       submit_success_pattern: "Env\u00edo correcto|Pronto recibir\u00e1s informaci\u00f3n",
       submit_error_pattern: "Error al enviar|Contacta a soporte|error|invalido|inválido|obligatorio|requerido|fall",
-      browser: "chromium",
+      browser: "chrome",
       headless: true,
       keep_browser_open: false,
       lead: { name: "pending", email: "pending@testingUtel.com", phone: "900000000" },

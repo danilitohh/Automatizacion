@@ -37,13 +37,9 @@ Copy-Item .env.example .env
 python -m playwright install chromium
 ```
 
-Para usar Google Chrome con una sesión persistente de QA, abre el perfil aislado con:
+Selecciona **Google Chrome - Incógnito** para automatizar con el Chrome instalado, sin cargar perfiles personales ni corporativos. Los módulos usan las credenciales configuradas para iniciar sesión en los CRM. Las cookies duran únicamente mientras permanezca abierto el contexto de esa ejecución; no se recuperan al iniciar otra sesión. Las configuraciones antiguas con `browser: "chrome"` también usan este modo temporal.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\open_chrome_qa.ps1
-```
-
-Inicia sesión en las plataformas necesarias y cierra esa ventana. Luego selecciona **Google Chrome - Perfil QA** en el Bot de verificaciones y ejecuta el flujo. Las cookies se guardan en `storage/browser_profiles/chrome-qa`, que está excluida de Git.
+Weekly Performance no utiliza perfiles: consulta la API de PageSpeed Insights.
 
 No completes todavía las variables de CRM o Strapi con credenciales reales; esos módulos pertenecen a fases posteriores.
 
@@ -115,7 +111,7 @@ Los tests usan archivos SQLite temporales y no modifican la base de datos local.
 frontend/                 Interfaz Electron y renderer.
 frontend/src/renderer/bot-module.js Constructor y controles del Bot de verificaciones.
 backend/app/automations/generic_bot/runner.py Ejecutor de pasos web con Playwright.
-storage/browser_profiles/chrome-qa Perfil persistente usado por Google Chrome para QA.
+backend/app/services/browser_service.py Apertura temporal compartida de navegadores.
 backend/app/automations/generic_bot/recorder.py Grabador visual de clicks y campos.
 backend/app/api/          Rutas HTTP.
 backend/app/config/       Variables y rutas centralizadas.
@@ -190,7 +186,7 @@ Antes de avanzar hay que verificar esta base con los tests y la prueba manual. E
 
 ## Grabar pasos visualmente
 
-1. Selecciona **Google Chrome - Perfil QA** y escribe la URL inicial.
+1. Selecciona **Google Chrome - Incógnito** y escribe la URL inicial.
 2. Pulsa **Grabar pasos**.
 3. Interactúa con la ventana de Chrome que se abre; los elementos se resaltan al pasar el cursor.
 4. Haz click en botones o enlaces y selecciona los campos de formulario que el bot deberá rellenar. Los pasos aparecerán automáticamente en la aplicación.

@@ -54,6 +54,10 @@ export const api = {
     formData.append("file", file);
     return request("/api/weekly-auto/forms/spreadsheet-preview", { method: "POST", body: formData });
   },
+  previewWeeklyFormsUrls: (urls, country = "") => request("/api/weekly-auto/forms/urls/preview", {
+    method: "POST",
+    body: JSON.stringify({ urls, country }),
+  }),
   previewWeeklyLeadsSpreadsheet: (file) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -70,6 +74,10 @@ export const api = {
     formData.append("mapping", JSON.stringify(mapping));
     return request("/api/bots/utel-inconcert/batch-run", { method: "POST", body: formData });
   },
+  runWeeklyFormsUrls: (urls, config, country = "") => request("/api/weekly-auto/forms/urls/run", {
+    method: "POST",
+    body: JSON.stringify({ urls, country, config }),
+  }),
   runWeeklyLeadsBatch: (file, config, mapping) => {
     const formData = new FormData();
     formData.append("file", file);

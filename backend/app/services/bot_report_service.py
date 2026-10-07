@@ -8,6 +8,17 @@ from .form_data_report_service import FormDataReportService
 
 
 class BotReportService:
+    @staticmethod
+    def failure_detail(result: dict) -> str:
+        """Agrupa todas las etapas fallidas sin ocultar un CRM detrás del otro."""
+
+        failures = dict.fromkeys(
+            f"[{stage.get('stage')}] {stage.get('message', '')}"
+            if stage.get('stage') else str(stage.get('message', ''))
+            for stage in result.get("stages", []) if stage.get("status") == "FAIL"
+        )
+        return " | ".join(failures) or str(result.get("error") or "")
+
     def build(self, content: bytes, mapping: dict, results: list):
         workbook = load_workbook(io.BytesIO(content))
         service = BotSpreadsheetService()
@@ -107,7 +118,7 @@ class BotReportService:
                 elif link and failure and failure.get("stage") == "inconcert_manage":
                     status = "LEAD LOCALIZADO - VALIDACION PENDIENTE"
                 sheet.cell(row, status_col).value = status
-                detail = failure["message"] if failure else result.get("summary", "")
+                detail = self.failure_detail(result) or result.get("summary", "")
                 submission_detail = str(result.get("utel_submission_message") or "").strip()
                 if (
                     result.get("utel_submission_attempted")

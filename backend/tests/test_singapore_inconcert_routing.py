@@ -40,12 +40,22 @@ def test_asian_country_aliases_use_singapore_inconcert(service, country):
     assert service.default_inconcert_url(country) == SINGAPORE_URL
 
 
+@pytest.mark.parametrize('service', (
+    BotSpreadsheetService, LeadsDeploySpreadsheetService,
+    WeeklyFormsSpreadsheetService, WeeklyLeadsSpreadsheetService,
+))
+def test_indonesia_uses_verified_asia_tenant_in_shared_weekly_flow(service):
+    """El flujo compartido corregido no deriva Indonesia a Emergentes."""
+    assert service.default_inconcert_url('Indonesia') == SINGAPORE_URL
+
+
 @pytest.mark.parametrize("service", (BotSpreadsheetService, WeeklyFormsSpreadsheetService))
-def test_outdated_excel_hint_does_not_override_asian_country(service):
+@pytest.mark.parametrize("country", ("Philippines", "Indonesia"))
+def test_outdated_excel_hint_does_not_override_asian_country(service, country):
     """Un enlace antiguo del Excel no puede desviar Filipinas a Emergentes."""
 
     assert service.inconcert_url_for_case(
-        "Philippines", EMERGING_URL, EMERGING_URL
+        country, EMERGING_URL, EMERGING_URL
     ) == SINGAPORE_URL
 
 

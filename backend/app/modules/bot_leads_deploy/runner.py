@@ -234,6 +234,8 @@ class UtelInconcertRunner:
                     except UtelQaError as search_error:
                         if search_error.stage != "inconcert_search":
                             raise
+                        # La conciliación posterior conserva el error del primer CRM.
+                        await self._record_crm_search_failure(search_error, inconcert_page, 4)
                         balancer_page = await self._session_page(context, "balancer")
                         page = balancer_page
                         balancer_page.set_default_timeout(30000)
@@ -452,6 +454,8 @@ class UtelInconcertRunner:
                 except UtelQaError as search_error:
                     if search_error.stage != "inconcert_search":
                         raise
+                    # El respaldo no debe borrar la causa original de InConcert.
+                    await self._record_crm_search_failure(search_error, inconcert_page, 9)
                     self.logger.warning(
                         "El lead %s no apareció en InConcert; se consultará el "
                         "Balanceador como respaldo.",
@@ -797,7 +801,11 @@ class UtelInconcertRunner:
             if found_balancer
             else ""
         )
-        failure = next((stage.message for stage in self.stage_results if stage.status == "FAIL"), "")
+        # Conservar cada sistema/etapa, incluso si el otro CRM sí encuentra el lead.
+        failure = " | ".join(dict.fromkeys(
+            f"[{stage.stage}] {stage.message}"
+            for stage in self.stage_results if stage.status == "FAIL"
+        ))
         return {
             "status": "FAIL" if failed else "PASS",
             "summary": summary,
@@ -1379,6 +1387,18 @@ class UtelInconcertRunner:
 
     async def _check_access(self, page: Any) -> None:
         text = await page.locator("body").inner_text(timeout=12000)
+        # Un fallo del origen no es un formulario ausente ni prueba de antibot.
+        origin_error = re.search(r"Error code\s+(52[0-6])\b", text, re.I)
+        if origin_error and "cloudflare" in text.lower():
+            ray = re.search(r"Cloudflare Ray ID:\s*([a-f0-9]+)", text, re.I)
+            diagnostic = f" Ray ID: {ray.group(1)}." if ray else ""
+            raise UtelQaError(
+                "utel_access",
+                f"HTTP {origin_error.group(1)}: Cloudflare reportó un fallo del servidor de origen. "
+                "No se cargó el formulario ni se realizó un envío; no implica un bloqueo antibot."
+                + diagnostic,
+                "body",
+            )
         if re.search(r"sorry,?\s+you have been blocked|you are unable to access", text, re.I):
             raise UtelQaError(
                 "utel_access", "El sitio bloqueo el acceso de esta sesion. No se envio el formulario. "
@@ -2261,9 +2281,8 @@ class UtelInconcertRunner:
 
             if api_response in done:
                 response = api_response.result()
-                # Un HTTP 500 puede llegar antes que el toast que explica el
-                # rechazo real. Dar una breve ventana al feedback visible evita
-                # clasificar "Contacta a soporte" como pendiente y abrir CRM.
+                # Adjuntar el toast al diagnóstico; un HTTP 5xx sigue siendo
+                # incierto aunque diga soporte, porque puede haber creado el lead.
                 if not feedback_task.done():
                     with suppress(Exception):
                         await asyncio.wait_for(asyncio.shield(feedback_task), timeout=2)
@@ -2295,7 +2314,12 @@ class UtelInconcertRunner:
                 if response is not None:
                     await self._classify_utel_api_response(response, text)
                     return
-                raise RejectedSubmission(
+                signal = (
+                    UnconfirmedSubmission
+                    if self._is_explicit_submit_rejection(text)
+                    else RejectedSubmission
+                )
+                raise signal(
                     "utel_submit",
                     f"UTEL mostró un aviso después del POST: {text}",
                 )
@@ -2429,17 +2453,20 @@ class UtelInconcertRunner:
                     "telefono_presente": bool(inputs.get("phone")),
                 }
                 suffix += f" Datos técnicos: {metadata}."
+        # Un fallo de servidor o un toast genérico con respuesta exitosa no
+        # demuestra rechazo: conciliar la misma identidad antes de otro envío.
+        if status >= 500 or status == 0 or (status < 400 and rejected):
+            notice = " Aviso visible: Error al enviar / Contacta a soporte." if rejected else ""
+            raise UnconfirmedSubmission(
+                "utel_submit",
+                f"UTEL devolvió HTTP {status or 'desconocido'} en POST /api/forms. "
+                f"Se verificará en CRM porque el lead podría haberse enviado.{notice}{suffix}",
+            )
         if rejected:
             raise RejectedSubmission(
                 "utel_submit",
                 f"UTEL mostró Error al enviar / Contacta a soporte. "
                 f"POST /api/forms: HTTP {status}.{suffix}",
-            )
-        if status >= 500:
-            raise UnconfirmedSubmission(
-                "utel_submit",
-                f"UTEL devolvió HTTP {status or 'desconocido'} en POST /api/forms. "
-                f"Se verificará en CRM porque el lead podría haberse enviado.{suffix}",
             )
         raise RejectedSubmission(
             "utel_submit",
@@ -2776,7 +2803,7 @@ class UtelInconcertRunner:
         challenge_resolved = not challenge_detected
         if challenge_detected:
             # En Chrome visible, Cloudflare puede completar su comprobación y
-            # guardar la autorización en el perfil QA. Se espera una sola vez
+            # conservar la autorización en la sesión actual. Se espera una sola vez
             # antes de clasificar el acceso como bloqueo temporal.
             deadline = perf_counter() + 45
             while perf_counter() < deadline:
@@ -3076,13 +3103,20 @@ class UtelInconcertRunner:
         self._balancer_found_at = perf_counter()
 
     async def _apply_contact_search(self, page: Any, filter_name: str, value: str) -> None:
+        """Confirma el filtro activo antes de buscar, tolerando iconos decorativos."""
+
         search_input = await self._resolve_inconcert_search_input(page)
         if search_input is None:
             raise UtelQaError("inconcert_search", "No se pudo ubicar el campo de busqueda en InConcert.")
         filter_container = search_input.locator("xpath=ancestor::div[contains(@class,'input-group')][1]")
+        # Algunos tenants incluyen caracteres de FontAwesome en innerText.
+        # No deben confundirse con parte de la etiqueta ni ampliar la búsqueda.
+        decoration = r"[\s\ue000-\uf8ff▾▼⌄]*"
+        filter_pattern = re.compile(rf"^{decoration}(Nombre|Email){decoration}$", re.I)
+        desired_pattern = re.compile(rf"^{decoration}{re.escape(filter_name)}{decoration}$", re.I)
         filter_button = filter_container.locator(
             "button:visible, [role='button']:visible, .dropdown-toggle:visible"
-        ).filter(has_text=re.compile(r"^\s*(Nombre|Email)\s*$", re.I)).first
+        ).filter(has_text=filter_pattern).first
         if not await self._locator_count(filter_button, timeout_ms=1200):
             # El tenant Singapur separa visualmente el botón y el input sin un
             # ancestro .input-group compartido y no siempre usa la clase
@@ -3090,7 +3124,7 @@ class UtelInconcertRunner:
             filter_button = page.locator(
                 "button:visible, [role='button']:visible, .dropdown-toggle:visible"
             ).filter(
-                has_text=re.compile(r"^\s*(Nombre|Email)\s*$", re.I)
+                has_text=filter_pattern
             ).first
         current_filter = ""
         if await self._locator_count(filter_button, timeout_ms=1200) > 0:
@@ -3100,34 +3134,48 @@ class UtelInconcertRunner:
                 current_filter = self._normalize(await filter_button.inner_text(timeout=1000))
             except Exception:
                 current_filter = ""
-            desired_filter = self._normalize(filter_name)
-            if current_filter != desired_filter:
+            if not desired_pattern.fullmatch(current_filter):
                 await filter_button.click(force=True)
-                selected_filter = False
+                # Esperar el menú: contar opciones inmediatamente tras el clic
+                # pierde las listas que Angular renderiza de forma asíncrona.
                 options = page.locator(
                     ".dropdown-menu:visible a, .dropdown-menu:visible button, "
+                    ".dropdown-menu:visible li, .dropdown-menu:visible span, "
                     "[role='menu']:visible [role='menuitem'], "
+                    "[role='listbox']:visible [role='option'], "
                     "a.dropdown-item:visible, button.dropdown-item:visible, "
                     "li:visible a, li:visible button"
-                )
-                for index in range(await options.count()):
-                    option = options.nth(index)
-                    try:
-                        if self._normalize((await option.inner_text()).strip()) == desired_filter:
-                            await option.click(force=True)
-                            selected_filter = True
-                            break
-                    except Exception:
-                        continue
-                if not selected_filter:
-                    close_button = page.locator("button[title='Cerrar']").first
-                    if await self._locator_count(close_button, timeout_ms=1200):
-                        await close_button.click(force=True)
+                ).filter(has_text=desired_pattern)
+                try:
+                    await options.first.wait_for(state="visible", timeout=5000)
+                    await options.first.click(timeout=5000)
+                except Exception as error:
+                    # Algunos tenants renderizan cada opción como texto directo
+                    # dentro de un contenedor sin las clases del dropdown.
+                    # Buscar el nodo de texto exacto evita volver al filtro Nombre.
+                    exact_options = page.locator(
+                        f"xpath=//*[normalize-space(text())='{filter_name}']"
+                    )
+                    clicked_exact = False
+                    for option_index in range(await exact_options.count()):
+                        candidate = exact_options.nth(option_index)
+                        try:
+                            if await candidate.is_visible():
+                                await candidate.click(force=True, timeout=5000)
+                                clicked_exact = True
+                                break
+                        except Exception:
+                            continue
+                    if not clicked_exact:
+                        raise UtelQaError(
+                            "inconcert_search",
+                            f"InConcert no permitió seleccionar '{filter_name}' en el menú. No se ejecutó una búsqueda ambigua.",
+                        ) from error
                 filter_changed = False
                 deadline = perf_counter() + 5
                 while perf_counter() < deadline:
                     try:
-                        if self._normalize(await filter_button.inner_text()) == desired_filter:
+                        if desired_pattern.fullmatch((await filter_button.inner_text()).strip()):
                             filter_changed = True
                             break
                     except Exception:
@@ -3224,7 +3272,14 @@ class UtelInconcertRunner:
             cells = row.locator("td")
             for cell_index in range(await cells.count()):
                 cell_text = self._normalize((await cells.nth(cell_index).inner_text()).strip()).strip(" .")
-                if cell_text == expected:
+                # Algunos tenants renderizan en la misma celda el texto del
+                # enlace y su etiqueta accesible, duplicando el nombre exacto.
+                # Aceptar solo repeticiones completas evita confundir nombres
+                # parecidos o filas de otros contactos.
+                repeated_name = expected and re.fullmatch(
+                    rf"(?:{re.escape(expected)}\s*)+", cell_text
+                )
+                if cell_text == expected or repeated_name:
                     matching_rows.append(row)
                     break
         return matching_rows

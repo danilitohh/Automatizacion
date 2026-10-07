@@ -14,6 +14,7 @@ from backend.app.automations.leads_deploy.runner import LeadsDeployRunner
 from backend.app.config.settings import Settings
 from backend.app.main import create_app
 from backend.app.modules.bot_leads_deploy.browser_session import LeadsDeployBrowserSession
+from backend.app.modules.weekly_auto.weekly_forms import WeeklyFormsCaseConfig
 from backend.app.schemas.bot import UtelLead, UtelQaConfig
 
 
@@ -26,9 +27,9 @@ def _config(**updates):
     return UtelQaConfig(**(values | updates))
 
 
-@pytest.mark.parametrize("browser_name", ["chromium", "chrome"])
+@pytest.mark.parametrize("browser_name", ["chromium", "chrome", "chrome_incognito"])
 def test_session_launches_once_and_reuses_pages(tmp_path, monkeypatch, browser_name):
-    """Valida ambos modos de apertura y que se conservan tres pestañas como máximo."""
+    """Valida cada apertura y que se conservan tres pestañas como máximo."""
 
     async def scenario():
         pages = []
@@ -46,8 +47,12 @@ def test_session_launches_once_and_reuses_pages(tmp_path, monkeypatch, browser_n
         factory = Mock(return_value=SimpleNamespace(start=AsyncMock(return_value=driver)))
         monkeypatch.setattr("playwright.async_api.async_playwright", factory)
         session = LeadsDeployBrowserSession(Settings(storage_dir=tmp_path))
+        config = (
+            WeeklyFormsCaseConfig(**(_config().model_dump() | {"browser": browser_name}))
+            if browser_name == "chrome_incognito" else _config(browser=browser_name)
+        )
         for _ in range(3):
-            await session.start(_config(browser=browser_name))
+            await session.start(config)
             for role in ("utel", "inconcert", "balancer"):
                 page = await session.page(role)
                 page.url = f"https://{role}.test/"
@@ -55,6 +60,11 @@ def test_session_launches_once_and_reuses_pages(tmp_path, monkeypatch, browser_n
         factory.assert_called_once()
         assert engine.launch.await_count + engine.launch_persistent_context.await_count == 1
         assert len(pages) == 3
+        if browser_name in {"chrome", "chrome_incognito"}:
+            engine.launch.assert_awaited_once_with(headless=True, channel="chrome")
+            engine.launch_persistent_context.assert_not_awaited()
+            browser.new_context.assert_awaited_once_with(viewport={"width": 1440, "height": 900})
+            assert not (tmp_path / "browser_profiles").exists()
         context.close.assert_not_awaited()
         await session.close()
         context.close.assert_awaited_once()
@@ -186,12 +196,13 @@ def test_batch_api_awaits_each_row_with_same_session(tmp_path, monkeypatch, dry_
     assert preflight == ([] if dry_run else [seen[0][:2]])
 
 
-def test_real_browser_preserves_session_between_programs(tmp_path):
-    """Ejecuta dos filas en Chrome real con páginas locales interceptadas, sin envíos."""
+@pytest.mark.parametrize("browser_name", ["chrome", "chrome_incognito"])
+def test_real_browser_preserves_session_between_programs(tmp_path, browser_name):
+    """Verifica sesiones de Chrome con páginas locales interceptadas, sin envíos."""
 
     async def scenario():
         runner = LeadsDeployRunner(Settings(storage_dir=tmp_path))
-        config = _config(browser="chrome")
+        config = WeeklyFormsCaseConfig(**(_config().model_dump() | {"browser": browser_name}))
         rows, requests = [], []
 
         async def fixture(route):
@@ -230,5 +241,14 @@ def test_real_browser_preserves_session_between_programs(tmp_path):
             assert requests == ["https://landing.test/one", "https://landing.test/two"]
             runner._submit_utel_form.assert_not_awaited()
         assert rows[0].is_closed()
+        if browser_name in {"chrome", "chrome_incognito"}:
+            # Una nueva ejecución temporal no recupera cookies del lote anterior.
+            fresh = LeadsDeployBrowserSession(Settings(storage_dir=tmp_path))
+            try:
+                await fresh.start(config)
+                assert await fresh.context.cookies() == []
+                assert not (tmp_path / "browser_profiles").exists()
+            finally:
+                await fresh.close()
 
     asyncio.run(scenario())

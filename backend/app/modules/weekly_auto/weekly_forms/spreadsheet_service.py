@@ -31,6 +31,11 @@ class WeeklyFormsSpreadsheetService(BotSpreadsheetService):
             "lead url",
         ),
         "client": ("cliente", "client"),
+        "program_name": ("programa", "programa seleccionado", "program", "carrera", "producto"),
+        # Datos QA reutilizables para reintentos explícitos sin generar otro lead.
+        "lead_name": ("nombre", "nombre lead", "lead name", "name"),
+        "lead_email": ("correo", "correo lead", "email", "lead email"),
+        "lead_phone": ("telefono", "teléfono", "telefono lead", "phone", "lead phone"),
         "document_number": (
             "documento de prueba",
             "numero de documento",
@@ -47,6 +52,11 @@ class WeeklyFormsSpreadsheetService(BotSpreadsheetService):
     @classmethod
     def _weekly_form_type(cls, value: str, url: str) -> tuple[str, str]:
         normalized = cls._normalize(value)
+        # Esta landing monta el formulario dinámico directamente en
+        # ``formContainer``; aunque algunas matrices la marcan como Tarjeta,
+        # no requiere navegar por una lista de programas.
+        if "licenciaturas-y-maestrias-executive" in cls._normalize(url):
+            return "lateral", "form_lp"
         if "form lp" in normalized or normalized in {"lp", "landing", "landing page"}:
             # Calculadora de becas conserva FooterBLC aunque algunas matrices la
             # hayan etiquetado históricamente como Form Lp.
@@ -275,6 +285,9 @@ class WeeklyFormsSpreadsheetService(BotSpreadsheetService):
                     "weekly_form_type": weekly_form_type,
                     "program_name": self._cell(row_values, indexes.get("program_name")),
                     "client": self._cell(row_values, indexes.get("client")),
+                    "lead_name": self._cell(row_values, indexes.get("lead_name")),
+                    "lead_email": self._cell(row_values, indexes.get("lead_email")),
+                    "lead_phone": self._cell(row_values, indexes.get("lead_phone")),
                     "document_number": self._cell(row_values, indexes.get("document_number")),
                     "inconcert_url": self._cell(row_values, indexes.get("inconcert_url")),
                     "lead_origin_url": self._cell(row_values, indexes.get("lead_origin_url")),

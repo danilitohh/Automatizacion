@@ -241,6 +241,17 @@ class LeadsDeployDualCrmRunner(UtelInconcertRunner):
         if primary_result.get("status") != "FAIL":
             return None
 
+        # El runner base puede haber usado ya su respaldo secuencial. Guardar
+        # ambos errores no debe lanzar una tercera consulta al mismo sistema.
+        stage_names = [
+            str(stage.get("stage", "") if isinstance(stage, dict) else getattr(stage, "stage", ""))
+            for stage in primary_result.get("stages", [])
+        ]
+        if any(name.startswith("inconcert_") for name in stage_names) and any(
+            name.startswith("lead_balancer_") for name in stage_names
+        ):
+            return None
+
         # Nunca iniciar una búsqueda CRM si la etapa que falló fue el envío.
         # Esto cubre rechazos explícitos de UTEL y evita buscar leads inexistentes.
         failed_stage = self._failed_stage_name(primary_result)
@@ -292,9 +303,9 @@ class LeadsDeployDualCrmRunner(UtelInconcertRunner):
                 "defer_crm_verification": False,
                 "lead_origin_url": balancer_url,
                 "inconcert_url": balancer_url,
-                # Balanceador puede presentar Cloudflare; mantener Chrome visible
-                # conserva el perfil QA que ya usa este módulo.
-                "browser": "chrome",
+                # Una verificación de respaldo nunca debe cargar QA cuando el
+                # usuario eligió explícitamente una sesión temporal de Chrome.
+                "browser": "chrome_incognito" if config.browser == "chrome_incognito" else "chrome",
                 "headless": False,
                 "keep_browser_open": False,
             }
@@ -313,6 +324,10 @@ class LeadsDeployDualCrmRunner(UtelInconcertRunner):
             *primary.get("stages", []),
             *secondary.get("stages", []),
         ]
+        # La segunda consulta no sustituye el diagnóstico del primer sistema.
+        merged["error"] = " | ".join(dict.fromkeys(
+            str(result["error"]) for result in (primary, secondary) if result.get("error")
+        ))
         merged["screenshots"] = list(
             dict.fromkeys(
                 [

@@ -310,6 +310,8 @@ initializeWeeklyAutoModule({
   weeklyFormsStatus: api.utelBatchStatus,
   cancelWeeklyForms: api.cancelUtelBatch,
   weeklyFormsDownloadUrl: api.weeklyFormsDownloadUrl,
+  previewWeeklyFormsUrls: api.previewWeeklyFormsUrls,
+  runWeeklyFormsUrls: api.runWeeklyFormsUrls,
   runWeeklyPerformance: api.runWeeklyPerformance,
   weeklyPerformanceStatus: api.weeklyPerformanceStatus,
   cancelWeeklyPerformance: api.cancelWeeklyPerformance,

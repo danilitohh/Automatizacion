@@ -32,6 +32,25 @@ def test_country_inference_follows_url_rules():
     assert infer_country("Global", "https://utel.edu.mx/global/", "India Master") == "India"
 
 
+def test_report_preserves_both_crm_errors_in_original_and_summary_sheets():
+    """La columna Error y DETALLE BOT no esconden la primera búsqueda fallida."""
+    content = _xlsx(['URL'], [['https://utel.edu.mx/']])
+    row = {'sheet':'QA', 'row_number':2, 'utel_url':'https://utel.edu.mx/'}
+    stages = [
+        {'stage':'inconcert_search', 'status':'FAIL', 'message':'No se pudo seleccionar Email'},
+        {'stage':'lead_balancer_search', 'status':'FAIL', 'message':'Lead ausente en Balancer'},
+    ]
+    result = {'status':'FAIL', 'stages':stages, 'utel_submission':'success'}
+    workbook = FormValidationReportService().build(content, {'utel_url':'URL'}, [{'row':row,'result':result}])
+    for title, labels in [('QA', ['Error','DETALLE BOT']), ('Form Validation resultados', ['Error'])]:
+        sheet = workbook[title]
+        headers = {cell.value:cell.column for cell in sheet[1]}
+        for label in labels:
+            message = sheet.cell(2, headers[label]).value
+            assert 'inconcert_search' in message and 'No se pudo seleccionar Email' in message
+            assert 'lead_balancer_search' in message and 'Lead ausente en Balancer' in message
+
+
 def test_form_validation_accepts_url_only_and_omits_existing_lead():
     content = _xlsx(
         ["URL", "Country", "Lead"],

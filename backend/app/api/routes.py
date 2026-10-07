@@ -335,6 +335,10 @@ def _is_support_rejection(result: dict[str, Any]) -> bool:
     # mostrado un aviso ambiguo después del clic.
     if result.get("lead_url"):
         return False
+    # Un POST incierto (p. ej. HTTP 500 con toast de soporte) solo admite
+    # conciliación CRM; nunca generar otro teléfono por el texto del aviso.
+    if result.get("utel_submission_attempted") and result.get("utel_submission") in {"pending", "success"}:
+        return False
     texts = [
         str(result.get("utel_submission_message") or ""),
         str(result.get("summary") or ""),
@@ -357,9 +361,10 @@ def _is_support_rejection(result: dict[str, Any]) -> bool:
 def _is_post_submit_crm_retry_candidate(result: dict[str, Any]) -> bool:
     """Permite una segunda consulta CRM cuando UTEL ya fue enviado."""
 
-    # Un rechazo visible de UTEL es definitivo para esta ejecución. Aunque el
-    # navegador haya alcanzado a observar un POST, no se consulta CRM porque el
-    # propio sitio informó que no creó el lead.
+    # Conservar el fallo del CRM alterno no debe reencolar un lead confirmado.
+    if result.get("lead_url") or result.get("lead_found") == "success":
+        return False
+    # Solo excluir rechazos definitivos, no un aviso ambiguo posterior al POST.
     if _is_support_rejection(result):
         return False
 
@@ -840,9 +845,14 @@ def _preview_lead_for_case(
     }
 
 
-def _synthetic_qa_document_number(sequence: int) -> str:
-    """Builds a clearly synthetic QA identifier instead of impersonating an ID."""
+def _synthetic_qa_document_number(sequence: int, country: str = "") -> str:
+    """Genera un documento QA con el formato esperado por cada landing."""
 
+    # Bolivia valida el Carnet de identidad como un número nacional de siete
+    # u ocho dígitos; los identificadores ``QA-...`` son rechazados por esas LP.
+    if WeeklyFormsSpreadsheetService._normalize(country) == "bolivia":
+        value = 5_400_000 + ((max(1, sequence) * 7_919) % 4_500_000)
+        return str(value)
     return f"QA-{date.today():%Y%m%d}-{max(1, sequence):06d}"
 
 
@@ -917,6 +927,23 @@ async def preview_form_validation_urls(payload: dict[str, Any]) -> dict:
     return WeeklyLeadsSpreadsheetService().preview(content, "form-validation-urls.xlsx")
 
 
+@router.post("/weekly-auto/forms/urls/preview")
+async def preview_weekly_forms_urls(payload: dict[str, Any]) -> dict:
+    """Previsualiza URLs pegadas para Weekly Forms con un país compartido."""
+
+    urls = payload.get("urls") if isinstance(payload, dict) else None
+    if not isinstance(urls, list):
+        raise HTTPException(status_code=400, detail="Envía una lista de URLs, una por línea.")
+    cleaned = [str(url).strip() for url in urls if str(url or "").strip()]
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Debes indicar al menos una URL.")
+    content = FormValidationInputService.workbook_bytes(
+        cleaned,
+        str(payload.get("country") or ""),
+    )
+    return WeeklyFormsSpreadsheetService().preview(content, "weekly-forms-urls.xlsx")
+
+
 async def _run_utel_batch_job(application, job_id: str, content: bytes, filename: str, raw_config: dict, mapping: dict[str, str]) -> None:
     """Ejecuta las filas seleccionadas y escribe URL LEAD en una copia del Excel."""
 
@@ -924,15 +951,21 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
     job = application.state.utel_batch_jobs[job_id]
     is_weekly_leads = raw_config.get("automation_module") == "weekly_leads"
     is_weekly_forms = raw_config.get("automation_module") in {"weekly_forms", "weekly_leads"}
+    # La verificación reutiliza leads existentes y nunca vuelve a abrir UTEL.
+    verification_only_batch = bool(raw_config.get("verification_only"))
     # Weekly Forms conserva un único intento por fila para no reservar teléfonos extra.
     single_attempt_weekly_forms = raw_config.get("automation_module") == "weekly_forms"
+    # El modo temporal conserva su navegador durante preflight, filas y CRM.
+    weekly_incognito = single_attempt_weekly_forms and raw_config.get("browser", "chrome") in {"chrome", "chrome_incognito"}
     batch_size = (
         WeeklyFormsSpreadsheetService.BATCH_SIZE
         if is_weekly_forms
         else max(1, int(settings.batch_size))
     )
     batch_pause_seconds = (
-        WeeklyFormsSpreadsheetService.BATCH_PAUSE_SECONDS
+        0
+        if verification_only_batch
+        else WeeklyFormsSpreadsheetService.BATCH_PAUSE_SECONDS
         if is_weekly_forms
         else max(0, int(settings.batch_delay_seconds))
     )
@@ -1011,7 +1044,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
         )
         if not batch_dry_run and not fill_only and needs_inconcert:
             # InConcert se valida antes del primer clic. Los lotes cuyo origen
-            # es exclusivamente Balanceador reutilizan la sesión chrome-qa y no
+            # es exclusivamente Balanceador utilizan una sesión temporal y no
             # deben exigir credenciales de un CRM que nunca van a consultar.
             crm_preflight = runner_cls(settings)
             if not crm_preflight.has_inconcert_credentials():
@@ -1139,19 +1172,30 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     )
                 ),
                 "defer_crm_verification": False,
-                "verification_only": False,
+                "verification_only": verification_only_batch,
                 "skip_preselected_fields": skip_preselected_fields,
                 "weekly_form_type": row.get("weekly_form_type", "form_lp"),
                 "qa_document_required": single_attempt_weekly_forms,
                 "client": row.get("client", ""),
                 "lead": {
                     **row_config.get("lead", {}),
+                    **(
+                        {
+                            "name": row.get("lead_name", ""),
+                            "email": row.get("lead_email", ""),
+                            "phone": row.get("lead_phone", ""),
+                        }
+                        if raw_config.get("reuse_lead_data")
+                        and row.get("lead_name")
+                        and row.get("lead_email")
+                        and row.get("lead_phone")
+                        else {}
+                    ),
                     "document_number": row.get("document_number", ""),
                 },
-                # Cloudflare reconoce mejor el perfil persistente de Chrome que
-                # un Chromium aislado nuevo. Balanceador se abre visible para
-                # permitir completar un desafío legítimo si vuelve a solicitarlo.
-                "browser": "chrome" if (uses_balanceador and not batch_dry_run) else row_config.get("browser", "chromium"),
+                # Conservar el Chrome histórico para Balanceador salvo que
+                # Weekly Forms solicite explícitamente una sesión incógnita.
+                "browser": "chrome" if (uses_balanceador and not batch_dry_run and not weekly_incognito) else row_config.get("browser", "chromium"),
                 "headless": False if (uses_balanceador and not batch_dry_run) else row_config.get("headless", True),
             })
             config_model = (
@@ -1177,16 +1221,21 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 and (fill_only or settings.utel_allow_synthetic_real_phones)
             ),
         )
-        if not batch_dry_run and not fill_only and not settings.utel_allow_synthetic_real_phones:
+        if (
+            not batch_dry_run
+            and not fill_only
+            and not settings.utel_allow_synthetic_real_phones
+            and not raw_config.get("reuse_lead_data")
+        ):
             # Primero se valida localmente que cada fila tenga un número real,
             # válido y disponible. No se abre CRM ni UTEL con un banco incompleto.
             lead_service.validate_authorized_capacity(
                 [config.country for _, config in prepared_rows]
             )
 
-        if is_leads_deploy and prepared_rows:
-            # Un único lote de Leads Deploy usa el perfil a la vez. El mismo
-            # runner conserva navegador y pestañas durante todas sus filas.
+        if (is_leads_deploy or weekly_incognito) and prepared_rows:
+            # Un runner conserva navegador y pestañas durante todas las filas.
+            # Weekly Forms incógnito comparte también el login del preflight.
             if not hasattr(application.state, "leads_deploy_browser_lock"):
                 application.state.leads_deploy_browser_lock = asyncio.Lock()
             job["phase"] = "Esperando navegador de Leads Deploy"
@@ -1250,6 +1299,9 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
 
             try:
                 lead = (
+                    prepared_config.lead.model_dump()
+                    if raw_config.get("reuse_lead_data")
+                    else
                     _preview_lead_for_case(
                         lead_service,
                         prepared_config.country,
@@ -1314,17 +1366,17 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 })
                 continue
 
-            # Colombia solicita documento en sus Form LP; cuando la matriz no
-            # aporta uno, se entrega un identificador marcado como QA y único
-            # por secuencia para que el sitio lo acepte o reporte su formato.
+            # Algunas Form LP solicitan documento; cuando la matriz no aporta
+            # uno, se entrega un identificador QA con el formato del país.
             if (
                 single_attempt_weekly_forms
-                and service._normalize(prepared_config.country) == "colombia"
+                and service._normalize(prepared_config.country) in {"colombia", "bolivia"}
                 and not prepared_config.lead.document_number
                 and not lead.get("document_number")
             ):
                 lead["document_number"] = _synthetic_qa_document_number(
-                    int(lead.get("sequence") or index)
+                    int(lead.get("sequence") or index),
+                    prepared_config.country,
                 )
 
             config = prepared_config.model_copy(
@@ -1334,7 +1386,10 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 # Flujo secuencial por fila: el runner envía el formulario y
                 # consulta inmediatamente el CRM indicado antes de continuar.
                 config = config.model_copy(
-                    update={"defer_crm_verification": False, "verification_only": False}
+                    update={
+                        "defer_crm_verification": False,
+                        "verification_only": verification_only_batch,
+                    }
                 )
             job.update({
                 "current_program": row.get("test_case") or row["program_name"] or row["level"],
@@ -1587,10 +1642,10 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     "current_lead_phone": verify_config.lead.phone,
                     "last_error": "",
                 })
-                # Leads Deploy reutiliza la sesión; el resto conserva su
-                # recuperación en Chrome. Esta fase nunca vuelve a enviar UTEL.
+                # Leads Deploy e incógnito reutilizan la sesión elegida; el resto
+                # conserva su recuperación histórica. Esta fase no reenvía UTEL.
                 verify_config = verify_config.model_copy(
-                    update={} if is_leads_deploy else {"browser": "chrome", "headless": False}
+                    update={} if (is_leads_deploy or weekly_incognito) else {"browser": "chrome", "headless": False}
                 )
                 verification = await (shared_runner or runner_cls(settings)).run(verify_config)
                 serializable_verification = {**verification, "stages": [stage.model_dump() for stage in verification["stages"]]}
@@ -1794,6 +1849,34 @@ async def run_form_validation_urls(request: Request, payload: dict[str, Any]) ->
     config = {**config, "automation_module": "weekly_leads", "workflow_mode": "form_validation"}
     upload = UploadFile(
         filename="form-validation-urls.xlsx",
+        file=io.BytesIO(content),
+    )
+    return await run_utel_batch(
+        request,
+        upload,
+        json.dumps(config),
+        json.dumps(FormValidationInputService.mapping()),
+    )
+
+
+@router.post("/weekly-auto/forms/urls/run", status_code=202)
+async def run_weekly_forms_urls(request: Request, payload: dict[str, Any]) -> dict:
+    """Ejecuta solo las URLs pegadas usando el flujo de Weekly Forms."""
+
+    urls = payload.get("urls") if isinstance(payload, dict) else None
+    if not isinstance(urls, list):
+        raise HTTPException(status_code=400, detail="Envía una lista de URLs, una por línea.")
+    cleaned = [str(url).strip() for url in urls if str(url or "").strip()]
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Debes indicar al menos una URL.")
+    content = FormValidationInputService.workbook_bytes(
+        cleaned,
+        str(payload.get("country") or ""),
+    )
+    config = payload.get("config") if isinstance(payload.get("config"), dict) else {}
+    config = {**config, "automation_module": "weekly_forms", "workflow_mode": "form_validation"}
+    upload = UploadFile(
+        filename="weekly-forms-urls.xlsx",
         file=io.BytesIO(content),
     )
     return await run_utel_batch(

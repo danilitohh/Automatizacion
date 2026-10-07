@@ -10,6 +10,7 @@ from ...config.settings import Settings
 from ...schemas.bot import BotStep
 from ...schemas.recorder import RecorderEvent, RecorderStartRequest
 from ...services.logging_service import get_logger
+from ...services.browser_service import launch_browser
 from .runner import BotRunner
 
 
@@ -205,19 +206,9 @@ class RecorderSession:
             from playwright.async_api import async_playwright
 
             self.playwright = await async_playwright().start()
-            if self.config.browser == "chrome":
-                profile_directory = self.settings.storage_dir / "browser_profiles" / "chrome-qa"
-                profile_directory.mkdir(parents=True, exist_ok=True)
-                self.context = await self.playwright.chromium.launch_persistent_context(
-                    str(profile_directory),
-                    channel="chrome",
-                    headless=False,
-                    viewport={"width": 1440, "height": 900},
-                )
-            else:
-                browser_type = getattr(self.playwright, self.config.browser)
-                self.browser = await browser_type.launch(headless=False)
-                self.context = await self.browser.new_context(viewport={"width": 1440, "height": 900})
+            # El grabador tampoco reutiliza perfiles guardados.
+            self.browser = await launch_browser(self.playwright, self.config.browser, headless=False)
+            self.context = await self.browser.new_context(viewport={"width": 1440, "height": 900})
 
             await self.context.add_init_script(RECORDER_SCRIPT)
             self.page = await self.context.new_page()

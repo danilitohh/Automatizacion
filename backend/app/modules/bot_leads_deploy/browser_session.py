@@ -5,6 +5,7 @@ from typing import Any
 
 from ...config.settings import Settings
 from ...schemas.bot import UtelQaConfig
+from ...services.browser_service import launch_browser
 
 
 class LeadsDeployBrowserSession:
@@ -34,20 +35,9 @@ class LeadsDeployBrowserSession:
         self.playwright = await async_playwright().start()
         try:
             headless = False if config.keep_browser_open else config.headless
-            if config.browser in {"chrome", "brave"}:
-                profile = self.settings.storage_dir / "browser_profiles" / "chrome-qa"
-                profile.mkdir(parents=True, exist_ok=True)
-                options = {"headless": headless, "viewport": {"width": 1440, "height": 900}}
-                if config.browser == "brave":
-                    options["executable_path"] = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
-                else:
-                    options["channel"] = "chrome"
-                self.context = await self.playwright.chromium.launch_persistent_context(
-                    str(profile), **options
-                )
-            else:
-                self.browser = await getattr(self.playwright, config.browser).launch(headless=headless)
-                self.context = await self.browser.new_context(viewport={"width": 1440, "height": 900})
+            # Una sola sesión temporal por lote, sin directorio de perfil.
+            self.browser = await launch_browser(self.playwright, config.browser, headless=headless)
+            self.context = await self.browser.new_context(viewport={"width": 1440, "height": 900})
         except BaseException:
             # También libera el driver si se cancela o falla la apertura.
             await self.close()
@@ -58,7 +48,7 @@ class LeadsDeployBrowserSession:
 
         page = self.pages.get(role)
         if page is None or page.is_closed():
-            # Chrome persistente puede traer una pestaña vacía inicial.
+            # Aprovecha una pestaña vacía disponible antes de crear otra.
             page = next(
                 (item for item in self.context.pages
                  if item not in self.pages.values() and item.url == "about:blank"),
