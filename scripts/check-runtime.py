@@ -15,14 +15,16 @@ for line in (Path(__file__).resolve().parents[1] / 'backend/requirements.txt').r
         raise RuntimeError(f'Version incompatible: {requirement}')
 
 for module in (
-    'fastapi', 'uvicorn', 'pydantic_settings', 'httpx', 'cloudscraper',
-    'openpyxl', 'multipart', 'phonenumbers',
+    'fastapi', 'uvicorn', 'pydantic', 'pydantic_settings', 'httpx',
+    'cloudscraper', 'playwright', 'openpyxl', 'multipart', 'phonenumbers',
+    'docx', 'pypdf', 'dotenv', 'pytest',
 ):
     importlib.import_module(module)
 
 with sync_playwright() as playwright:
-    browser = playwright.chromium.launch(headless=True)
-    page = browser.new_page()
-    page.set_content('<title>UTEL setup check</title>')
-    assert page.title() == 'UTEL setup check'
-    browser.close()
+    for browser_type in (playwright.chromium, playwright.firefox, playwright.webkit):
+        browser = browser_type.launch(headless=True)
+        page = browser.new_page()
+        page.set_content('<title>UTEL setup check</title>')
+        assert page.title() == 'UTEL setup check'
+        browser.close()

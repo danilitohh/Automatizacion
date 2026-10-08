@@ -24,7 +24,7 @@ Electron arranca FastAPI automáticamente cuando se inicia la aplicación deskto
 
 ## Instalación
 
-En un equipo Windows nuevo, abre **Iniciar.cmd**. El asistente solicita autorización para instalar las dependencias faltantes —incluido Electron— y luego abre la aplicación de escritorio. También se comprueba la preparación al ejecutar `npm run web` o `npm start`. Consulta [tecnologías, instalación y compatibilidad](docs/instalacion.md).
+En un equipo Windows nuevo, abre **Iniciar.cmd**. El asistente solicita autorización para instalar las dependencias faltantes de la web app —Python, Node.js, paquetes del backend, Chromium, Firefox, WebKit, Google Chrome y recursos locales— y abre la aplicación en el navegador predeterminado. Las credenciales de servicios externos se configuran por equipo. Para Electron, ejecuta `npm run dev` después de instalar también sus dependencias npm. Consulta [tecnologías, instalación y compatibilidad](docs/instalacion.md).
 
 Desde la raíz del proyecto:
 
@@ -51,7 +51,7 @@ No completes todavía las variables de CRM o Strapi con credenciales reales; eso
 npm run web
 ```
 
-Después abre `http://127.0.0.1:8000`. Esta primera fase web se ejecuta en la misma computadora para conservar el acceso a Chromium, los archivos locales, Ollama y las sesiones de QA. Electron continúa disponible mientras se completa la migración.
+El lanzador abre `http://127.0.0.1:8000` en el navegador predeterminado cuando FastAPI está listo. Esta primera fase web se ejecuta en la misma computadora para conservar el acceso a Chromium, los archivos locales, Ollama y las sesiones de QA. Electron continúa disponible mientras se completa la migración.
 
 ### Opción desktop: Electron + FastAPI
 

@@ -13,11 +13,11 @@ from .program_rotation_service import ProgramRotationService
 
 class BotSpreadsheetService:
     DEFAULT_CATALOG_PATH = Path(__file__).resolve().parents[3] / "backend" / "data" / "Programas_UTEL_Todos_los_Paises.xlsx"
-    # Filipinas, India, Indonesia y Singapur comparten un tenant InConcert. Sus alias no
-    # deben caer en el respaldo genérico de Mercados Emergentes.
-    SINGAPORE_INCONCERT_URL = "https://mas-utel-singapur.infunnel.inconcert.cloud/"
+    # Filipinas, India, Vietnam, Indonesia y Singapur comparten este tenant InConcert.
+    # Sus alias no deben caer en el respaldo genérico de Mercados Emergentes.
+    SINGAPORE_INCONCERT_URL = "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people"
     SINGAPORE_INCONCERT_COUNTRIES = frozenset({
-        "filipinas", "philippines", "india", "indonesia", "singapur", "singapore",
+        "filipinas", "philippines", "india", "vietnam", "indonesia", "singapur", "singapore",
     })
     # Agrega nuevos paises aqui cuando se incorporen nuevos balanceadores.
     INCONCERT_BY_COUNTRY = {
@@ -40,6 +40,7 @@ class BotSpreadsheetService:
         "filipinas": SINGAPORE_INCONCERT_URL,
         "philippines": SINGAPORE_INCONCERT_URL,
         "india": SINGAPORE_INCONCERT_URL,
+        "vietnam": SINGAPORE_INCONCERT_URL,
         "indonesia": SINGAPORE_INCONCERT_URL,
         "singapur": SINGAPORE_INCONCERT_URL,
         "singapore": SINGAPORE_INCONCERT_URL,

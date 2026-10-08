@@ -2,18 +2,18 @@
 
 La interfaz usa HTML, CSS y JavaScript con módulos ES nativos; no necesita React ni un compilador frontend. Consume la API mediante fetch. FastAPI sirve la interfaz en modo web. Electron 36 es la envoltura de escritorio y Node.js ejecuta los lanzadores.
 
-El backend utiliza Python, FastAPI, Uvicorn, Pydantic Settings, HTTPX, cloudscraper y python-multipart. SQLite viene incluido con Python y no necesita un servidor separado. Playwright controla los navegadores, openpyxl procesa Excel y phonenumbers valida teléfonos. pytest ejecuta pruebas. Las versiones admitidas están en backend/requirements.txt y package.json; npm ci respeta package-lock.json.
+El backend utiliza Python, FastAPI, Uvicorn, Pydantic Settings, HTTPX, cloudscraper y python-multipart. SQLite viene incluido con Python y no necesita un servidor separado. Playwright controla Chromium, Firefox y WebKit; Google Chrome está disponible para los flujos que usan Chrome Incógnito. openpyxl procesa Excel, python-docx y pypdf leen documentos, y phonenumbers valida teléfonos. pytest ejecuta pruebas. Las versiones admitidas están en backend/requirements.txt y package.json; npm ci respeta package-lock.json.
 
 ## Nuevo equipo Windows
 
 1. Copiar o clonar el proyecto sin .venv, node_modules, .env ni perfiles privados de storage.
-2. Abrir Iniciar.cmd. No necesita Node ni Python para mostrar el asistente; al terminar prepara y abre la versión de escritorio.
+2. Abrir Iniciar.cmd. No necesita Node ni Python para mostrar el asistente; al terminar prepara las dependencias de la web app y la abre en el navegador predeterminado.
 3. Leer la lista de instalaciones y escribir SI para autorizarlas. Cancelar no instala nada y no inicia la app.
-4. El asistente instala los runtimes faltantes mediante winget, crea .venv, instala los requisitos Python, Chromium, las dependencias npm y Electron, y comprueba dependencias. Puede aparecer el aviso de permisos de Windows. Si winget falta, muestra instrucciones y se detiene.
+4. El asistente instala los runtimes faltantes mediante winget, crea .venv, instala los requisitos Python, Chromium, Firefox, WebKit y Google Chrome, y comprueba que los motores puedan abrirse. Puede aparecer el aviso de permisos de Windows. Si winget falta, muestra instrucciones y se detiene.
 5. Configurar las credenciales propias en .env e iniciar sesión en los CRM cuando corresponda. Las claves, sesiones y permisos externos no se pueden crear instalando librerías.
-6. Iniciar.cmd abre la ventana de escritorio. Para usar el modo web, ejecuta `npm run web` y abre http://127.0.0.1:8000 cuando el servidor esté listo; este modo no requiere Electron.
+6. Iniciar.cmd abre la web app en el navegador. También puedes ejecutar `npm run web`; este modo no requiere Electron.
 
-Cada arranque con Iniciar.cmd, npm run web o npm start comprueba las dependencias instaladas, sus versiones admitidas y Chromium. El modo web no exige Electron. Un registro ausente, antiguo o con distinta firma no provoca una reinstalación si las dependencias funcionan. Sólo solicita autorización cuando falla la comprobación de un requisito. Ejecutar Uvicorn directamente omite este asistente.
+Cada arranque con Iniciar.cmd, npm run web o npm start comprueba las dependencias instaladas, sus versiones admitidas y los motores Chromium, Firefox y WebKit. Iniciar.cmd y el modo web no exigen Electron; `npm start` sí requiere ejecutar `npm ci` para instalar Electron. Un registro ausente, antiguo o con distinta firma no provoca una reinstalación si las dependencias funcionan. Sólo solicita autorización cuando falla la comprobación de un requisito. Ejecutar Uvicorn directamente omite este asistente.
 
 Diagnóstico sin instalaciones: powershell -NoProfile -File scripts/setup-windows.ps1 -CheckOnly. Código 0: listo; 2: preparación pendiente; 1: error.
 

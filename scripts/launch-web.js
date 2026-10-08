@@ -39,6 +39,44 @@ const child = spawn(
   },
 );
 
+function openBrowser() {
+  let command;
+  let args;
+  if (process.platform === "win32") {
+    command = "cmd.exe";
+    args = ["/c", "start", "", webUrl];
+  } else if (process.platform === "darwin") {
+    command = "open";
+    args = [webUrl];
+  } else {
+    command = "xdg-open";
+    args = [webUrl];
+  }
+
+  const opener = spawn(command, args, { detached: true, stdio: "ignore", windowsHide: true });
+  opener.once("error", () => console.warn(`No se pudo abrir el navegador automaticamente. Abre ${webUrl}`));
+  opener.unref();
+}
+
+async function openWhenReady() {
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline && child.exitCode === null) {
+    try {
+      const response = await fetch(`${webUrl}/api/health`);
+      if (response.ok) {
+        openBrowser();
+        return;
+      }
+    } catch {
+      // FastAPI aun esta iniciando.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  if (child.exitCode === null) console.warn(`Abre ${webUrl} cuando el servidor este listo.`);
+}
+
+void openWhenReady();
+
 child.once("error", (error) => {
   console.error(`No se pudo iniciar el servidor web: ${error.message}`);
   process.exitCode = 1;

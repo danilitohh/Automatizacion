@@ -1105,10 +1105,12 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 }
             )
             catalog_program = None
-            # El catálogo oficial se activa para Leads Deploy (identificado por
-            # su columna Url Origen Lead) y no altera Excels genéricos antiguos.
+            # El endpoint marca Leads Deploy explícitamente: su matriz no
+            # contiene URL y siempre obtiene el destino del catálogo interno.
+            # Se conserva la detección histórica para Excels antiguos genéricos.
             use_official_catalog = bool(
-                row.get("lead_origin_url")
+                is_leads_deploy
+                or row.get("lead_origin_url")
                 or "leads deploy" in filename.casefold()
             )
             if not row["program_name"] and use_official_catalog:

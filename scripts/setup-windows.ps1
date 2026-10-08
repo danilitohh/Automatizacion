@@ -47,7 +47,7 @@ try {
     }
     if (-not $ready) {
         Write-Host 'UTEL QA necesita preparar/verificar las dependencias de este equipo.'
-        Write-Host 'Preparara Python, Node.js, librerias en .venv, Chromium y Chrome segun lo necesario.'
+        Write-Host 'Preparara Python, Node.js, librerias en .venv, Chromium, Firefox, WebKit y Google Chrome segun lo necesario.'
         if ($Mode -eq 'desktop') { Write-Host 'El modo escritorio tambien requiere Electron.' }
         Write-Host 'Se requiere internet y espacio en disco. Windows puede solicitar permisos de administrador.'
         if ($CheckOnly) { Write-Host 'Diagnostico: preparacion pendiente. No se instalo nada.'; exit 2 }
@@ -71,7 +71,7 @@ try {
             }
             if (-not (Test-Path 'node_modules/electron/dist/electron.exe')) { throw 'Electron no se descargo correctamente; no se marcara la instalacion como completa.' }
         }
-        Invoke-Checked $venvPython @('-m', 'playwright', 'install', 'chromium')
+        Invoke-Checked $venvPython @('-m', 'playwright', 'install', 'chromium', 'firefox', 'webkit')
         Invoke-Checked $venvPython @('-m', 'pip', 'check')
         Invoke-Checked $venvPython @((Join-Path $PSScriptRoot 'check-runtime.py'))
         if (-not (Test-Path '.env')) { Copy-Item -LiteralPath '.env.example' -Destination '.env'; Write-Host 'Se creo .env: configure sus credenciales de CRM/IA antes de ejecutar automatizaciones.' }

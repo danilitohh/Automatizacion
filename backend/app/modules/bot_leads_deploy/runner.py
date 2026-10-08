@@ -3,6 +3,7 @@
 import asyncio
 import re
 import secrets
+import sys
 import unicodedata
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime
@@ -3199,7 +3200,8 @@ class UtelInconcertRunner:
         if await self._locator_count(grouped_input, timeout_ms=1200):
             search_input = grouped_input
         await search_input.click(force=True)
-        await search_input.press("Control+A")
+        select_all_shortcut = "Meta+A" if sys.platform == "darwin" else "Control+A"
+        await search_input.press(select_all_shortcut)
         await search_input.press("Backspace")
         # Este campo de InConcert conserva un modelo Angular distinto del valor
         # DOM cuando se usa fill() sobre una búsqueda previa. La escritura
