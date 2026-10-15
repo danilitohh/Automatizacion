@@ -62,6 +62,10 @@ class UtelInconcertRunner:
     FORM_WAIT_TIMEOUT_MS = 30000
     FORM_RECHECK_TIMEOUT_MS = 15000
     FORM_POLL_INTERVAL_SECONDS = 0.5
+    # Cloudflare puede presentar una verificación interactiva antes de dejar
+    # montar el formulario. En modo visible esperamos a que el usuario la
+    # complete en la misma pestaña; el envío todavía no ha comenzado.
+    MANUAL_CHALLENGE_TIMEOUT_SECONDS = 300
     COUNTRY_CODES = {
         "mexico": "+52",
         "mÃ©xico": "+52",
@@ -1173,12 +1177,12 @@ class UtelInconcertRunner:
         if actual_tokens == expected_tokens:
             return True
 
-        # Algunas PDP publican una preposición editorial distinta a la del
-        # catálogo (por ejemplo, ``Instituciones de Salud`` frente a
-        # ``Instituciones en Salud``). Conservamos todas las palabras de
-        # contenido y toleramos únicamente esta sustitución de preposiciones,
-        # sin convertir la validación en una coincidencia por subconjunto.
-        editorial_prepositions = {"de", "en", "del"}
+        # Algunas PDP publican una preposición o conjunción editorial distinta
+        # a la del catálogo (p. ej. ``Dirección e Ingeniería`` frente a
+        # ``Dirección en Ingeniería``). Conservamos todas las palabras de
+        # contenido y toleramos únicamente esta sustitución, sin convertir la
+        # validación en una coincidencia por subconjunto.
+        editorial_prepositions = {"de", "en", "del", "e"}
         editorial_actual = [
             "_prep" if token in editorial_prepositions else token
             for token in actual_tokens
@@ -1386,7 +1390,64 @@ class UtelInconcertRunner:
         if await heading.count():
             self.selected_program_name = (await heading.inner_text()).strip()
 
+    async def _wait_for_manual_challenge(self, page: Any) -> bool:
+        """Espera una verificación Cloudflare en la misma ventana visible.
+
+        La espera solo se activa para una pantalla de desafío interactivo. La
+        página de bloqueo permanente («You have been blocked») sigue fallando
+        de inmediato porque no ofrece una acción que el usuario pueda completar
+        desde el navegador del bot.
+        """
+
+        try:
+            title = await page.title()
+        except Exception:
+            title = ""
+        try:
+            text = await page.locator("body").inner_text(timeout=5000)
+        except Exception:
+            text = ""
+        challenge_markers = (
+            "__cf_chl",
+            "cdn-cgi/challenge",
+            "just a moment",
+            "verify you are human",
+            "checking your browser",
+            "verificación de seguridad en curso",
+        )
+        searchable = f"{page.url} {title} {text}".casefold()
+        if not any(marker in searchable for marker in challenge_markers):
+            return False
+
+        await self._show_active_page(page)
+        self.logger.warning(
+            "Cloudflare solicita verificación manual en UTEL. "
+            "Completa la verificación en la ventana visible; el bot esperará hasta %s minutos.",
+            self.MANUAL_CHALLENGE_TIMEOUT_SECONDS // 60,
+        )
+        try:
+            await page.wait_for_function(
+                """(markers) => {
+                    const text = `${document.title} ${document.body?.innerText || ''}`.toLowerCase();
+                    const url = location.href.toLowerCase();
+                    return !markers.some(marker => text.includes(marker) || url.includes(marker));
+                }""",
+                arg=[*challenge_markers],
+                timeout=self.MANUAL_CHALLENGE_TIMEOUT_SECONDS * 1000,
+                polling=1000,
+            )
+        except Exception as error:
+            raise UtelQaError(
+                "utel_access",
+                "La verificación manual de Cloudflare no se completó dentro del tiempo permitido. "
+                "No se envió el formulario.",
+                "body",
+            ) from error
+        self.logger.info("Verificación manual de Cloudflare completada; continuando con UTEL.")
+        return True
+
     async def _check_access(self, page: Any) -> None:
+        await self._wait_for_manual_challenge(page)
         text = await page.locator("body").inner_text(timeout=12000)
         # Un fallo del origen no es un formulario ausente ni prueba de antibot.
         origin_error = re.search(r"Error code\s+(52[0-6])\b", text, re.I)
@@ -1415,7 +1476,12 @@ class UtelInconcertRunner:
             # Colombia). Se distingue por su contenedor y sus tres campos
             # académicos/contacto, excluyendo TarjetaBLC y LateralBLC.
             selector = ", ".join(
-                part.strip() + ':has([data-cy="productsInput"]):has([data-cy="emailInput"]):has([data-cy="telephoneInput"])'
+                part.strip()
+                + (
+                    ""
+                    if part.strip() == f"#{form_id}"
+                    else ':has([data-cy="productsInput"]):has([data-cy="emailInput"]):has([data-cy="telephoneInput"])'
+                )
                 for part in (
                     f"#{form_id}",
                     '.form-container-config-chakra-config form:not([id])',
@@ -1479,13 +1545,41 @@ class UtelInconcertRunner:
             # Solo el footer requiere ser llevado a la zona inferior. La tarjeta
             # aparece en el hero de la PDP y hacer scroll allí puede fallar
             # mientras React termina de estabilizar la página.
-            await self._position_footer_form(form)
-            await asyncio.sleep(2)
-            refreshed_form, refreshed_count = await self._wait_for_visible_form(
-                page,
-                selector,
-                timeout_ms=self.FORM_RECHECK_TIMEOUT_MS,
-            )
+            refreshed_form = None
+            refreshed_count = 0
+            for settle_attempt in range(3):
+                if form is None:
+                    form, _ = await self._wait_for_visible_form(
+                        page,
+                        selector,
+                        timeout_ms=self.FORM_RECHECK_TIMEOUT_MS,
+                    )
+                    if form is None:
+                        if settle_attempt < 2:
+                            await self._activate_footer_zone(page, selector)
+                        continue
+                await self._position_footer_form(form)
+                await asyncio.sleep(1.2)
+                refreshed_form, refreshed_count = await self._wait_for_visible_form(
+                    page,
+                    selector,
+                    timeout_ms=self.FORM_RECHECK_TIMEOUT_MS,
+                )
+                if refreshed_form is not None:
+                    form = refreshed_form
+                    break
+                # React puede desmontar FooterBLC justo al entrar en viewport.
+                # Reactivarlo una vez más evita clasificar ese remontaje como
+                # formulario ausente, sin relajar la validación de visibilidad.
+                if settle_attempt < 2:
+                    await self._activate_footer_zone(page, selector)
+                    form, _ = await self._wait_for_visible_form(
+                        page,
+                        selector,
+                        timeout_ms=self.FORM_RECHECK_TIMEOUT_MS,
+                    )
+                    if form is None:
+                        continue
             if refreshed_form is None:
                 state = "existe, pero dejo de estar visible" if refreshed_count else "desaparecio del DOM"
                 raise UtelQaError(
@@ -1493,7 +1587,6 @@ class UtelInconcertRunner:
                     f"El formulario {form_id} {state} despues de activar el contenido de la pagina.",
                     selector,
                 )
-            form = refreshed_form
             await self._position_footer_form(form)
         return form
 
@@ -1522,10 +1615,10 @@ class UtelInconcertRunner:
         """Activa el lazy loading del footer sin depender de un id concreto."""
 
         try:
-            if await page.locator(selector).count():
+            if await page.locator(selector).filter(visible=True).count():
                 return
             for _ in range(12):
-                if await page.locator(selector).count():
+                if await page.locator(selector).filter(visible=True).count():
                     return
                 await page.evaluate("window.scrollBy(0, Math.max(500, Math.floor(innerHeight * 0.85)))")
                 await asyncio.sleep(0.35)
@@ -2235,6 +2328,22 @@ class UtelInconcertRunner:
                 # El request puede haberse emitido justo antes de que Playwright
                 # reportara un cambio de página o de nodo; se comprueba antes de fallar.
                 click_error = error
+                if not api_request.done():
+                    # Algunas PDP remontan el botón durante el scroll y Playwright
+                    # puede conservar la geometría anterior. Se reposiciona una vez
+                    # y se reintenta sobre el mismo nodo; solo si tampoco funciona
+                    # se usa el click DOM normal de la propia página.
+                    try:
+                        await submit.evaluate(
+                            "element => element.scrollIntoView({block: 'center', inline: 'center'})"
+                        )
+                        await asyncio.sleep(0.4)
+                        await submit.click(force=True, timeout=12000)
+                    except Exception as retry_error:
+                        click_error = retry_error
+                        if not api_request.done():
+                            with suppress(Exception):
+                                await submit.evaluate("element => element.click()")
 
             request_deadline = perf_counter() + 15
             while not api_request.done():
@@ -2797,6 +2906,21 @@ class UtelInconcertRunner:
         response = None
         if not await self._balancer_list_ready(page, base_url):
             response = await page.goto(base_url, wait_until="domcontentloaded", timeout=60000)
+        try:
+            balancer_text = await page.locator("body").inner_text(timeout=5000)
+        except Exception:
+            balancer_text = ""
+        if re.search(
+            r"verificaci[oó]n de seguridad en curso|verify you are human|checking your browser",
+            balancer_text,
+            re.I,
+        ):
+            raise UtelQaError(
+                "lead_balancer_search",
+                "El Balanceador está detenido en la verificación de seguridad de Cloudflare. "
+                "Completa la casilla en un navegador visible y vuelve a ejecutar solo la "
+                "verificación CRM; no se reenviará UTEL.",
+            )
         challenge_detected = (
             (response is not None and response.status in {401, 403})
             or "__cf_chl" in page.url
@@ -3199,19 +3323,34 @@ class UtelInconcertRunner:
         grouped_input = filter_container.locator("input:visible").first
         if await self._locator_count(grouped_input, timeout_ms=1200):
             search_input = grouped_input
-        await search_input.click(force=True)
         select_all_shortcut = "Meta+A" if sys.platform == "darwin" else "Control+A"
-        await search_input.press(select_all_shortcut)
-        await search_input.press("Backspace")
-        # Este campo de InConcert conserva un modelo Angular distinto del valor
-        # DOM cuando se usa fill() sobre una búsqueda previa. La escritura
-        # secuencial reproduce el evento de teclado que actualiza ambos.
-        await search_input.press_sequentially(value, delay=15)
-        try:
-            await search_input.press("Tab")
-        except Exception:
-            pass
-        typed_value = (await search_input.input_value()).strip()
+        typed_value = ""
+        # InConcert remonta el campo mediante Angular. Escribir a 15 ms por
+        # carácter puede perder teclas durante ese render, aunque Playwright
+        # haya terminado la secuencia. Escribimos más despacio y verificamos el
+        # valor final; si no coincide, limpiamos y hacemos un segundo intento.
+        for attempt, typing_delay in enumerate((60, 120)):
+            if attempt:
+                search_input = await self._resolve_inconcert_search_input(page)
+                if search_input is None:
+                    raise UtelQaError(
+                        "inconcert_search",
+                        "El campo de búsqueda desapareció antes de reintentar el correo.",
+                    )
+                grouped_input = filter_container.locator("input:visible").first
+                if await self._locator_count(grouped_input, timeout_ms=1200):
+                    search_input = grouped_input
+            await search_input.click(force=True)
+            await search_input.press(select_all_shortcut)
+            await search_input.press("Backspace")
+            await search_input.press_sequentially(value, delay=typing_delay)
+            try:
+                await search_input.press("Tab")
+            except Exception:
+                pass
+            typed_value = (await search_input.input_value()).strip()
+            if typed_value.casefold() == value.strip().casefold():
+                break
         if typed_value.casefold() != value.strip().casefold():
             raise UtelQaError(
                 "inconcert_search",

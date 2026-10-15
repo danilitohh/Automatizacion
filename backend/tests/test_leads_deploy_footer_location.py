@@ -3,11 +3,13 @@
 import asyncio
 from unittest.mock import AsyncMock
 
+import pytest
 from playwright.async_api import async_playwright
 
 from backend.app.automations.leads_deploy.runner import LeadsDeployRunner
 from backend.app.config.settings import Settings
 from backend.app.schemas.bot import UtelQaConfig, UtelLead
+from backend.app.modules.bot_leads_deploy.runner import UtelQaError
 
 
 def test_asian_footer_opens_home_and_preserves_catalog_program():
@@ -31,6 +33,43 @@ def test_asian_footer_opens_home_and_preserves_catalog_program():
             page.goto.reset_mock()
             await runner._open_utel(page, config.model_copy(update={"country": country}))
             page.goto.assert_awaited_once_with("https://utel.edu.mx/philippines", wait_until="domcontentloaded")
+    asyncio.run(scenario())
+
+
+def test_utel_manual_cloudflare_challenge_waits_in_visible_page():
+    async def scenario():
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            try:
+                page = await browser.new_page()
+                await page.set_content(
+                    "<title>Just a moment...</title>"
+                    "<main>Verify you are human</main>"
+                        "<script>setTimeout(() => { document.title = 'UTEL'; document.body.innerText = 'Formulario UTEL'; }, 100)</script>"
+                )
+                runner = LeadsDeployRunner(Settings())
+                runner.MANUAL_CHALLENGE_TIMEOUT_SECONDS = 3
+                assert await runner._wait_for_manual_challenge(page)
+                await runner._check_access(page)
+            finally:
+                await browser.close()
+
+    asyncio.run(scenario())
+
+
+def test_utel_hard_cloudflare_block_still_fails_without_waiting():
+    async def scenario():
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            try:
+                page = await browser.new_page()
+                await page.set_content("<main>Sorry, you have been blocked</main>")
+                runner = LeadsDeployRunner(Settings())
+                with pytest.raises(UtelQaError, match="bloqueo el acceso"):
+                    await runner._check_access(page)
+            finally:
+                await browser.close()
+
     asyncio.run(scenario())
 
 
