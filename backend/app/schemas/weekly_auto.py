@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from .browser import BrowserName, normalize_browser
+
 
 class WeeklyAutoConfig(BaseModel):
     """Parámetros de ejecución para el módulo \"weekly auto\"."""
@@ -11,7 +13,7 @@ class WeeklyAutoConfig(BaseModel):
     name: str = Field(default="Weekly Auto", min_length=1, max_length=120)
     urls: list[str] = Field(default_factory=list)
     use_default_urls: bool = True
-    browser: Literal["chromium", "chrome", "chrome_incognito", "firefox", "webkit"] = "chrome"
+    browser: BrowserName = "chrome_incognito"
     headless: bool = True
     keep_browser_open: bool = False
     viewport_width: int = 1280
@@ -20,6 +22,13 @@ class WeeklyAutoConfig(BaseModel):
     scroll_pause_ms: int = 2000
     settle_wait_ms: int = 1000
     max_urls: int | None = None
+
+    @field_validator("browser", mode="before")
+    @classmethod
+    def use_chrome_incognito(cls, value: object) -> str:
+        """Migra selecciones antiguas al único navegador soportado."""
+
+        return normalize_browser(value)
 
     @field_validator("inter_url_delay_seconds", "scroll_pause_ms", "settle_wait_ms")
     @classmethod

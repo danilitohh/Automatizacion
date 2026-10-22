@@ -20,11 +20,12 @@ Electron arranca FastAPI automáticamente cuando se inicia la aplicación deskto
 
 - Node.js 18 o superior y npm.
 - Python 3.11 o superior.
+- Google Chrome instalado para las automatizaciones.
 - En Windows, el comando `python` debe estar disponible. Se puede usar otro con `PYTHON_COMMAND`.
 
 ## Instalación
 
-En un equipo Windows nuevo, abre **Iniciar.cmd**. El asistente solicita autorización para instalar las dependencias faltantes de la web app —Python, Node.js, paquetes del backend, Chromium, Firefox, WebKit, Google Chrome y recursos locales— y abre la aplicación en el navegador predeterminado. Las credenciales de servicios externos se configuran por equipo. Para Electron, ejecuta `npm run dev` después de instalar también sus dependencias npm. Consulta [tecnologías, instalación y compatibilidad](docs/instalacion.md).
+En un equipo Windows nuevo, abre **Iniciar.cmd**. El asistente solicita autorización para instalar las dependencias faltantes de la web app —Python, Node.js, paquetes del backend, Google Chrome y recursos locales— y abre la aplicación en el navegador predeterminado. Las credenciales de servicios externos se configuran por equipo. Para Electron, ejecuta `npm run dev` después de instalar también sus dependencias npm. Consulta [tecnologías, instalación y compatibilidad](docs/instalacion.md).
 
 Desde la raíz del proyecto:
 
@@ -34,7 +35,6 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r backend/requirements.txt
 Copy-Item .env.example .env
-python -m playwright install chromium
 ```
 
 Selecciona **Google Chrome - Incógnito** para automatizar con el Chrome instalado, sin cargar perfiles personales ni corporativos. Los módulos usan las credenciales configuradas para iniciar sesión en los CRM. Las cookies duran únicamente mientras permanezca abierto el contexto de esa ejecución; no se recuperan al iniciar otra sesión. Las configuraciones antiguas con `browser: "chrome"` también usan este modo temporal.
@@ -51,7 +51,7 @@ No completes todavía las variables de CRM o Strapi con credenciales reales; eso
 npm run web
 ```
 
-El lanzador abre `http://127.0.0.1:8000` en el navegador predeterminado cuando FastAPI está listo. Esta primera fase web se ejecuta en la misma computadora para conservar el acceso a Chromium, los archivos locales, Ollama y las sesiones de QA. Electron continúa disponible mientras se completa la migración.
+El lanzador abre `http://127.0.0.1:8000` en el navegador predeterminado cuando FastAPI está listo. Esta primera fase web se ejecuta en la misma computadora para conservar el acceso a Google Chrome, los archivos locales, Ollama y las sesiones de QA. Electron continúa disponible mientras se completa la migración.
 
 ### Opción desktop: Electron + FastAPI
 

@@ -85,7 +85,6 @@ export function initializeLeadSubmissionModule(dependencies, options) {
           </select></label>
           <label class="field"><span>Navegador</span><select id="${config.key}-browser">
             ${privateBrowserOption}
-            <option value="chromium">Chromium aislado</option><option value="firefox">Firefox</option>
           </select>${privateBrowserHelp}</label>
           ${timeoutInput}
           ${fillOnlyInput}
@@ -270,7 +269,7 @@ export function initializeLeadSubmissionModule(dependencies, options) {
           parallel_crm_search: true, randomize_academic_selections: true,
           crm_search_timeout_seconds: Math.min(600, Math.max(15, Number(element("timeout")?.value || 90))),
           fill_only: Boolean(element("fill-only")?.checked),
-          browser: element("browser").value, headless: !visible, keep_browser_open: false,
+          browser: "chrome_incognito", headless: !visible, keep_browser_open: false,
         };
         const job = state.file
           ? await config.runBatch(state.file, batchConfig, state.mapping)

@@ -445,11 +445,9 @@ def _is_temporary_access_block(result: dict[str, Any]) -> bool:
 def _new_products_retry_browser(
     result: dict[str, Any], *, is_leads_deploy: bool
 ) -> str:
-    """Cambia de motor solo ante un bloqueo UTEL previo al envío."""
+    """Reintenta con una sesión temporal nueva de Google Chrome."""
 
-    if not is_leads_deploy and _is_temporary_access_block(result):
-        return "chromium"
-    return "chrome"
+    return "chrome_incognito"
 
 
 def _is_balanceador_url(url: str) -> bool:
@@ -956,7 +954,7 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
     # Weekly Forms conserva un único intento por fila para no reservar teléfonos extra.
     single_attempt_weekly_forms = raw_config.get("automation_module") == "weekly_forms"
     # El modo temporal conserva su navegador durante preflight, filas y CRM.
-    weekly_incognito = single_attempt_weekly_forms and raw_config.get("browser", "chrome") in {"chrome", "chrome_incognito"}
+    weekly_incognito = single_attempt_weekly_forms and raw_config.get("browser", "chrome_incognito") in {"chrome", "chrome_incognito"}
     batch_size = (
         WeeklyFormsSpreadsheetService.BATCH_SIZE
         if is_weekly_forms
@@ -1195,9 +1193,8 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                     ),
                     "document_number": row.get("document_number", ""),
                 },
-                # Conservar el Chrome histórico para Balanceador salvo que
-                # Weekly Forms solicite explícitamente una sesión incógnita.
-                "browser": "chrome" if (uses_balanceador and not batch_dry_run and not weekly_incognito) else row_config.get("browser", "chromium"),
+                # Todos los flujos usan una sesión temporal de Google Chrome.
+                "browser": "chrome_incognito",
                 "headless": False if (uses_balanceador and not batch_dry_run) else row_config.get("headless", True),
             })
             config_model = (
@@ -1647,7 +1644,9 @@ async def _run_utel_batch_job(application, job_id: str, content: bytes, filename
                 # Leads Deploy e incógnito reutilizan la sesión elegida; el resto
                 # conserva su recuperación histórica. Esta fase no reenvía UTEL.
                 verify_config = verify_config.model_copy(
-                    update={} if (is_leads_deploy or weekly_incognito) else {"browser": "chrome", "headless": False}
+                    update={"browser": "chrome_incognito"}
+                    if (is_leads_deploy or weekly_incognito)
+                    else {"browser": "chrome_incognito", "headless": False}
                 )
                 verification = await (shared_runner or runner_cls(settings)).run(verify_config)
                 serializable_verification = {**verification, "stages": [stage.model_dump() for stage in verification["stages"]]}

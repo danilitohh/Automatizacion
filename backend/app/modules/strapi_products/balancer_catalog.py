@@ -103,7 +103,7 @@ class BalancerProgramCatalog:
             raise self.startup_error
         self.playwright = await async_playwright().start()
         try:
-            self.browser = await self.playwright.chromium.launch(headless=False)
+            self.browser = await self.playwright.chromium.launch(channel="chrome", headless=False)
             context = await self.browser.new_context()
             self.page = await context.new_page()
             await self._open_catalog()

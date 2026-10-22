@@ -29,7 +29,7 @@ class LeadsDeployBrowserSession:
         except ImportError as error:
             raise RuntimeError(
                 "Playwright no está instalado. Instala backend/requirements.txt "
-                "y ejecuta python -m playwright install chromium."
+                "y asegúrate de tener Google Chrome instalado."
             ) from error
 
         self.playwright = await async_playwright().start()

@@ -143,7 +143,7 @@ def test_email_filter_accepts_icons_delayed_options_and_preserved_session(tmp_pa
         from playwright.async_api import async_playwright
         runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
         async with async_playwright() as pw:
-            browser = await pw.chromium.launch(headless=True)
+            browser = await pw.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.route('**/*', lambda route: route.fulfill(status=200, content_type='application/json', body='{}'))
             await page.goto('https://crm.test/')

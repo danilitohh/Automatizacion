@@ -90,7 +90,7 @@ class BotRunner:
             except ImportError as error:
                 raise RuntimeError(
                     "Playwright no está instalado. Ejecuta `python -m pip install -r backend/requirements.txt` "
-                    "y después `python -m playwright install chromium`."
+                    "y asegúrate de tener Google Chrome instalado."
                 ) from error
 
             await self._close_open_session()

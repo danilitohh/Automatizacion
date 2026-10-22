@@ -23,7 +23,7 @@ const state = {
     program_name: "",
     submit_success_pattern: "Env\u00edo correcto|Pronto recibir\u00e1s informaci\u00f3n",
     submit_error_pattern: "Error al enviar|Contacta a soporte|error|invalido|inválido|obligatorio|requerido|fall",
-    browser: "chrome",
+    browser: "chrome_incognito",
     headless: true,
     keep_browser_open: false,
     lead: { name: "pending", email: "pending@testingUtel.com", phone: "900000000" },
@@ -100,7 +100,7 @@ function renderModuleShell() {
           <label class="field full"><span>Nombre exacto del programa</span><input id="bot-program-name" type="text" placeholder="Obligatorio con coincidencia exacta" /></label>
           <label class="field full"><span>Patron de confirmacion (opcional)</span><input id="bot-success-pattern" type="text" placeholder="Ej. gracias|exito" /></label>
           <label class="field full"><span>Patron de error</span><input id="bot-error-pattern" type="text" /></label>
-          <label class="field"><span>Navegador</span><select id="bot-browser"><option value="chromium">Chromium aislado</option><option value="chrome">Google Chrome - Incógnito</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select></label>
+          <label class="field"><span>Navegador</span><select id="bot-browser"><option value="chrome_incognito">Google Chrome - Incógnito</option></select></label>
           <label class="toggle-field"><input id="bot-headless" type="checkbox" checked /><span><strong>Ejecutar en segundo plano</strong><small>Sin controlar tu navegador de trabajo</small></span></label>
           <label class="toggle-field full-toggle"><input id="bot-keep-browser-open" type="checkbox" /><span><strong>Modo debug visible</strong><small>Muestra el navegador durante la ejecucion y lo deja abierto al final</small></span></label>
         </div>
@@ -282,7 +282,7 @@ function readForm() {
   state.config.program_name = (getInputValue("#bot-program-name") || "").trim();
   state.config.submit_success_pattern = (getInputValue("#bot-success-pattern") || state.config.submit_success_pattern);
   state.config.submit_error_pattern = (getInputValue("#bot-error-pattern") || state.config.submit_error_pattern);
-  state.config.browser = getInputValue("#bot-browser") || state.config.browser;
+  state.config.browser = "chrome_incognito";
   state.config.headless = getInputValue("#bot-headless", { asBoolean: true });
   state.config.keep_browser_open = getInputValue("#bot-keep-browser-open", { asBoolean: true });
   state.config.lead = {
@@ -306,7 +306,7 @@ function writeForm() {
   setInputValue("#bot-program-name", state.config.program_name);
   setInputValue("#bot-success-pattern", state.config.submit_success_pattern);
   setInputValue("#bot-error-pattern", state.config.submit_error_pattern);
-  setInputValue("#bot-browser", state.config.browser);
+  setInputValue("#bot-browser", "chrome_incognito");
   setInputValue("#bot-headless", state.config.headless, { asBoolean: true });
   setInputValue("#bot-keep-browser-open", state.config.keep_browser_open, { asBoolean: true });
   setInputValue("#bot-lead-name", state.config.lead.name);
@@ -1202,7 +1202,7 @@ export function initializeBotModule({ showToast, runUtelInconcertBot, utelInconc
       program_name: "",
       submit_success_pattern: "Env\u00edo correcto|Pronto recibir\u00e1s informaci\u00f3n",
       submit_error_pattern: "Error al enviar|Contacta a soporte|error|invalido|inválido|obligatorio|requerido|fall",
-      browser: "chrome",
+      browser: "chrome_incognito",
       headless: true,
       keep_browser_open: false,
       lead: { name: "pending", email: "pending@testingUtel.com", phone: "900000000" },

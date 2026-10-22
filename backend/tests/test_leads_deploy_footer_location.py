@@ -39,7 +39,7 @@ def test_asian_footer_opens_home_and_preserves_catalog_program():
 def test_utel_manual_cloudflare_challenge_waits_in_visible_page():
     async def scenario():
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             try:
                 page = await browser.new_page()
                 await page.set_content(
@@ -60,7 +60,7 @@ def test_utel_manual_cloudflare_challenge_waits_in_visible_page():
 def test_utel_hard_cloudflare_block_still_fails_without_waiting():
     async def scenario():
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             try:
                 page = await browser.new_page()
                 await page.set_content("<main>Sorry, you have been blocked</main>")

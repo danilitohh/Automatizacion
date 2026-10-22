@@ -12,14 +12,12 @@ from backend.app.services.browser_service import launch_browser
 
 @pytest.mark.parametrize("name", ["chrome", "chrome_incognito", "chromium", "firefox", "webkit"])
 def test_launch_without_saved_profile(name):
-    """El valor antiguo chrome también abre sin directorio de usuario."""
+    """Los nombres históricos terminan en Chrome sin cargar un perfil."""
 
-    engines = {key: SimpleNamespace(launch=AsyncMock()) for key in ("chromium", "firefox", "webkit")}
+    engines = {"chromium": SimpleNamespace(launch=AsyncMock())}
     playwright = SimpleNamespace(**engines)
     asyncio.run(launch_browser(playwright, name, headless=True))
-    chrome = name in {"chrome", "chrome_incognito"}
-    options = {"headless": True, **({"channel": "chrome"} if chrome else {})}
-    engines["chromium" if chrome else name].launch.assert_awaited_once_with(**options)
+    engines["chromium"].launch.assert_awaited_once_with(channel="chrome", headless=True)
 
 
 def test_app_cannot_reopen_retired_profile():

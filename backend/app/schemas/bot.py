@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from .browser import BrowserName, normalize_browser
+
 
 BotStepType = Literal[
     "goto",
@@ -34,10 +36,17 @@ class BotConfig(BaseModel):
 
     name: str = Field(min_length=1, max_length=120)
     url: str = Field(min_length=1, max_length=2000)
-    browser: Literal["chromium", "chrome", "chrome_incognito", "firefox", "webkit"] = "chrome"
+    browser: BrowserName = "chrome_incognito"
     headless: bool = True
     keep_browser_open: bool = False
     steps: list[BotStep] = Field(min_length=1, max_length=100)
+
+    @field_validator("browser", mode="before")
+    @classmethod
+    def use_chrome_incognito(cls, value: object) -> str:
+        """Migra selecciones antiguas al único navegador soportado."""
+
+        return normalize_browser(value)
 
 
 class BotStepResult(BaseModel):
@@ -140,7 +149,7 @@ class UtelQaConfig(BaseModel):
     program_name: str = Field(default="", max_length=180)
     submit_success_pattern: str = Field(default="Env\u00edo correcto|Pronto recibir\u00e1s informaci\u00f3n", max_length=240)
     submit_error_pattern: str = Field(default="Error al enviar|Contacta a soporte|error|invalido|inválido|obligatorio|requerido|fall", max_length=240)
-    browser: Literal["chromium", "chrome", "chrome_incognito", "firefox", "webkit"] = "chrome"
+    browser: BrowserName = "chrome_incognito"
     headless: bool = True
     keep_browser_open: bool = False
     workflow_mode: Literal["product_release", "form_validation"] = "product_release"
@@ -152,6 +161,13 @@ class UtelQaConfig(BaseModel):
     verification_only: bool = False
     skip_preselected_fields: bool = False
     lead: UtelLead
+
+    @field_validator("browser", mode="before")
+    @classmethod
+    def use_chrome_incognito(cls, value: object) -> str:
+        """Migra selecciones antiguas al único navegador soportado."""
+
+        return normalize_browser(value)
 
     @field_validator("program_name")
     @classmethod

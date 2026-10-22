@@ -4,21 +4,12 @@ from typing import Any
 
 
 async def launch_browser(playwright: Any, name: str, *, headless: bool) -> Any:
-    """Chrome antiguo y explícitamente incógnito usan el mismo contexto temporal.
+    """Abre Google Chrome en un contexto temporal sin cargar perfiles guardados.
 
-    El llamador crea el contexto y conserva su ciclo de vida actual; nunca se
-    carga un directorio de usuario, incluso al restaurar configuraciones antiguas.
+    Los nombres históricos se aceptan para migrar configuraciones existentes,
+    pero todos terminan usando el canal instalado de Google Chrome.
     """
 
-    options: dict[str, Any] = {"headless": headless}
-    if name in {"chrome", "chrome_incognito", "brave"}:
-        engine = playwright.chromium
-        if name == "brave":
-            options["executable_path"] = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
-        else:
-            options["channel"] = "chrome"
-    elif name in {"chromium", "firefox", "webkit"}:
-        engine = getattr(playwright, name)
-    else:
+    if name not in {"chrome", "chrome_incognito", "chromium", "firefox", "webkit", "brave"}:
         raise ValueError(f"Navegador no admitido: {name}")
-    return await engine.launch(**options)
+    return await playwright.chromium.launch(channel="chrome", headless=headless)

@@ -288,7 +288,7 @@ def test_generic_lp_form_is_identified_and_filled(tmp_path: Path):
         })
         runner._rotation_config = config
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.set_content("""
               <form id="lead-form">
@@ -327,7 +327,7 @@ def test_generic_lp_ignores_hidden_duplicate_form(tmp_path: Path):
             "lead": {"name": "Persona QA", "email": "qa@example.test", "phone": "5555555555"},
         })
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.set_content("""
               <form style="opacity:0">
@@ -353,7 +353,7 @@ def test_inconcert_matches_accessible_name_duplicate(tmp_path: Path):
 
         runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.set_content("""
               <table><tbody>
@@ -374,7 +374,7 @@ def test_lp_fields_do_not_inherit_sibling_options(tmp_path: Path):
 
         runner = WeeklyFormsRunner(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage"))
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.set_content("""
               <form>
@@ -423,7 +423,7 @@ def test_lp_rejects_visible_custom_validation_before_submit(tmp_path: Path):
 
         runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.set_content('''<form>
               <input type="email" value="qa@example.test">
@@ -451,7 +451,7 @@ def test_lp_submits_request_not_multichannel_consent(tmp_path: Path):
         runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
         runner._rotation_config = SimpleNamespace(weekly_form_type="form_lp")
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.route("**/*", lambda route: route.fulfill(status=200, body="ok"))
             await page.goto("https://landing.test/")
@@ -492,7 +492,7 @@ def test_colombian_document_and_country_selection_are_corrected(tmp_path: Path):
             },
         })
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.set_content("""
               <form>
@@ -526,7 +526,7 @@ def test_page_without_lead_form_is_reported_for_manual_work(tmp_path: Path):
             "lead": {"name": "Persona QA", "email": "persona@example.test", "phone": "5551234567"},
         })
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.set_content("<main><h1>Contenido sin formulario</h1></main>")
             try:
@@ -560,7 +560,7 @@ def test_custom_privacy_checkbox_is_activated(tmp_path: Path):
 
         runner = WeeklyFormsRunner(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage"))
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.set_content("""
               <input id="terms" type="checkbox">

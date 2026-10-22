@@ -303,9 +303,8 @@ class LeadsDeployDualCrmRunner(UtelInconcertRunner):
                 "defer_crm_verification": False,
                 "lead_origin_url": balancer_url,
                 "inconcert_url": balancer_url,
-                # Una verificación de respaldo nunca debe cargar QA cuando el
-                # usuario eligió explícitamente una sesión temporal de Chrome.
-                "browser": "chrome_incognito" if config.browser == "chrome_incognito" else "chrome",
+                # Una verificación de respaldo siempre usa una sesión temporal de Chrome.
+                "browser": "chrome_incognito",
                 "headless": False,
                 "keep_browser_open": False,
             }

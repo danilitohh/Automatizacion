@@ -22,9 +22,8 @@ for module in (
     importlib.import_module(module)
 
 with sync_playwright() as playwright:
-    for browser_type in (playwright.chromium, playwright.firefox, playwright.webkit):
-        browser = browser_type.launch(headless=True)
-        page = browser.new_page()
-        page.set_content('<title>UTEL setup check</title>')
-        assert page.title() == 'UTEL setup check'
-        browser.close()
+    browser = playwright.chromium.launch(channel='chrome', headless=True)
+    page = browser.new_page()
+    page.set_content('<title>UTEL setup check</title>')
+    assert page.title() == 'UTEL setup check'
+    browser.close()

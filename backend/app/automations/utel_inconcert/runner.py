@@ -167,7 +167,7 @@ class UtelInconcertRunner:
             except ImportError as error:
                 raise RuntimeError(
                     "Playwright no esta instalado. Ejecuta `python -m pip install -r backend/requirements.txt` "
-                    "y despues `python -m playwright install chromium`."
+                    "y asegurate de tener Google Chrome instalado."
                 ) from error
 
             await self._close_open_session()

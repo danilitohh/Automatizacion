@@ -2,18 +2,18 @@
 
 La interfaz usa HTML, CSS y JavaScript con módulos ES nativos; no necesita React ni un compilador frontend. Consume la API mediante fetch. FastAPI sirve la interfaz en modo web. Electron 36 es la envoltura de escritorio y Node.js ejecuta los lanzadores.
 
-El backend utiliza Python, FastAPI, Uvicorn, Pydantic Settings, HTTPX, cloudscraper y python-multipart. SQLite viene incluido con Python y no necesita un servidor separado. Playwright controla Chromium, Firefox y WebKit; Google Chrome está disponible para los flujos que usan Chrome Incógnito. openpyxl procesa Excel, python-docx y pypdf leen documentos, y phonenumbers valida teléfonos. pytest ejecuta pruebas. Las versiones admitidas están en backend/requirements.txt y package.json; npm ci respeta package-lock.json.
+El backend utiliza Python, FastAPI, Uvicorn, Pydantic Settings, HTTPX, cloudscraper y python-multipart. SQLite viene incluido con Python y no necesita un servidor separado. Playwright usa el canal instalado de Google Chrome en un contexto temporal, sin descargar Chromium, Firefox ni WebKit. openpyxl procesa Excel, python-docx y pypdf leen documentos, y phonenumbers valida teléfonos. pytest ejecuta pruebas. Las versiones admitidas están en backend/requirements.txt y package.json; npm ci respeta package-lock.json.
 
 ## Nuevo equipo Windows
 
 1. Copiar o clonar el proyecto sin .venv, node_modules, .env ni perfiles privados de storage.
-2. Abrir Iniciar.cmd. No necesita Node ni Python para mostrar el asistente; al terminar prepara las dependencias Python y npm, los navegadores de Playwright y la web app, y la abre en el navegador predeterminado.
+2. Abrir Iniciar.cmd. No necesita Node ni Python para mostrar el asistente; al terminar prepara las dependencias Python y npm, comprueba Google Chrome y abre la web app en el navegador predeterminado.
 3. Leer la lista de instalaciones y escribir SI para autorizarlas. Cancelar no instala nada y no inicia la app.
-4. El asistente instala los runtimes faltantes mediante winget, crea .venv, instala los requisitos Python, Chromium, Firefox, WebKit y Google Chrome, y comprueba que los motores puedan abrirse. Puede aparecer el aviso de permisos de Windows. Si winget falta, muestra instrucciones y se detiene.
+4. El asistente instala los runtimes faltantes mediante winget, crea .venv, instala los requisitos Python y Google Chrome, y comprueba que Chrome pueda abrirse mediante Playwright. Puede aparecer el aviso de permisos de Windows. Si winget falta, muestra instrucciones y se detiene.
 5. Configurar las credenciales propias en .env e iniciar sesión en los CRM cuando corresponda. Las claves, sesiones y permisos externos no se pueden crear instalando librerías.
 6. Iniciar.cmd abre la web app en el navegador. También puedes ejecutar `npm run web`; cuando la instalación está pendiente, el asistente ejecuta `npm ci` y deja el árbol npm sincronizado aunque uses solo el modo web.
 
-Cada arranque con Iniciar.cmd, npm run web o npm start comprueba las dependencias instaladas, sus versiones admitidas y los motores Chromium, Firefox y WebKit. Cuando falta la preparación, el asistente sincroniza el lockfile npm y prepara Electron junto con el resto del árbol npm. Un registro ausente, antiguo o con distinta firma no provoca una reinstalación si las dependencias funcionan. Sólo solicita autorización cuando falla la comprobación de un requisito. Ejecutar Uvicorn directamente omite este asistente.
+Cada arranque con Iniciar.cmd, npm run web o npm start comprueba las dependencias instaladas, sus versiones admitidas y la apertura de Google Chrome mediante Playwright. Cuando falta la preparación, el asistente sincroniza el lockfile npm y prepara Electron junto con el resto del árbol npm. Un registro ausente, antiguo o con distinta firma no provoca una reinstalación si las dependencias funcionan. Sólo solicita autorización cuando falla la comprobación de un requisito. Ejecutar Uvicorn directamente omite este asistente.
 
 Diagnóstico sin instalaciones: powershell -NoProfile -File scripts/setup-windows.ps1 -CheckOnly. Código 0: listo; 2: preparación pendiente; 1: error.
 
@@ -35,8 +35,8 @@ Un móvil o una tableta puede actuar como cliente de una instalación web accesi
 
 ## Alcance de verificación
 
-El 7 de septiembre de 2026 se ejecutó Iniciar.cmd en una copia temporal sin .venv, node_modules ni .env. Se autorizó la instalación, se instalaron las librerías Python y Electron, se comprobó Chromium y se inició la app en el puerto de prueba 8017. La interfaz, /api/health y /api/dashboard/summary respondieron HTTP 200; Chromium cargó el dashboard sin errores JavaScript. El diagnóstico posterior devolvió código 0 sin volver a solicitar instalación.
+El 7 de septiembre de 2026 se ejecutó Iniciar.cmd en una copia temporal sin .venv, node_modules ni .env. Se autorizó la instalación, se instalaron las librerías Python y Electron, se comprobó Google Chrome y se inició la app en el puerto de prueba 8017. La interfaz, /api/health y /api/dashboard/summary respondieron HTTP 200; Chrome cargó el dashboard sin errores JavaScript. El diagnóstico posterior devolvió código 0 sin volver a solicitar instalación.
 
-La prueba detectó y corrigió el uso de Get-FileHash no disponible en ese arranque, una extracción incompleta de Electron y una comprobación de Playwright que cerraba su conexión demasiado pronto. El asistente ahora comprueba la apertura real de Chromium y la presencia del ejecutable de Electron antes de guardar la preparación.
+La prueba detectó y corrigió el uso de Get-FileHash no disponible en ese arranque, una extracción incompleta de Electron y una comprobación de Playwright que cerraba su conexión demasiado pronto. El asistente ahora comprueba la apertura real de Google Chrome y la presencia del ejecutable de Electron antes de guardar la preparación.
 
-Python, Node.js y Chrome ya estaban instalados en el computador anfitrión; Chromium estaba en la caché del usuario. Sus instalaciones iniciales mediante winget y la descarga de Chromium en un Windows completamente vacío aún requieren una máquina virtual o un equipo nuevo. npm también reportó dos vulnerabilidades de severidad alta en el árbol existente; no se actualizaron versiones como parte de esta prueba del instalador.
+Python, Node.js y Chrome ya estaban instalados en el computador anfitrión. La instalación inicial de Chrome mediante winget en un Windows completamente vacío aún requiere una máquina virtual o un equipo nuevo. npm también reportó dos vulnerabilidades de severidad alta en el árbol existente; no se actualizaron versiones como parte de esta prueba del instalador.

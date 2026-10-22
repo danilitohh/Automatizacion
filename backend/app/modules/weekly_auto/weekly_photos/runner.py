@@ -52,7 +52,7 @@ class WeeklyAutoRunner:
             from playwright.async_api import async_playwright
         except ImportError as error:
             raise RuntimeError(
-                "Playwright no está instalado. Ejecuta `python -m pip install -r backend/requirements.txt` y luego `python -m playwright install chromium`."
+                "Playwright no está instalado. Ejecuta `python -m pip install -r backend/requirements.txt` y asegúrate de tener Google Chrome instalado."
             ) from error
 
         try:

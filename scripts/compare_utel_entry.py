@@ -108,7 +108,7 @@ async def main(countries):
     )
     report = {
         "target_program": PROGRAM,
-        "browser": "chromium", "headless": False,
+        "browser": "chrome_incognito", "headless": False,
         "viewport": {"width": 1440, "height": 900},
         "session_design": "fresh independent session per route; same runner and launch options",
         "dry_run": True, "results": [],
@@ -125,7 +125,7 @@ async def main(countries):
                 country=country, utel_url=url, inconcert_url="",
                 modality="En linea", level="Doctorado", form_type="tarjeta",
                 program_name=program, workflow_mode="form_validation",
-                browser="chromium", headless=False, keep_browser_open=False,
+                browser="chrome_incognito", headless=False, keep_browser_open=False,
                 lead={"name": "QAComparacionSinEnvio", "email": "qa.comparacion@example.invalid", "phone": phone},
             )
             result = await ComparisonRunner(settings).run(config)

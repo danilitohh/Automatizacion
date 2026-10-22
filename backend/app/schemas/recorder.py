@@ -2,17 +2,25 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .bot import BotStep
+from .browser import BrowserName, normalize_browser
 
 
 class RecorderStartRequest(BaseModel):
     """Datos mínimos para abrir el navegador interactivo."""
 
     url: str = Field(min_length=1, max_length=2000)
-    browser: Literal["chromium", "chrome", "chrome_incognito", "firefox", "webkit"] = "chrome"
+    browser: BrowserName = "chrome_incognito"
     steps: list[BotStep] = Field(default_factory=list, max_length=100)
+
+    @field_validator("browser", mode="before")
+    @classmethod
+    def use_chrome_incognito(cls, value: object) -> str:
+        """Migra selecciones antiguas al único navegador soportado."""
+
+        return normalize_browser(value)
 
 
 class RecorderEvent(BaseModel):

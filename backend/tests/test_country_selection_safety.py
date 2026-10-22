@@ -17,7 +17,7 @@ def test_global_form_updates_both_country_controls() -> None:
         from playwright.async_api import async_playwright
 
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.set_content("""
                 <form>
@@ -47,7 +47,7 @@ def test_fixed_wrong_country_stops_before_submit() -> None:
         from playwright.async_api import async_playwright
 
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
+            browser = await playwright.chromium.launch(channel="chrome", headless=True)
             page = await browser.new_page()
             await page.set_content("""
                 <form><select data-cy="countryCallingCode" disabled>

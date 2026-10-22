@@ -14,7 +14,7 @@ const DEFAULT_CONFIG = {
   name: "Weekly Auto",
   urls: [],
   use_default_urls: true,
-  browser: "chrome",
+  browser: "chrome_incognito",
   headless: true,
   keep_browser_open: false,
   viewport_width: 1280,
@@ -127,7 +127,7 @@ function readConfig() {
   const name = document.querySelector("#weekly-auto-name").value.trim() || DEFAULT_CONFIG.name;
   const useDefault = document.querySelector("#weekly-auto-use-default").checked;
   const rawUrls = document.querySelector("#weekly-auto-urls").value.trim();
-  const browser = document.querySelector("#weekly-auto-browser").value;
+  const browser = "chrome_incognito";
   const headless = document.querySelector("#weekly-auto-headless").checked;
   const keepOpen = document.querySelector("#weekly-auto-keep-open").checked;
   const viewportWidth = toInt(document.querySelector("#weekly-auto-viewport-width").value, DEFAULT_CONFIG.viewport_width);
@@ -164,7 +164,7 @@ function writeConfig(config) {
   document.querySelector("#weekly-auto-name").value = config.name || DEFAULT_CONFIG.name;
   document.querySelector("#weekly-auto-use-default").checked = config.use_default_urls ?? DEFAULT_CONFIG.use_default_urls;
   document.querySelector("#weekly-auto-urls").value = (config.urls || []).join("\n");
-  document.querySelector("#weekly-auto-browser").value = config.browser || DEFAULT_CONFIG.browser;
+  document.querySelector("#weekly-auto-browser").value = "chrome_incognito";
   document.querySelector("#weekly-auto-headless").checked = config.headless ?? DEFAULT_CONFIG.headless;
   document.querySelector("#weekly-auto-keep-open").checked = config.keep_browser_open ?? DEFAULT_CONFIG.keep_browser_open;
   document.querySelector("#weekly-auto-viewport-width").value = config.viewport_width ?? DEFAULT_CONFIG.viewport_width;

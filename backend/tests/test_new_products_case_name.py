@@ -19,14 +19,11 @@ def test_new_products_case_name_limits_long_programs_to_schema_maximum():
     assert result.startswith("Bot nuevos productos")
 
 
-def test_new_products_access_block_retries_with_a_different_browser():
+def test_new_products_access_block_retries_with_a_fresh_chrome_session():
     result = {
         "summary": "El sitio bloqueó el acceso de esta sesion. No se envió el formulario.",
         "stages": [],
     }
 
-    assert (
-        _new_products_retry_browser(result, is_leads_deploy=False)
-        == "chromium"
-    )
-    assert _new_products_retry_browser(result, is_leads_deploy=True) == "chrome"
+    assert _new_products_retry_browser(result, is_leads_deploy=False) == "chrome_incognito"
+    assert _new_products_retry_browser(result, is_leads_deploy=True) == "chrome_incognito"
