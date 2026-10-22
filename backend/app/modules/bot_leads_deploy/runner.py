@@ -2739,11 +2739,42 @@ class UtelInconcertRunner:
             await user_field.wait_for(state="visible", timeout=60000)
             await user_field.fill(username)
             await password_field.fill(password)
-            await page.locator('button[type="submit"]').first.click()
+            submit = page.locator('button[type="submit"]:visible').first
+            auth_response = None
+            # El formulario de InConcert responde con ``401`` sin navegar cuando
+            # el usuario no pertenece al tenant regional. Capturarlo evita
+            # esperar 60 segundos y deja una causa accionable en Weekly Forms.
+            # Los mocks de las pruebas no exponen ``expect_response``; en ellos
+            # se conserva el click histórico sin tocar sus contratos.
+            if page.__class__.__module__.startswith("playwright."):
+                clicked = False
+                try:
+                    async with page.expect_response(
+                        lambda response: response.request.method == "POST"
+                        and response.url.rstrip("/").endswith("/auth/login"),
+                        timeout=30000,
+                    ) as response_info:
+                        clicked = True
+                        await submit.click()
+                    auth_response = await response_info.value
+                except Exception:
+                    if not clicked:
+                        raise
+            else:
+                await submit.click()
+            if auth_response is not None and auth_response.status in {401, 403}:
+                tenant = self._crm_origin or f"{current.scheme}://{current.netloc}"
+                raise UtelQaError(
+                    "inconcert_login",
+                    f"InConcert rechazó las credenciales para {tenant} (HTTP {auth_response.status}). "
+                    "Configura el usuario y contraseña autorizados para ese CRM regional.",
+                )
             await page.wait_for_url(self._is_crm_route, timeout=60000)
             await password_field.wait_for(state="hidden", timeout=10000)
             if not self._is_crm_route(page.url) or await self._is_inconcert_login(page):
                 raise RuntimeError("La sesion no quedo establecida")
+        except UtelQaError:
+            raise
         except Exception as error:
             # No incluir excepciones de fill: pueden contener credenciales.
             raise UtelQaError(
