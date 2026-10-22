@@ -1,0 +1,434 @@
+{
+  "input": "C:/Users/danil/Downloads/300bf37145c44a2c871dc6d9950071b1_leadsQA_sin_URL_LEAD (1).xlsx",
+  "recovered": [
+    {
+      "email": "Testing2026-09-25N16@testingUtel.com",
+      "name": "Danilo Prueba BKK",
+      "source": "balancer",
+      "url": "https://lead-balancer.scalahed.com/leads/detail/3229190"
+    },
+    {
+      "email": "Testing2026-09-25N19@testingUtel.com",
+      "name": "Danilo Prueba BKN",
+      "source": "balancer",
+      "url": "https://lead-balancer.scalahed.com/leads/detail/3229193"
+    },
+    {
+      "email": "Testing2026-09-25N21@testingUtel.com",
+      "name": "Danilo Prueba BKP",
+      "source": "inconcert",
+      "url": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159600"
+    },
+    {
+      "email": "Testing2026-09-25N22@testingUtel.com",
+      "name": "Danilo Prueba BKQ",
+      "source": "inconcert",
+      "url": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159601"
+    },
+    {
+      "email": "Testing2026-09-25N23@testingUtel.com",
+      "name": "Danilo Prueba BKR",
+      "source": "inconcert",
+      "url": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159602"
+    },
+    {
+      "email": "Testing2026-09-25N26@testingUtel.com",
+      "name": "Danilo Prueba BKU",
+      "source": "inconcert",
+      "url": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159603"
+    },
+    {
+      "email": "Testing2026-09-25N27@testingUtel.com",
+      "name": "Danilo Prueba BKV",
+      "source": "inconcert",
+      "url": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159604"
+    }
+  ],
+  "changes": [
+    {
+      "sheet": "Hoja 1",
+      "address": "O3",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229190"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA3",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB3",
+      "value": "Reverificado 27/09/2026: encontrado en Balancer con el mismo correo e identidad. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Dirección de Ventas', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo. | Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Dirección de Ventas', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo. Se agotaron los 3 intentos automáticos; realiza este caso manualmente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AO3",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AP3",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229190"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ3",
+      "value": "balancer"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS3",
+      "value": "Reverificado: lead existente; sin reenvío. Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Dirección de Ventas', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "K3",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "L3",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229190"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M3",
+      "value": "balancer"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O3",
+      "value": "Reverificado 27/09/2026: lead existente; sin reenvío. Error histórico: Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Dirección de Ventas', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O4",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229193"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA4",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB4",
+      "value": "Reverificado 27/09/2026: encontrado en Balancer con el mismo correo e identidad. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Gestión Estratégica del Capital Humano', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo. | Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Gestión Estratégica del Capital Humano', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo. Se agotaron los 3 intentos automáticos; realiza este caso manualmente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AO4",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AP4",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229193"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ4",
+      "value": "balancer"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS4",
+      "value": "Reverificado: lead existente; sin reenvío. Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Gestión Estratégica del Capital Humano', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "K4",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "L4",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229193"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M4",
+      "value": "balancer"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O4",
+      "value": "Reverificado 27/09/2026: lead existente; sin reenvío. Error histórico: Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Gestión Estratégica del Capital Humano', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O5",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159600"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA5",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB5",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert Asia con el mismo correo e identidad. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N21@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM5",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN5",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159600"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ5",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS5",
+      "value": "Reverificado: lead existente; sin reenvío. No se encontro el lead por email (Testing2026-09-25N21@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I6",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J6",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159600"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M6",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O6",
+      "value": "Reverificado 27/09/2026: lead existente; sin reenvío. Error histórico: No se encontro el lead por email (Testing2026-09-25N21@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O6",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159601"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA6",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB6",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert Asia con el mismo correo e identidad. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: InConcert mantuvo el filtro 'nombre' y no permitió cambiarlo a 'Email'. No se ejecutó una búsqueda ambigua. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM6",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN6",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159601"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ6",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS6",
+      "value": "Reverificado: lead existente; sin reenvío. InConcert mantuvo el filtro 'nombre' y no permitió cambiarlo a 'Email'. No se ejecutó una búsqueda ambigua."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I7",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J7",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159601"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M7",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O7",
+      "value": "Reverificado 27/09/2026: lead existente; sin reenvío. Error histórico: InConcert mantuvo el filtro 'nombre' y no permitió cambiarlo a 'Email'. No se ejecutó una búsqueda ambigua."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O7",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159602"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA7",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB7",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert Asia con el mismo correo e identidad. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: InConcert mantuvo el filtro 'nombre' y no permitió cambiarlo a 'Email'. No se ejecutó una búsqueda ambigua. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM7",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN7",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159602"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ7",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS7",
+      "value": "Reverificado: lead existente; sin reenvío. InConcert mantuvo el filtro 'nombre' y no permitió cambiarlo a 'Email'. No se ejecutó una búsqueda ambigua."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I8",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J8",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159602"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M8",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O8",
+      "value": "Reverificado 27/09/2026: lead existente; sin reenvío. Error histórico: InConcert mantuvo el filtro 'nombre' y no permitió cambiarlo a 'Email'. No se ejecutó una búsqueda ambigua."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O10",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159603"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA10",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB10",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert Asia con el mismo correo e identidad. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N26@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM10",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN10",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159603"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ10",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS10",
+      "value": "Reverificado: lead existente; sin reenvío. No se encontro el lead por email (Testing2026-09-25N26@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I11",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J11",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159603"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M11",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O11",
+      "value": "Reverificado 27/09/2026: lead existente; sin reenvío. Error histórico: No se encontro el lead por email (Testing2026-09-25N26@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O11",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159604"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA11",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB11",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert Asia con el mismo correo e identidad. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N27@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM11",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN11",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159604"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ11",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS11",
+      "value": "Reverificado: lead existente; sin reenvío. No se encontro el lead por email (Testing2026-09-25N27@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I12",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J12",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159604"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M12",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O12",
+      "value": "Reverificado 27/09/2026: lead existente; sin reenvío. Error histórico: No se encontro el lead por email (Testing2026-09-25N27@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  ]
+}

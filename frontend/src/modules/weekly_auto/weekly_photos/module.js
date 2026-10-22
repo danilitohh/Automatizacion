@@ -14,7 +14,7 @@ const DEFAULT_CONFIG = {
   name: "Weekly Auto",
   urls: [],
   use_default_urls: true,
-  browser: "chromium",
+  browser: "chrome",
   headless: true,
   keep_browser_open: false,
   viewport_width: 1280,

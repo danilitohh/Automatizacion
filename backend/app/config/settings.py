@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     strapi_url: str = ""
     strapi_token: SecretStr = SecretStr("")
     strapi_product_endpoint: str = "/api/products"
+    # Campo de hreflangs que gestiona exclusivamente el nuevo módulo.
+    strapi_hreflangs_path: str = "seo.MultipleHrefLangs"
     strapi_program_field: str = "title"
     strapi_seo_field: str = "seo"
     strapi_canonical_field: str = "LinkCanonical"

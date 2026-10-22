@@ -28,9 +28,14 @@ function Find-Python {
 try {
     $python = Find-Python
     $nodeReady = $false
+    $npmReady = $false
     if (Get-Command node -ErrorAction SilentlyContinue) {
         & node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 22 ? 0 : 1)"
         $nodeReady = $LASTEXITCODE -eq 0
+    }
+    if (Get-Command npm.cmd -ErrorAction SilentlyContinue) {
+        & npm.cmd --version *> $null
+        $npmReady = $LASTEXITCODE -eq 0
     }
     $venvPython = Join-Path $projectRoot '.venv\Scripts\python.exe'
     $chromePaths = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe", "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe")
@@ -41,37 +46,41 @@ try {
     $electronReady = $Mode -eq 'web' -or (Test-Path 'node_modules/electron/dist/electron.exe')
     # El registro es informativo: una instalacion existente y valida no requiere
     # reinstalar por un cambio de hash, carpeta o formato del registro.
-    if ((Test-Path $venvPython) -and $nodeReady -and $chromeReady -and $electronReady) {
+    if ((Test-Path $venvPython) -and $nodeReady -and $npmReady -and $chromeReady -and $electronReady -and (Test-Path 'node_modules')) {
         & $venvPython (Join-Path $PSScriptRoot 'check-runtime.py')
         $ready = $LASTEXITCODE -eq 0
     }
     if (-not $ready) {
         Write-Host 'UTEL QA necesita preparar/verificar las dependencias de este equipo.'
-        Write-Host 'Preparara Python, Node.js, librerias en .venv, Chromium y Chrome segun lo necesario.'
+        Write-Host 'Preparara Python, Node.js, librerias en .venv, Chromium, Firefox, WebKit y Google Chrome segun lo necesario.'
         if ($Mode -eq 'desktop') { Write-Host 'El modo escritorio tambien requiere Electron.' }
         Write-Host 'Se requiere internet y espacio en disco. Windows puede solicitar permisos de administrador.'
         if ($CheckOnly) { Write-Host 'Diagnostico: preparacion pendiente. No se instalo nada.'; exit 2 }
         $answer = Read-Host 'Autoriza la descarga e instalacion? Escriba SI para continuar'
         if ($answer.Trim() -ine 'SI') { Write-Host 'Instalacion cancelada.'; exit 1 }
-        if (-not $python -or -not $nodeReady -or -not $chromeReady) {
+        if (-not $python -or -not $nodeReady -or -not $npmReady -or -not $chromeReady) {
             if (-not (Get-Command winget -ErrorAction SilentlyContinue)) { throw 'Instale App Installer de Microsoft (winget), o Python 3.12, Node.js LTS y Chrome manualmente, y vuelva a abrir Iniciar.cmd.' }
-            foreach ($item in @(@(-not $python, 'Python.Python.3.12'), @(-not $nodeReady, 'OpenJS.NodeJS.LTS'), @(-not $chromeReady, 'Google.Chrome'))) {
+            foreach ($item in @(@(-not $python, 'Python.Python.3.12'), @(-not $nodeReady -or -not $npmReady, 'OpenJS.NodeJS.LTS'), @(-not $chromeReady, 'Google.Chrome'))) {
                 if ($item[0]) { Invoke-Checked 'winget' @('install', '--id', $item[1], '--exact', '--source', 'winget', '--accept-source-agreements', '--accept-package-agreements', '--disable-interactivity') }
             }
             Refresh-Path
             $python = Find-Python
         }
         if (-not $python) { throw 'Python no esta disponible. Cierre y vuelva a abrir Iniciar.cmd.' }
+        if (-not (Get-Command npm.cmd -ErrorAction SilentlyContinue)) { throw 'npm no esta disponible despues de instalar Node.js. Cierre y vuelva a abrir Iniciar.cmd.' }
         if (-not (Test-Path $venvPython)) { Invoke-Checked $python @('-m', 'venv', '.venv') }
+        # Instalar el lockfile también en modo web evita depender de node_modules
+        # heredado. Electron se usa solo en modo desktop, pero los lanzadores y
+        # cualquier futura integración npm quedan preparados desde el mismo paso.
+        Invoke-Checked 'npm.cmd' @('ci', '--no-audit', '--no-fund')
         Invoke-Checked $venvPython @('-m', 'pip', 'install', '-r', 'backend/requirements.txt')
         if ($Mode -eq 'desktop') {
-            Invoke-Checked 'npm.cmd' @('ci')
             if (-not (Test-Path 'node_modules/electron/dist/electron.exe')) {
                 Invoke-Checked 'node' @('scripts/install-electron.js')
             }
             if (-not (Test-Path 'node_modules/electron/dist/electron.exe')) { throw 'Electron no se descargo correctamente; no se marcara la instalacion como completa.' }
         }
-        Invoke-Checked $venvPython @('-m', 'playwright', 'install', 'chromium')
+        Invoke-Checked $venvPython @('-m', 'playwright', 'install', 'chromium', 'firefox', 'webkit')
         Invoke-Checked $venvPython @('-m', 'pip', 'check')
         Invoke-Checked $venvPython @((Join-Path $PSScriptRoot 'check-runtime.py'))
         if (-not (Test-Path '.env')) { Copy-Item -LiteralPath '.env.example' -Destination '.env'; Write-Host 'Se creo .env: configure sus credenciales de CRM/IA antes de ejecutar automatizaciones.' }
@@ -88,5 +97,9 @@ try {
         Invoke-Checked $venvPython @((Join-Path $PSScriptRoot 'prepare-resources.py'), '--prepare')
     } elseif ($resourceStatus -ne 0) { throw 'Faltan recursos de la app o su configuracion es invalida. Revise el mensaje anterior.' }
     Write-Host 'Dependencias y recursos locales preparados. CRM e IA requieren credenciales propias; Ollama local es opcional.'
-    if ($Launch) { Invoke-Checked 'node' @('scripts/launch-web.js') }
+    # Inicia el lanzador correspondiente al modo ya preparado por este asistente.
+    if ($Launch) {
+        $launcher = if ($Mode -eq 'desktop') { 'scripts/launch-electron.js' } else { 'scripts/launch-web.js' }
+        Invoke-Checked 'node' @($launcher)
+    }
 } catch { Write-Host "No se pudo preparar UTEL QA: $_" -ForegroundColor Red; exit 1 }

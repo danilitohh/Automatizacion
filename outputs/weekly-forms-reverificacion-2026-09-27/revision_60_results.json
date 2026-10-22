@@ -1,0 +1,898 @@
+[
+  {
+    "row": 56,
+    "email": "Testing2026-09-25N28@testingUtel.com",
+    "status": "VERIFICADO",
+    "source": "Balancer",
+    "link": "https://lead-balancer.scalahed.com/leads/detail/3229147",
+    "detail": "Lead existente localizado por correo exacto, nombre y teléfono; sin reenviar.",
+    "evidence": "3229147\tDanilo Prueba BKW\tDanilo Prueba BKW\tTesting2026-09-25N28@testingUtel.com\t5546486792\t\tMéxico\t25/09/2026 12:49:13\t25/09/2026 12:49:13\t",
+    "identity": {
+      "name": "Danilo Prueba BKW",
+      "email": "Testing2026-09-25N28@testingUtel.com",
+      "phone": "5546486792",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N28@testingUtel.com) despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 68,
+    "email": "Testing2026-09-25N31@testingUtel.com",
+    "status": "VERIFICADO",
+    "source": "Balancer",
+    "link": "https://lead-balancer.scalahed.com/leads/detail/3229162",
+    "detail": "Lead existente localizado por correo exacto, nombre y teléfono; sin reenviar.",
+    "evidence": "3229162\tDanilo Prueba BKZ\tDanilo Prueba BKZ\tTesting2026-09-25N31@testingUtel.com\t5546510549\t\tMéxico\t25/09/2026 12:55:26\t25/09/2026 12:55:26\t",
+    "identity": {
+      "name": "Danilo Prueba BKZ",
+      "email": "Testing2026-09-25N31@testingUtel.com",
+      "phone": "5546510549",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N31@testingUtel.com) despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 77,
+    "email": "Testing2026-09-25N32@testingUtel.com",
+    "status": "VERIFICADO",
+    "source": "Balancer",
+    "link": "https://lead-balancer.scalahed.com/leads/detail/3229171",
+    "detail": "Lead existente localizado por correo exacto, nombre y teléfono; sin reenviar.",
+    "evidence": "3229171\tDanilo Prueba BLA\tDanilo Prueba BLA\tTesting2026-09-25N32@testingUtel.com\t5546518468\t\tMéxico\t25/09/2026 12:58:28\t25/09/2026 12:58:28\t",
+    "identity": {
+      "name": "Danilo Prueba BLA",
+      "email": "Testing2026-09-25N32@testingUtel.com",
+      "phone": "5546518468",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N32@testingUtel.com) despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 147,
+    "email": "Testing2026-09-25N72@testingUtel.com",
+    "status": "VERIFICADO",
+    "source": "Balancer",
+    "link": "https://lead-balancer.scalahed.com/leads/detail/3229362",
+    "detail": "Lead existente localizado por correo exacto, nombre y teléfono; sin reenviar.",
+    "evidence": "3229362\tDanilo Prueba BMO\tDanilo Prueba BMO\tTesting2026-09-25N72@testingUtel.com\t966835228\t\tEcuador\t25/09/2026 14:06:32\t25/09/2026 14:06:32\t",
+    "identity": {
+      "name": "Danilo Prueba BMO",
+      "email": "Testing2026-09-25N72@testingUtel.com",
+      "phone": "966835228",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N72@testingUtel.com) despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 152,
+    "email": "Testing2026-09-25N73@testingUtel.com",
+    "status": "VERIFICADO",
+    "source": "Balancer",
+    "link": "https://lead-balancer.scalahed.com/leads/detail/3229368",
+    "detail": "Lead existente localizado por correo exacto, nombre y teléfono; sin reenviar.",
+    "evidence": "3229368\tDanilo Prueba BMP\tDanilo Prueba BMP\tTesting2026-09-25N73@testingUtel.com\t966843147\t\tEcuador\t25/09/2026 14:08:28\t25/09/2026 14:08:28\t",
+    "identity": {
+      "name": "Danilo Prueba BMP",
+      "email": "Testing2026-09-25N73@testingUtel.com",
+      "phone": "966843147",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N73@testingUtel.com) despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 158,
+    "email": "Testing2026-09-25N74@testingUtel.com",
+    "status": "VERIFICADO",
+    "source": "Balancer",
+    "link": "https://lead-balancer.scalahed.com/leads/detail/3229372",
+    "detail": "Lead existente localizado por correo exacto, nombre y teléfono; sin reenviar.",
+    "evidence": "3229372\tDanilo Prueba BMQ\tDanilo Prueba BMQ\tTesting2026-09-25N74@testingUtel.com\t966851066\t\tEcuador\t25/09/2026 14:10:29\t25/09/2026 14:10:29\t",
+    "identity": {
+      "name": "Danilo Prueba BMQ",
+      "email": "Testing2026-09-25N74@testingUtel.com",
+      "phone": "966851066",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N74@testingUtel.com) despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 197,
+    "email": "Testing2026-09-25N112@testingUtel.com",
+    "status": "VERIFICADO",
+    "source": "inConcert",
+    "link": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628626",
+    "detail": "Lead existente confirmado por correo exacto, nombre y teléfono. Sin reenviar.",
+    "identity": {
+      "name": "Danilo Prueba BOC",
+      "email": "Testing2026-09-25N112@testingUtel.com",
+      "phone": "57151988",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N112@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 112,
+    "email": "Testing2026-09-25N56@testingUtel.com",
+    "status": "VERIFICADO",
+    "source": "inConcert",
+    "link": "https://mas-utel-pe.inconcertcc.com/mas/contact/people/view/4032669",
+    "detail": "Lead existente confirmado por correo exacto, nombre y teléfono. Sin reenviar.",
+    "identity": {
+      "name": "Danilo Prueba BLY",
+      "email": "Testing2026-09-25N56@testingUtel.com",
+      "phone": "946708524",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N56@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 48,
+    "email": "Testing2026-09-25N20@testingUtel.com",
+    "status": "VERIFICADO",
+    "source": "inConcert",
+    "link": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159599",
+    "detail": "Búsqueda por correo exacto devolvió una ficha: Danilo Prueba BKO, Filipinas. Sin reenviar.",
+    "identity": {
+      "name": "Danilo Prueba BKO",
+      "email": "Testing2026-09-25N20@testingUtel.com",
+      "phone": "9176423440",
+      "status": "success",
+      "error": ""
+    }
+  },
+  {
+    "row": 196,
+    "email": "Testing2026-09-25N111@testingUtel.com",
+    "status": "VERIFICADO",
+    "source": "inConcert",
+    "link": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628625",
+    "detail": "Lead existente confirmado por correo exacto, nombre y teléfono. Sin reenviar.",
+    "identity": {
+      "name": "Danilo Prueba BOB",
+      "email": "Testing2026-09-25N111@testingUtel.com",
+      "phone": "77144069",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N111@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 88,
+    "email": "Testing2026-09-25N36@testingUtel.com",
+    "status": "VERIFICADO",
+    "submitted": true,
+    "confirmation": "https://universidad.utel.edu.mx/colombia/typ/?token_external=ae003d2d-62fc-4758-b4dd-6e577d420b19",
+    "detail": "Se completaron documento QA, graduación, programa, medio de contacto y privacidad. Redirección a página de agradecimiento. Lead confirmado en inConcert por correo exacto y nombre. Consulta posterior de Balancer sin coincidencia por el mismo correo; confirmado en inConcert.",
+    "link": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4082969",
+    "source": "inConcert",
+    "identity": {
+      "name": "Danilo Prueba BLE",
+      "email": "Testing2026-09-25N36@testingUtel.com",
+      "phone": "3216550144",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 89,
+    "status": "ERROR EXTERNO 520",
+    "detail": "La página devuelve error 520 antes de mostrar el formulario. No se realizó envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:55:39 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd052fd155090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:55:50.195Z",
+    "identity": {
+      "name": "Danilo Prueba BLF",
+      "email": "Testing2026-09-25N37@testingUtel.com",
+      "phone": "3216558063",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 94,
+    "status": "ERROR EXTERNO 520",
+    "detail": "La página devuelve error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:55:51 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd0a00d2d5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:56:08.100Z",
+    "identity": {
+      "name": "Danilo Prueba BLK",
+      "email": "Testing2026-09-25N42@testingUtel.com",
+      "phone": "3216597658",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 96,
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:56:09 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd108dfe15090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:56:08.954Z",
+    "identity": {
+      "name": "Danilo Prueba BLM",
+      "email": "Testing2026-09-25N44@testingUtel.com",
+      "phone": "3216613496",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 98,
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:56:09 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd10e39475090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:56:09.872Z",
+    "identity": {
+      "name": "Danilo Prueba BLO",
+      "email": "Testing2026-09-25N46@testingUtel.com",
+      "phone": "3216629334",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 61,
+    "email": "Testing2026-09-25N29@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:57:27 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd2f39f2e5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:57:27.001Z",
+    "identity": {
+      "name": "Danilo Prueba BKX",
+      "email": "Testing2026-09-25N29@testingUtel.com",
+      "phone": "5546494711",
+      "status": "pending",
+      "error": "El formulario conserva campos obligatorios sin completar: FechaNacimiento-input"
+    }
+  },
+  {
+    "row": 67,
+    "email": "Testing2026-09-25N30@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:57:27 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd2f63b595090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:57:27.485Z",
+    "identity": {
+      "name": "Danilo Prueba BKY",
+      "email": "Testing2026-09-25N30@testingUtel.com",
+      "phone": "5546502630",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N30@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 80,
+    "email": "Testing2026-09-25N33@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:57:28 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd2f9285b5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:57:28.485Z",
+    "identity": {
+      "name": "Danilo Prueba BLB",
+      "email": "Testing2026-09-25N33@testingUtel.com",
+      "phone": "5546526387",
+      "status": "pending",
+      "error": "El listado se abrio, pero no se encontro una tarjeta o enlace valido de programa."
+    }
+  },
+  {
+    "row": 87,
+    "email": "Testing2026-09-25N35@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:57:29 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd2ff8a465090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:57:29.349Z",
+    "identity": {
+      "name": "Danilo Prueba BLD",
+      "email": "Testing2026-09-25N35@testingUtel.com",
+      "phone": "3216542225",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N35@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 103,
+    "email": "Testing2026-09-25N51@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:57:30 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd304db9e5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:57:30.203Z",
+    "identity": {
+      "name": "Danilo Prueba BLT",
+      "email": "Testing2026-09-25N51@testingUtel.com",
+      "phone": "3216668929",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 52,
+    "status": "EXCLUIDO POR USUARIO",
+    "detail": "Vietnam: no ejecutar ni sustituir teléfonos. Falta definir el inConcert correspondiente.",
+    "identity": {
+      "name": "Danilo Prueba BKS",
+      "email": "Testing2026-09-25N24@testingUtel.com",
+      "phone": "5546455116",
+      "status": "pending",
+      "error": "El Excel pide México, pero paisesPIVI solo ofrece Philippines, India y Vietnam. No se cambió el país ni se envió el formulario."
+    }
+  },
+  {
+    "row": 53,
+    "status": "EXCLUIDO POR USUARIO",
+    "detail": "Vietnam: no ejecutar ni sustituir teléfonos. Falta definir el inConcert correspondiente.",
+    "identity": {
+      "name": "Danilo Prueba BKT",
+      "email": "Testing2026-09-25N25@testingUtel.com",
+      "phone": "5546463035",
+      "status": "pending",
+      "error": "Misma URL global que fila 8. El selector de residencia no ofrece México. Se necesita una URL compatible o corregir el país y sus datos QA."
+    }
+  },
+  {
+    "row": 106,
+    "email": "Testing2026-09-25N54@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:59:03 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd54cce335090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:59:03.628Z",
+    "identity": {
+      "name": "Danilo Prueba BLW",
+      "email": "Testing2026-09-25N54@testingUtel.com",
+      "phone": "3216692686",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 131,
+    "email": "Testing2026-09-25N63@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:59:04 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd5521eef5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:59:04.106Z",
+    "identity": {
+      "name": "Danilo Prueba BMF",
+      "email": "Testing2026-09-25N63@testingUtel.com",
+      "phone": "8095553957",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 132,
+    "email": "Testing2026-09-25N64@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:59:05 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd5550be25090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:59:05.181Z",
+    "identity": {
+      "name": "Danilo Prueba BMG",
+      "email": "Testing2026-09-25N64@testingUtel.com",
+      "phone": "8095551876",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 133,
+    "email": "Testing2026-09-25N65@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:59:06 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd55bbef35090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:59:06.105Z",
+    "identity": {
+      "name": "Danilo Prueba BMH",
+      "email": "Testing2026-09-25N65@testingUtel.com",
+      "phone": "8095559795",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 135,
+    "email": "Testing2026-09-25N67@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 03:59:07 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd56189695090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T03:59:07.008Z",
+    "identity": {
+      "name": "Danilo Prueba BMJ",
+      "email": "Testing2026-09-25N67@testingUtel.com",
+      "phone": "8095555633",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 160,
+    "email": "Testing2026-09-25N75@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:01:05 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd842be765090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:01:05.115Z",
+    "identity": {
+      "name": "Danilo Prueba BMR",
+      "email": "Testing2026-09-25N75@testingUtel.com",
+      "phone": "4695555652",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 162,
+    "email": "Testing2026-09-25N77@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:01:05 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd8497af65090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:01:05.587Z",
+    "identity": {
+      "name": "Danilo Prueba BMT",
+      "email": "Testing2026-09-25N77@testingUtel.com",
+      "phone": "6175551490",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N77@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 163,
+    "email": "Testing2026-09-25N78@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:01:06 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd84c6f6c5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:01:06.501Z",
+    "identity": {
+      "name": "Danilo Prueba BMU",
+      "email": "Testing2026-09-25N78@testingUtel.com",
+      "phone": "6175559409",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N78@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 164,
+    "email": "Testing2026-09-25N79@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:01:07 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd85208b55090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:01:07.373Z",
+    "identity": {
+      "name": "Danilo Prueba BMV",
+      "email": "Testing2026-09-25N79@testingUtel.com",
+      "phone": "6465557328",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N79@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 165,
+    "email": "Testing2026-09-25N80@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:01:08 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fd85758f95090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:01:08.213Z",
+    "identity": {
+      "name": "Danilo Prueba BMW",
+      "email": "Testing2026-09-25N80@testingUtel.com",
+      "phone": "7025555247",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 167,
+    "email": "Testing2026-09-25N82@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:02:20 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fda1b78fc5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:02:20.160Z",
+    "identity": {
+      "name": "Danilo Prueba BMY",
+      "email": "Testing2026-09-25N82@testingUtel.com",
+      "phone": "7135551085",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 168,
+    "email": "Testing2026-09-25N83@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:02:20 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fda1e5d465090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:02:20.513Z",
+    "identity": {
+      "name": "Danilo Prueba BMZ",
+      "email": "Testing2026-09-25N83@testingUtel.com",
+      "phone": "7135559004",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 169,
+    "email": "Testing2026-09-25N84@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:02:21 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fda2099685090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:02:21.000Z",
+    "identity": {
+      "name": "Danilo Prueba BNA",
+      "email": "Testing2026-09-25N84@testingUtel.com",
+      "phone": "7185556923",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 171,
+    "email": "Testing2026-09-25N86@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:02:21 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fda239e245090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:02:21.819Z",
+    "identity": {
+      "name": "Danilo Prueba BNC",
+      "email": "Testing2026-09-25N86@testingUtel.com",
+      "phone": "9175552761",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N86@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 172,
+    "email": "Testing2026-09-25N87@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:02:22 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fda28bf115090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:02:22.331Z",
+    "identity": {
+      "name": "Danilo Prueba BND",
+      "email": "Testing2026-09-25N87@testingUtel.com",
+      "phone": "9295550680",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N87@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 173,
+    "email": "Testing2026-09-25N88@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:03:26 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fdbb58ece5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:03:26.293Z",
+    "identity": {
+      "name": "Danilo Prueba BNE",
+      "email": "Testing2026-09-25N88@testingUtel.com",
+      "phone": "9295558599",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N88@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 175,
+    "email": "Testing2026-09-25N90@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:03:27 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fdbbbc9eb5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:03:27.100Z",
+    "identity": {
+      "name": "Danilo Prueba BNG",
+      "email": "Testing2026-09-25N90@testingUtel.com",
+      "phone": "1146977770",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 178,
+    "email": "Testing2026-09-25N93@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:03:28 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fdbc0bac05090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:03:28.015Z",
+    "identity": {
+      "name": "Danilo Prueba BNJ",
+      "email": "Testing2026-09-25N93@testingUtel.com",
+      "phone": "1147001527",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 179,
+    "email": "Testing2026-09-25N94@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:03:28 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fdbc68c7d5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:03:28.474Z",
+    "identity": {
+      "name": "Danilo Prueba BNK",
+      "email": "Testing2026-09-25N94@testingUtel.com",
+      "phone": "1147009446",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 180,
+    "email": "Testing2026-09-25N95@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:03:29 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fdbc9598a5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:03:29.426Z",
+    "identity": {
+      "name": "Danilo Prueba BNL",
+      "email": "Testing2026-09-25N95@testingUtel.com",
+      "phone": "1147017365",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 186,
+    "email": "Testing2026-09-25N101@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:04:50 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fddc298b15090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:04:50.115Z",
+    "identity": {
+      "name": "Danilo Prueba BNR",
+      "email": "Testing2026-09-25N101@testingUtel.com",
+      "phone": "67064879",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 187,
+    "email": "Testing2026-09-25N102@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:04:51 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fddc7c90d5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:04:50.991Z",
+    "identity": {
+      "name": "Danilo Prueba BNS",
+      "email": "Testing2026-09-25N102@testingUtel.com",
+      "phone": "67072798",
+      "status": "success",
+      "error": "No se encontro el lead por email (Testing2026-09-25N102@testingUtel.com) en el Balanceador despues de esperar su indexacion."
+    }
+  },
+  {
+    "row": 188,
+    "email": "Testing2026-09-25N103@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:04:51 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fddcd298f5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:04:51.807Z",
+    "identity": {
+      "name": "Danilo Prueba BNT",
+      "email": "Testing2026-09-25N103@testingUtel.com",
+      "phone": "67080717",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 189,
+    "email": "Testing2026-09-25N104@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:04:52 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fddd25ab85090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:04:52.655Z",
+    "identity": {
+      "name": "Danilo Prueba BNU",
+      "email": "Testing2026-09-25N104@testingUtel.com",
+      "phone": "67088636",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 190,
+    "email": "Testing2026-09-25N105@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:04:53 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fddd78c0e5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:04:53.547Z",
+    "identity": {
+      "name": "Danilo Prueba BNV",
+      "email": "Testing2026-09-25N105@testingUtel.com",
+      "phone": "67096555",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 191,
+    "email": "Testing2026-09-25N106@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:06:10 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fdfb5cfa45090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:06:10.049Z",
+    "identity": {
+      "name": "Danilo Prueba BNW",
+      "email": "Testing2026-09-25N106@testingUtel.com",
+      "phone": "67104474",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 192,
+    "email": "Testing2026-09-25N107@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:06:11 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fdfbb289a5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:06:10.908Z",
+    "identity": {
+      "name": "Danilo Prueba BNX",
+      "email": "Testing2026-09-25N107@testingUtel.com",
+      "phone": "67112393",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 193,
+    "email": "Testing2026-09-25N108@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:06:11 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fdfc0aa085090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:06:11.753Z",
+    "identity": {
+      "name": "Danilo Prueba BNY",
+      "email": "Testing2026-09-25N108@testingUtel.com",
+      "phone": "67120312",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 194,
+    "email": "Testing2026-09-25N109@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:06:12 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fdfc5daf65090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:06:12.687Z",
+    "identity": {
+      "name": "Danilo Prueba BNZ",
+      "email": "Testing2026-09-25N109@testingUtel.com",
+      "phone": "67128231",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 195,
+    "email": "Testing2026-09-25N110@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:06:13 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fdfcbbd595090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:06:13.560Z",
+    "identity": {
+      "name": "Danilo Prueba BOA",
+      "email": "Testing2026-09-25N110@testingUtel.com",
+      "phone": "67136150",
+      "status": "failed",
+      "error": "El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    }
+  },
+  {
+    "row": 199,
+    "email": "Testing2026-09-25N113@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:07:39 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fe1e6ce085090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:07:39.827Z",
+    "identity": {
+      "name": "Danilo Prueba BOD",
+      "email": "Testing2026-09-25N113@testingUtel.com",
+      "phone": "5547159907",
+      "status": "failed",
+      "error": "El formulario no tiene un botón de envío visible."
+    }
+  },
+  {
+    "row": 200,
+    "email": "Testing2026-09-25N114@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:07:40 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fe1ec6fb35090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:07:40.721Z",
+    "identity": {
+      "name": "Danilo Prueba BOE",
+      "email": "Testing2026-09-25N114@testingUtel.com",
+      "phone": "5547167826",
+      "status": "failed",
+      "error": "El formulario no tiene un botón de envío visible."
+    }
+  },
+  {
+    "row": 201,
+    "email": "Testing2026-09-25N115@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:07:41 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fe1f1d97b5090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:07:41.541Z",
+    "identity": {
+      "name": "Danilo Prueba BOF",
+      "email": "Testing2026-09-25N115@testingUtel.com",
+      "phone": "5547175745",
+      "status": "failed",
+      "error": "El formulario no tiene un botón de envío visible."
+    }
+  },
+  {
+    "row": 202,
+    "email": "Testing2026-09-25N116@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:07:42 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fe1f70ab85090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:07:42.366Z",
+    "identity": {
+      "name": "Danilo Prueba BOG",
+      "email": "Testing2026-09-25N116@testingUtel.com",
+      "phone": "5547183664",
+      "status": "failed",
+      "error": ""
+    }
+  },
+  {
+    "row": 203,
+    "email": "Testing2026-09-25N117@testingUtel.com",
+    "status": "ERROR EXTERNO 520",
+    "detail": "Error 520 antes de mostrar el formulario. Sin envío.",
+    "evidence": "- banner:\n  - heading \"Web server is returning an unknown error Error code 520\" [level=1]:\n    - generic: Web server is returning an unknown error\n    - text: Error code 520\n  - text: Visit\n  - link \"cloudflare.com\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n  - text: for more information.\n  - generic: 2026-09-28 04:07:42 UTC\n- text: You\n- heading \"Browser\" [level=3]\n- text: Working\n- link:\n  - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Bogotá\n- heading \"Cloudflare\" [level=3]:\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx\n- text: Working\n- text: universidad.utel.edu.mx\n- heading \"Host\" [level=3]\n- text: Error\n- heading \"What happened?\" [level=2]\n- paragraph: There is an unknown connection issue between Cloudflare and the origin web server. As a result, the web page can not be displayed.\n- heading \"What can I do?\" [level=2]\n- heading \"If you are a visitor of this website:\" [level=3]\n- paragraph: Please try again in a few minutes.\n- heading \"If you are the owner of this website:\" [level=3]\n- paragraph:\n  - text: There is an issue between Cloudflare's cache and your origin web server. Cloudflare monitors for these errors and automatically investigates the cause. To help support the investigation, you can pull the corresponding error log from your web server and submit it our support team. Please include the Ray ID (which is at the bottom of this error page).\n  - link \"Additional troubleshooting resources\":\n    - /url: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/\n  - text: .\n- paragraph:\n  - text: \"Cloudflare Ray ID:\"\n  - strong: a41fe1f70ab85090\n  - text: •\n  - text: \"Your IP:\"\n  - button \"Click to reveal\"\n  - text: •\n  - text: Performance & security by\n  - link \"Cloudflare\":\n    - /url: https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_520&utm_campaign=universidad.utel.edu.mx",
+    "time": "2026-09-28T04:07:42.390Z",
+    "identity": {
+      "name": "Danilo Prueba BOH",
+      "email": "Testing2026-09-25N117@testingUtel.com",
+      "phone": "5547191583",
+      "status": "failed",
+      "error": ""
+    }
+  },
+  {
+    "row": 207,
+    "status": "SIN FORMULARIO EN ESTA URL",
+    "email": "Testing2026-09-25N118@testingUtel.com",
+    "detail": "La portada de Expansión Profesional muestra contenido y enlaces de empleabilidad, pero no un formulario de captación en la URL indicada. No se envió.",
+    "time": "2026-09-28T04:09:09.633Z",
+    "identity": {
+      "name": "Danilo Prueba BOI",
+      "email": "Testing2026-09-25N118@testingUtel.com",
+      "phone": "5547199502",
+      "status": "pending",
+      "error": "Se revisó la página Expansión Profesional. No muestra formulario de contacto utilizable en esta URL. No se realizó envío."
+    }
+  },
+  {
+    "row": 208,
+    "email": "Testing2026-09-25N119@testingUtel.com",
+    "status": "CORREO RECHAZADO POR FORMULARIO",
+    "detail": "Newsletter HubSpot. Al completar nombre y correo originales y salir del campo, muestra «Ingresa una dirección de correo válida». Persiste tras cerrar el aviso de cookies. No se pulsó Suscríbete ni se cambió el correo. La integración de este newsletter con los CRM no está confirmada.",
+    "time": "2026-09-28T04:09:53.731Z",
+    "evidence": "- list:\n  - link \"negocios Negocios \":\n    - /url: \"#\"\n    - img \"negocios\"\n    - generic: Negocios\n    - generic: \n    - text: \n  - link \"bussiness Marketing \":\n    - /url: \"#\"\n    - img \"bussiness\"\n    - generic: Marketing\n    - generic: \n    - text: \n  - link \"Vector Desarrollo personal \":\n    - /url: \"#\"\n    - img \"Vector\"\n    - generic: Desarrollo personal\n    - generic: \n    - text: \n  - link \"innova Tecnología \":\n    - /url: \"#\"\n    - img \"innova\"\n    - generic: Tecnología\n    - generic: \n    - text: \n  - link \"educacion Educación \":\n    - /url: \"#\"\n    - img \"educacion\"\n    - generic: Educación\n    - generic: \n    - text: \n- text:                \n- main:\n  - article:\n    - img \"logo-utelx(1)\"\n    - link \"Personas\":\n      - /url: https://utelx.io/personas/\n      - generic: Personas\n    - link \"Empresas\":\n      - /url: https://utelx.io/for-business/\n      - generic: Empresas\n    - region \"Carrusel de imágenes\":\n      - group \"1 de 1\":\n        - link:\n          - /url: /for-business/\n          - figure:\n            - img \"Utel-Universidad-UtelX-SitioPrincipal-Desktop-202603\"\n    - link:\n      - /url: https://ingenierosconectados.com/impulsa-tu-carrera/\n    - heading \"Nuestro contenido\" [level=2]\n    - heading \"Cursos\" [level=2]\n    - heading \"Rutas de aprendizaje\" [level=2]\n    - paragraph: Más de 2,500 cursos con metodología práctica y aplicable.\n    - link \"Ver cursos\":\n      - /url: https://utelx.io/cursos/cursos/\n      - generic: Ver cursos\n    - heading \"Nuestras Alianzas\" [level=2]\n    - paragraph: Alianzas estratégicas para la alta calidad.\n    - paragraph\n    - paragraph\n    - paragraph\n    - paragraph\n    - heading \"Suscríbete a nuestro newsletter\" [level=2]:\n      - text: Suscríbete\n      - text: a nuestro newsletter\n    - paragraph: Entérate antes que nadie de nuestros nuevos lanzamientos, recomendaciones, promociones y noticias.\n    - iframe [active] [id=\"hs-form-iframe-0\"]:\n      - textbox:\n        - /placeholder: Nombre completo:*\n      - textbox:\n        - /placeholder: Correo electrónico *\n      - alert:\n        - generic: Ingresa una dirección de correo válida.\n      - list:\n        - checkbox \"Acepto la Política de Privacidad*\" [active]\n        - text: Acepto la\n        - link \"Política de Privacidad\":\n          - /url: https://utelx.io/aviso-privacidad-usuarios-utel/\n        - text: \"*\"\n      - button \"Suscríbete\"\n      - iframe:\n        - link \"Crea tus propios formularios gratuitos para generar leads desde tu sitio web.\":\n          - /url: https://app.hubspot.com/signup-hubspot/marketing?uuid=4c58ce8e-e770-44df-8a47-e2fb6505e052&utm_medium=virality&utm_campaign=hubspot-forms-virality&intent=marketingFreeForms&hubs_id=forms-branding-control&hubs_source=utelx.io\n          - strong: Crea tus propios formularios gratuitos\n          - text: para generar leads desde tu sitio web.\n    - heading \"Beneficios\" [level=2]\n- complementary:\n  - heading \"Contáctate con nosotros\" [level=4]\n  - text: \"Escribe a:\"\n  - link \"ayuda@utelx.io\":\n    - /url: mailto:ayuda@utelx.io\n  - list:\n    - link:\n      - /url: https://www.facebook.com/UTEL.X\n    - link:\n      - /url: https://www.instagram.com/utel.x/?hl=es-la\n    - link:\n      - /url: https://www.youtube.com/@UtelX/videos\n    - link:\n      - /url: https://www.linkedin.com/company/utel-x/\n    - link:\n      - /url: https://www.tiktok.com/@utel_x\n  - heading \"Links útiles\" [level=4]\n  - list:\n    - link \"Blog\":\n      - /url: /blog/\n    - link \"Preguntas Frecuentes\":\n      - /url: /preguntas-frecuentes/\n    - link \"Política de Privacidad\":\n      - /url: /aviso-privacidad-usuarios-utel/\n    - link \"Términos y condiciones\":\n      - /url: /terminos-y-condiciones/\n- contentinfo:\n  - complementary:\n    - text: ©2026 Derechos Reservados -\n    - link \"Utel\":\n      - /url: https://utel.edu.mx/\n    - text: \"| Scala Higher Education S. C.\"\n- link:\n  - /url: \"#\"\n  - generic: \n- banner\n- generic: desktop",
+    "identity": {
+      "name": "Danilo Prueba BOJ",
+      "email": "Testing2026-09-25N119@testingUtel.com",
+      "phone": "5547207421",
+      "status": "success",
+      "error": "UTEL X muestra un formulario HubSpot de newsletter. Al llenar la identidad original aparece: Ingresa una dirección de correo válida. No se volvió a pulsar Suscríbete. La integración de este newsletter con inConcert/Balancer no está confirmada."
+    }
+  },
+  {
+    "row": 209,
+    "email": "Testing2026-09-25N120@testingUtel.com",
+    "status": "LLENADO VÁLIDO; CRM SIN CONFIRMAR",
+    "detail": "Nombre, apellidos, correo y teléfono originales completos. Programa Fundamentos de desarrollo web y privacidad seleccionados. Los cuatro campos pasan la validación HTML. El historial indica envío success, pero el correo no apareció en inConcert México ni Balancer durante esta revisión. No se repitió el envío para evitar duplicados. Se requiere confirmar la integración/destino de UCamp.",
+    "time": "2026-09-28T04:10:22.383Z",
+    "identity": {
+      "name": "Danilo Prueba BOK",
+      "email": "Testing2026-09-25N120@testingUtel.com",
+      "phone": "5547215340",
+      "status": "success",
+      "error": "UCamp: nombre Danilo, apellidos Prueba BOK, correo y teléfono originales, Fundamentos de desarrollo web y privacidad completos. Los controles pasan la validación HTML. No se repitió el envío ya registrado como success. No se encontró el correo en inConcert México ni Balancer."
+    }
+  }
+]

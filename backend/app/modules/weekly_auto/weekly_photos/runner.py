@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 
 from ....schemas.weekly_auto import WeeklyAutoConfig
 from ....services.logging_service import get_logger
+from ....services.browser_service import launch_browser
 
 
 class WeeklyAutoError(RuntimeError):
@@ -127,19 +128,9 @@ class WeeklyAutoRunner:
             browser = None
             context = None
             try:
-                if config.browser == "chrome":
-                    profile_directory = self.settings.storage_dir / "browser_profiles" / "weekly-auto-chrome"
-                    profile_directory.mkdir(parents=True, exist_ok=True)
-                    context = await playwright.chromium.launch_persistent_context(
-                        str(profile_directory),
-                        channel="chrome",
-                        headless=config.headless if not config.keep_browser_open else False,
-                        viewport={"width": config.viewport_width, "height": config.viewport_height},
-                    )
-                else:
-                    browser_type = getattr(playwright, config.browser)
-                    browser = await browser_type.launch(headless=config.headless if not config.keep_browser_open else False)
-                    context = await browser.new_context(viewport={"width": config.viewport_width, "height": config.viewport_height})
+                # Contexto temporal: no se carga ningún perfil de Chrome.
+                browser = await launch_browser(playwright, config.browser, headless=config.headless if not config.keep_browser_open else False)
+                context = await browser.new_context(viewport={"width": config.viewport_width, "height": config.viewport_height})
 
                 for index, url in enumerate(urls, start=1):
                     start = perf_counter()

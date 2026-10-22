@@ -7,7 +7,9 @@ también un Excel sencillo con una columna URL y país opcional.
 from __future__ import annotations
 
 import io
+import re
 from typing import Any
+from urllib.parse import urlparse
 
 from openpyxl import load_workbook
 
@@ -17,6 +19,25 @@ from ..weekly_forms.spreadsheet_service import WeeklyFormsSpreadsheetService
 
 class WeeklyLeadsSpreadsheetService(WeeklyFormsSpreadsheetService):
     """Reutiliza las reglas históricas y permite URLs QA sin columnas auxiliares."""
+
+    @classmethod
+    def infer_level(cls, value: str, url: str) -> str:
+        """Prioriza el nivel explícito en el slug académico de la landing.
+
+        Algunas matrices QA heredadas etiquetan todas las filas como
+        Licenciatura. En Form Validation, un slug académico inequívoco debe
+        ganar para no enviar un programa de pregrado desde una página de
+        posgrado. Weekly Forms conserva su lectura histórica de la columna.
+        """
+
+        path = urlparse(url).path.casefold()
+        if re.search(r"(?:^|/)[^/]*doctorad", path):
+            return "Doctorado"
+        if re.search(r"(?:^|/)[^/]*maestr", path):
+            return "Maestría"
+        if re.search(r"(?:^|/)[^/]*licenciatur", path):
+            return "Licenciatura"
+        return super().infer_level(value, url)
 
     # Los reportes de auditoría incluyen metadatos que no existen en la matriz
     # QA clásica. Se conservan en la fila para que el runner pueda diagnosticar

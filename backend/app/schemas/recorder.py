@@ -11,7 +11,7 @@ class RecorderStartRequest(BaseModel):
     """Datos mínimos para abrir el navegador interactivo."""
 
     url: str = Field(min_length=1, max_length=2000)
-    browser: Literal["chromium", "chrome", "firefox", "webkit"] = "chrome"
+    browser: Literal["chromium", "chrome", "chrome_incognito", "firefox", "webkit"] = "chrome"
     steps: list[BotStep] = Field(default_factory=list, max_length=100)
 
 

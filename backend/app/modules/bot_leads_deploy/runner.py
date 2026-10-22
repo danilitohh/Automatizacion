@@ -3,6 +3,7 @@
 import asyncio
 import re
 import secrets
+import sys
 import unicodedata
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime
@@ -17,6 +18,7 @@ from pydantic import SecretStr
 from ...config.settings import Settings
 from ...schemas.bot import UtelQaConfig, UtelQaStageResult
 from ...services.logging_service import get_logger
+from ...services.form_field_evidence import capture_visible_form_fields
 from ...services.doctorate_link_catalog import DoctorateLinkCatalog
 from ...services.program_rotation_service import ProgramRotationService
 from .browser_session import LeadsDeployBrowserSession
@@ -60,6 +62,10 @@ class UtelInconcertRunner:
     FORM_WAIT_TIMEOUT_MS = 30000
     FORM_RECHECK_TIMEOUT_MS = 15000
     FORM_POLL_INTERVAL_SECONDS = 0.5
+    # Cloudflare puede presentar una verificación interactiva antes de dejar
+    # montar el formulario. En modo visible esperamos a que el usuario la
+    # complete en la misma pestaña; el envío todavía no ha comenzado.
+    MANUAL_CHALLENGE_TIMEOUT_SECONDS = 300
     COUNTRY_CODES = {
         "mexico": "+52",
         "mÃ©xico": "+52",
@@ -114,6 +120,7 @@ class UtelInconcertRunner:
         self.evidence_directory: Path | None = None
         self.lead_url: str | None = None
         self.selected_program_name = ""
+        self.form_fields: list[dict[str, str]] = []
         self._selected_direct_url = ""
         self._selected_direct_page_program = ""
         self._rotation_config = None
@@ -156,6 +163,7 @@ class UtelInconcertRunner:
         self.screenshots = []
         self.lead_url = None
         self.selected_program_name = ""
+        self.form_fields = []
         self._selected_direct_url = ""
         self._selected_direct_page_program = ""
         self._rotation_config = config
@@ -231,6 +239,8 @@ class UtelInconcertRunner:
                     except UtelQaError as search_error:
                         if search_error.stage != "inconcert_search":
                             raise
+                        # La conciliación posterior conserva el error del primer CRM.
+                        await self._record_crm_search_failure(search_error, inconcert_page, 4)
                         balancer_page = await self._session_page(context, "balancer")
                         page = balancer_page
                         balancer_page.set_default_timeout(30000)
@@ -261,7 +271,15 @@ class UtelInconcertRunner:
                 await self._run_stage(2, "utel_navigation", "Modalidad, nivel y programa resueltos", utel_page, lambda: self._navigate_utel(utel_page, config))
                 self._raise_if_stop_requested(should_stop)
                 form = await self._run_stage(3, "utel_form", "Formulario identificado", utel_page, lambda: self._find_utel_form(utel_page, config))
-                await self._run_stage(4, "utel_fill", "Formulario rellenado", utel_page, lambda: self._fill_utel_form(utel_page, form, config), "02_formulario_lleno")
+                try:
+                    await self._run_stage(4, "utel_fill", "Formulario rellenado", utel_page, lambda: self._fill_utel_form(utel_page, form, config), "02_formulario_lleno")
+                finally:
+                    # También se guardan valores parciales si falla el llenado;
+                    # la captura ocurre siempre antes de cualquier envío.
+                    try:
+                        self.form_fields = await capture_visible_form_fields(form)
+                    except Exception as error:  # noqa: BLE001 - preservar el error original
+                        self.logger.warning("No se pudieron leer los campos del formulario: %s", error)
                 self._raise_if_stop_requested(should_stop)
                 if config.fill_only:
                     # El modo de inspección permite revisar visualmente cada
@@ -441,6 +459,8 @@ class UtelInconcertRunner:
                 except UtelQaError as search_error:
                     if search_error.stage != "inconcert_search":
                         raise
+                    # El respaldo no debe borrar la causa original de InConcert.
+                    await self._record_crm_search_failure(search_error, inconcert_page, 9)
                     self.logger.warning(
                         "El lead %s no apareció en InConcert; se consultará el "
                         "Balanceador como respaldo.",
@@ -532,10 +552,13 @@ class UtelInconcertRunner:
         started = perf_counter()
 
         async def search_inconcert() -> tuple[str | None, bool, float | None]:
-            page = await self._session_page(context, "inconcert")
-            page.set_default_timeout(30000)
+            page = None
             login_completed = False
             try:
+                # Incluye la creación de la pestaña: si falla antes de la primera
+                # etapa Playwright, el otro CRM debe seguir y el error debe quedar visible.
+                page = await self._session_page(context, "inconcert")
+                page.set_default_timeout(30000)
                 await self._run_stage(
                     6,
                     "inconcert_open",
@@ -582,16 +605,30 @@ class UtelInconcertRunner:
                 # el momento en que el resultado deja de ser una coincidencia
                 # provisional y puede convertirse en el enlace principal.
                 return url, True, self._inconcert_found_at or perf_counter()
-            except UtelQaError:
-                # La otra consulta continúa aunque un CRM no esté disponible.
+            except UtelRunCancelled:
+                raise
+            except UtelQaError as error:
+                # La consulta paralela no debe esconder la etapa que falló.
                 if not login_completed:
                     self.status_flags["inconcert_login"] = "failed"
+                await self._record_crm_search_failure(error, page, 6)
+                return None, False, None
+            except Exception as caught:  # noqa: BLE001 - no cancelar la consulta paralela
+                error = UtelQaError(
+                    "inconcert_search",
+                    f"No se pudo consultar InConcert: {self._friendly_error(caught)}",
+                )
+                if not login_completed:
+                    self.status_flags["inconcert_login"] = "failed"
+                await self._record_crm_search_failure(error, page, 6)
                 return None, False, None
 
         async def search_balancer() -> tuple[str | None, bool, float | None]:
-            page = await self._session_page(context, "balancer")
-            page.set_default_timeout(30000)
+            page = None
             try:
+                # Evita que un fallo al crear la pestaña quede fuera del reporte.
+                page = await self._session_page(context, "balancer")
+                page.set_default_timeout(30000)
                 await self._run_stage(
                     6,
                     "lead_balancer_search",
@@ -612,7 +649,17 @@ class UtelInconcertRunner:
                     bool(self._balancer_lead_url),
                     self._balancer_found_at or perf_counter(),
                 )
-            except UtelQaError:
+            except UtelRunCancelled:
+                raise
+            except UtelQaError as error:
+                await self._record_crm_search_failure(error, page, 6)
+                return None, False, None
+            except Exception as caught:  # noqa: BLE001 - preservar la consulta InConcert
+                error = UtelQaError(
+                    "lead_balancer_search",
+                    f"No se pudo consultar Balanceador: {self._friendly_error(caught)}",
+                )
+                await self._record_crm_search_failure(error, page, 6)
                 return None, False, None
 
         # Las dos búsquedas siguen corriendo en paralelo para conservar ambas
@@ -662,9 +709,47 @@ class UtelInconcertRunner:
             self.status_flags["utel_submission"] = "pending" if post_submit_signal else "success"
         return self._build_result(config, started_at, timer)
 
+    async def _record_crm_search_failure(
+        self,
+        error: UtelQaError,
+        page: Any | None,
+        fallback_step: int,
+    ) -> None:
+        """Conserva errores capturados dentro de gather, que no llegan a run()."""
+
+        # _run_stage ya tomó una captura cuando corresponde; los errores de
+        # apertura de sesión pueden no tenerla porque ocurren antes de esa etapa.
+        screenshot = error.screenshot
+        if not screenshot and page is not None:
+            screenshot = await self._safe_screenshot(page, f"error_{error.stage}")
+        stage_steps = {
+            "inconcert_open": 6,
+            "inconcert_login": 7,
+            "inconcert_contacts": 8,
+            "inconcert_search": 9,
+            "inconcert_manage": 10,
+            "lead_balancer_search": 6,
+        }
+        self._append_failed_stage(
+            stage_steps.get(error.stage, fallback_step),
+            error,
+            error.url or (getattr(page, "url", None) if page is not None else None),
+            screenshot,
+        )
+
     def _build_result(self, config: UtelQaConfig, started_at: str, timer: float) -> dict[str, Any]:
         failed = any(stage.status == "FAIL" for stage in self.stage_results)
         crm_found = bool(self._inconcert_lead_url or self._balancer_lead_url)
+        # En una ejecución real, el envío sin enlace de CRM confirmado no es un
+        # éxito; evita falsos PASS si una excepción quedó fuera del registro normal.
+        if (
+            config.workflow_mode == "form_validation"
+            and not config.fill_only
+            and not config.dry_run
+            and not crm_found
+            and self.status_flags.get("lead_found") == "failed"
+        ):
+            failed = True
         only_crm_failure = failed and all(
             stage.stage.startswith(("inconcert_", "lead_balancer_"))
             for stage in self.stage_results
@@ -678,6 +763,12 @@ class UtelInconcertRunner:
         if config.workflow_mode == "form_validation":
             if config.fill_only and not failed:
                 summary = "Formulario rellenado correctamente; el envio se omitio por modo solo llenado."
+            elif self.status_flags.get("lead_found") == "failed" and not crm_found:
+                summary = (
+                    "Formulario enviado, pero el lead no se encontró ni se pudo verificar "
+                    "en InConcert o Balanceador. Revisa ambos CRM antes de reintentar; "
+                    "el formulario no se reenvió."
+                )
             elif failed:
                 summary = "La validacion del formulario o del lead fallo en una etapa."
             elif self._inconcert_lead_url and self._balancer_lead_url:
@@ -688,10 +779,8 @@ class UtelInconcertRunner:
                 )
             elif self._balancer_lead_url:
                 summary = "Formulario enviado y lead verificado en Balancer; no confirmado en InConcert."
-            elif self.status_flags.get("lead_source") == "balanceador":
-                summary = "Formulario enviado y enlace del lead verificado en el Balanceador."
             else:
-                summary = "Formulario enviado y enlace del lead verificado en InConcert."
+                summary = "Formulario enviado; la verificación del lead sigue pendiente."
         else:
             if failed:
                 summary = "El flujo UTEL/InConcert fallo en una etapa."
@@ -717,7 +806,11 @@ class UtelInconcertRunner:
             if found_balancer
             else ""
         )
-        failure = next((stage.message for stage in self.stage_results if stage.status == "FAIL"), "")
+        # Conservar cada sistema/etapa, incluso si el otro CRM sí encuentra el lead.
+        failure = " | ".join(dict.fromkeys(
+            f"[{stage.stage}] {stage.message}"
+            for stage in self.stage_results if stage.status == "FAIL"
+        ))
         return {
             "status": "FAIL" if failed else "PASS",
             "summary": summary,
@@ -733,6 +826,7 @@ class UtelInconcertRunner:
             "lead_phone": config.lead.phone,
             "utel_submission_attempted": self._submission_attempted,
             "selected_program_name": self.selected_program_name,
+            "form_fields": self.form_fields,
             "program_selection_notice": self.program_selection_notice,
             "lead_url": self.lead_url,
             "first_crm_source": self._first_crm_source,
@@ -1083,12 +1177,12 @@ class UtelInconcertRunner:
         if actual_tokens == expected_tokens:
             return True
 
-        # Algunas PDP publican una preposición editorial distinta a la del
-        # catálogo (por ejemplo, ``Instituciones de Salud`` frente a
-        # ``Instituciones en Salud``). Conservamos todas las palabras de
-        # contenido y toleramos únicamente esta sustitución de preposiciones,
-        # sin convertir la validación en una coincidencia por subconjunto.
-        editorial_prepositions = {"de", "en", "del"}
+        # Algunas PDP publican una preposición o conjunción editorial distinta
+        # a la del catálogo (p. ej. ``Dirección e Ingeniería`` frente a
+        # ``Dirección en Ingeniería``). Conservamos todas las palabras de
+        # contenido y toleramos únicamente esta sustitución, sin convertir la
+        # validación en una coincidencia por subconjunto.
+        editorial_prepositions = {"de", "en", "del", "e"}
         editorial_actual = [
             "_prep" if token in editorial_prepositions else token
             for token in actual_tokens
@@ -1296,8 +1390,77 @@ class UtelInconcertRunner:
         if await heading.count():
             self.selected_program_name = (await heading.inner_text()).strip()
 
+    async def _wait_for_manual_challenge(self, page: Any) -> bool:
+        """Espera una verificación Cloudflare en la misma ventana visible.
+
+        La espera solo se activa para una pantalla de desafío interactivo. La
+        página de bloqueo permanente («You have been blocked») sigue fallando
+        de inmediato porque no ofrece una acción que el usuario pueda completar
+        desde el navegador del bot.
+        """
+
+        try:
+            title = await page.title()
+        except Exception:
+            title = ""
+        try:
+            text = await page.locator("body").inner_text(timeout=5000)
+        except Exception:
+            text = ""
+        challenge_markers = (
+            "__cf_chl",
+            "cdn-cgi/challenge",
+            "just a moment",
+            "verify you are human",
+            "checking your browser",
+            "verificación de seguridad en curso",
+        )
+        searchable = f"{page.url} {title} {text}".casefold()
+        if not any(marker in searchable for marker in challenge_markers):
+            return False
+
+        await self._show_active_page(page)
+        self.logger.warning(
+            "Cloudflare solicita verificación manual en UTEL. "
+            "Completa la verificación en la ventana visible; el bot esperará hasta %s minutos.",
+            self.MANUAL_CHALLENGE_TIMEOUT_SECONDS // 60,
+        )
+        try:
+            await page.wait_for_function(
+                """(markers) => {
+                    const text = `${document.title} ${document.body?.innerText || ''}`.toLowerCase();
+                    const url = location.href.toLowerCase();
+                    return !markers.some(marker => text.includes(marker) || url.includes(marker));
+                }""",
+                arg=[*challenge_markers],
+                timeout=self.MANUAL_CHALLENGE_TIMEOUT_SECONDS * 1000,
+                polling=1000,
+            )
+        except Exception as error:
+            raise UtelQaError(
+                "utel_access",
+                "La verificación manual de Cloudflare no se completó dentro del tiempo permitido. "
+                "No se envió el formulario.",
+                "body",
+            ) from error
+        self.logger.info("Verificación manual de Cloudflare completada; continuando con UTEL.")
+        return True
+
     async def _check_access(self, page: Any) -> None:
+        await self._wait_for_manual_challenge(page)
         text = await page.locator("body").inner_text(timeout=12000)
+        # Un fallo del origen no es un formulario ausente ni prueba de antibot.
+        origin_error = re.search(r"Error code\s+(52[0-6])\b", text, re.I)
+        if origin_error and "cloudflare" in text.lower():
+            ray = re.search(r"Cloudflare Ray ID:\s*([a-f0-9]+)", text, re.I)
+            diagnostic = f" Ray ID: {ray.group(1)}." if ray else ""
+            raise UtelQaError(
+                "utel_access",
+                f"HTTP {origin_error.group(1)}: Cloudflare reportó un fallo del servidor de origen. "
+                "No se cargó el formulario ni se realizó un envío; no implica un bloqueo antibot."
+                + diagnostic,
+                "body",
+            )
         if re.search(r"sorry,?\s+you have been blocked|you are unable to access", text, re.I):
             raise UtelQaError(
                 "utel_access", "El sitio bloqueo el acceso de esta sesion. No se envio el formulario. "
@@ -1313,7 +1476,12 @@ class UtelInconcertRunner:
             # Colombia). Se distingue por su contenedor y sus tres campos
             # académicos/contacto, excluyendo TarjetaBLC y LateralBLC.
             selector = ", ".join(
-                part.strip() + ':has([data-cy="productsInput"]):has([data-cy="emailInput"]):has([data-cy="telephoneInput"])'
+                part.strip()
+                + (
+                    ""
+                    if part.strip() == f"#{form_id}"
+                    else ':has([data-cy="productsInput"]):has([data-cy="emailInput"]):has([data-cy="telephoneInput"])'
+                )
                 for part in (
                     f"#{form_id}",
                     '.form-container-config-chakra-config form:not([id])',
@@ -1377,13 +1545,41 @@ class UtelInconcertRunner:
             # Solo el footer requiere ser llevado a la zona inferior. La tarjeta
             # aparece en el hero de la PDP y hacer scroll allí puede fallar
             # mientras React termina de estabilizar la página.
-            await self._position_footer_form(form)
-            await asyncio.sleep(2)
-            refreshed_form, refreshed_count = await self._wait_for_visible_form(
-                page,
-                selector,
-                timeout_ms=self.FORM_RECHECK_TIMEOUT_MS,
-            )
+            refreshed_form = None
+            refreshed_count = 0
+            for settle_attempt in range(3):
+                if form is None:
+                    form, _ = await self._wait_for_visible_form(
+                        page,
+                        selector,
+                        timeout_ms=self.FORM_RECHECK_TIMEOUT_MS,
+                    )
+                    if form is None:
+                        if settle_attempt < 2:
+                            await self._activate_footer_zone(page, selector)
+                        continue
+                await self._position_footer_form(form)
+                await asyncio.sleep(1.2)
+                refreshed_form, refreshed_count = await self._wait_for_visible_form(
+                    page,
+                    selector,
+                    timeout_ms=self.FORM_RECHECK_TIMEOUT_MS,
+                )
+                if refreshed_form is not None:
+                    form = refreshed_form
+                    break
+                # React puede desmontar FooterBLC justo al entrar en viewport.
+                # Reactivarlo una vez más evita clasificar ese remontaje como
+                # formulario ausente, sin relajar la validación de visibilidad.
+                if settle_attempt < 2:
+                    await self._activate_footer_zone(page, selector)
+                    form, _ = await self._wait_for_visible_form(
+                        page,
+                        selector,
+                        timeout_ms=self.FORM_RECHECK_TIMEOUT_MS,
+                    )
+                    if form is None:
+                        continue
             if refreshed_form is None:
                 state = "existe, pero dejo de estar visible" if refreshed_count else "desaparecio del DOM"
                 raise UtelQaError(
@@ -1391,7 +1587,6 @@ class UtelInconcertRunner:
                     f"El formulario {form_id} {state} despues de activar el contenido de la pagina.",
                     selector,
                 )
-            form = refreshed_form
             await self._position_footer_form(form)
         return form
 
@@ -1420,10 +1615,10 @@ class UtelInconcertRunner:
         """Activa el lazy loading del footer sin depender de un id concreto."""
 
         try:
-            if await page.locator(selector).count():
+            if await page.locator(selector).filter(visible=True).count():
                 return
             for _ in range(12):
-                if await page.locator(selector).count():
+                if await page.locator(selector).filter(visible=True).count():
                     return
                 await page.evaluate("window.scrollBy(0, Math.max(500, Math.floor(innerHeight * 0.85)))")
                 await asyncio.sleep(0.35)
@@ -2133,6 +2328,22 @@ class UtelInconcertRunner:
                 # El request puede haberse emitido justo antes de que Playwright
                 # reportara un cambio de página o de nodo; se comprueba antes de fallar.
                 click_error = error
+                if not api_request.done():
+                    # Algunas PDP remontan el botón durante el scroll y Playwright
+                    # puede conservar la geometría anterior. Se reposiciona una vez
+                    # y se reintenta sobre el mismo nodo; solo si tampoco funciona
+                    # se usa el click DOM normal de la propia página.
+                    try:
+                        await submit.evaluate(
+                            "element => element.scrollIntoView({block: 'center', inline: 'center'})"
+                        )
+                        await asyncio.sleep(0.4)
+                        await submit.click(force=True, timeout=12000)
+                    except Exception as retry_error:
+                        click_error = retry_error
+                        if not api_request.done():
+                            with suppress(Exception):
+                                await submit.evaluate("element => element.click()")
 
             request_deadline = perf_counter() + 15
             while not api_request.done():
@@ -2180,9 +2391,8 @@ class UtelInconcertRunner:
 
             if api_response in done:
                 response = api_response.result()
-                # Un HTTP 500 puede llegar antes que el toast que explica el
-                # rechazo real. Dar una breve ventana al feedback visible evita
-                # clasificar "Contacta a soporte" como pendiente y abrir CRM.
+                # Adjuntar el toast al diagnóstico; un HTTP 5xx sigue siendo
+                # incierto aunque diga soporte, porque puede haber creado el lead.
                 if not feedback_task.done():
                     with suppress(Exception):
                         await asyncio.wait_for(asyncio.shield(feedback_task), timeout=2)
@@ -2214,7 +2424,12 @@ class UtelInconcertRunner:
                 if response is not None:
                     await self._classify_utel_api_response(response, text)
                     return
-                raise RejectedSubmission(
+                signal = (
+                    UnconfirmedSubmission
+                    if self._is_explicit_submit_rejection(text)
+                    else RejectedSubmission
+                )
+                raise signal(
                     "utel_submit",
                     f"UTEL mostró un aviso después del POST: {text}",
                 )
@@ -2348,17 +2563,20 @@ class UtelInconcertRunner:
                     "telefono_presente": bool(inputs.get("phone")),
                 }
                 suffix += f" Datos técnicos: {metadata}."
+        # Un fallo de servidor o un toast genérico con respuesta exitosa no
+        # demuestra rechazo: conciliar la misma identidad antes de otro envío.
+        if status >= 500 or status == 0 or (status < 400 and rejected):
+            notice = " Aviso visible: Error al enviar / Contacta a soporte." if rejected else ""
+            raise UnconfirmedSubmission(
+                "utel_submit",
+                f"UTEL devolvió HTTP {status or 'desconocido'} en POST /api/forms. "
+                f"Se verificará en CRM porque el lead podría haberse enviado.{notice}{suffix}",
+            )
         if rejected:
             raise RejectedSubmission(
                 "utel_submit",
                 f"UTEL mostró Error al enviar / Contacta a soporte. "
                 f"POST /api/forms: HTTP {status}.{suffix}",
-            )
-        if status >= 500:
-            raise UnconfirmedSubmission(
-                "utel_submit",
-                f"UTEL devolvió HTTP {status or 'desconocido'} en POST /api/forms. "
-                f"Se verificará en CRM porque el lead podría haberse enviado.{suffix}",
             )
         raise RejectedSubmission(
             "utel_submit",
@@ -2521,11 +2739,42 @@ class UtelInconcertRunner:
             await user_field.wait_for(state="visible", timeout=60000)
             await user_field.fill(username)
             await password_field.fill(password)
-            await page.locator('button[type="submit"]').first.click()
+            submit = page.locator('button[type="submit"]:visible').first
+            auth_response = None
+            # El formulario de InConcert responde con ``401`` sin navegar cuando
+            # el usuario no pertenece al tenant regional. Capturarlo evita
+            # esperar 60 segundos y deja una causa accionable en Weekly Forms.
+            # Los mocks de las pruebas no exponen ``expect_response``; en ellos
+            # se conserva el click histórico sin tocar sus contratos.
+            if page.__class__.__module__.startswith("playwright."):
+                clicked = False
+                try:
+                    async with page.expect_response(
+                        lambda response: response.request.method == "POST"
+                        and response.url.rstrip("/").endswith("/auth/login"),
+                        timeout=30000,
+                    ) as response_info:
+                        clicked = True
+                        await submit.click()
+                    auth_response = await response_info.value
+                except Exception:
+                    if not clicked:
+                        raise
+            else:
+                await submit.click()
+            if auth_response is not None and auth_response.status in {401, 403}:
+                tenant = self._crm_origin or f"{current.scheme}://{current.netloc}"
+                raise UtelQaError(
+                    "inconcert_login",
+                    f"InConcert rechazó las credenciales para {tenant} (HTTP {auth_response.status}). "
+                    "Configura el usuario y contraseña autorizados para ese CRM regional.",
+                )
             await page.wait_for_url(self._is_crm_route, timeout=60000)
             await password_field.wait_for(state="hidden", timeout=10000)
             if not self._is_crm_route(page.url) or await self._is_inconcert_login(page):
                 raise RuntimeError("La sesion no quedo establecida")
+        except UtelQaError:
+            raise
         except Exception as error:
             # No incluir excepciones de fill: pueden contener credenciales.
             raise UtelQaError(
@@ -2688,6 +2937,21 @@ class UtelInconcertRunner:
         response = None
         if not await self._balancer_list_ready(page, base_url):
             response = await page.goto(base_url, wait_until="domcontentloaded", timeout=60000)
+        try:
+            balancer_text = await page.locator("body").inner_text(timeout=5000)
+        except Exception:
+            balancer_text = ""
+        if re.search(
+            r"verificaci[oó]n de seguridad en curso|verify you are human|checking your browser",
+            balancer_text,
+            re.I,
+        ):
+            raise UtelQaError(
+                "lead_balancer_search",
+                "El Balanceador está detenido en la verificación de seguridad de Cloudflare. "
+                "Completa la casilla en un navegador visible y vuelve a ejecutar solo la "
+                "verificación CRM; no se reenviará UTEL.",
+            )
         challenge_detected = (
             (response is not None and response.status in {401, 403})
             or "__cf_chl" in page.url
@@ -2695,7 +2959,7 @@ class UtelInconcertRunner:
         challenge_resolved = not challenge_detected
         if challenge_detected:
             # En Chrome visible, Cloudflare puede completar su comprobación y
-            # guardar la autorización en el perfil QA. Se espera una sola vez
+            # conservar la autorización en la sesión actual. Se espera una sola vez
             # antes de clasificar el acceso como bloqueo temporal.
             deadline = perf_counter() + 45
             while perf_counter() < deadline:
@@ -2995,13 +3259,20 @@ class UtelInconcertRunner:
         self._balancer_found_at = perf_counter()
 
     async def _apply_contact_search(self, page: Any, filter_name: str, value: str) -> None:
+        """Confirma el filtro activo antes de buscar, tolerando iconos decorativos."""
+
         search_input = await self._resolve_inconcert_search_input(page)
         if search_input is None:
             raise UtelQaError("inconcert_search", "No se pudo ubicar el campo de busqueda en InConcert.")
         filter_container = search_input.locator("xpath=ancestor::div[contains(@class,'input-group')][1]")
+        # Algunos tenants incluyen caracteres de FontAwesome en innerText.
+        # No deben confundirse con parte de la etiqueta ni ampliar la búsqueda.
+        decoration = r"[\s\ue000-\uf8ff▾▼⌄]*"
+        filter_pattern = re.compile(rf"^{decoration}(Nombre|Email){decoration}$", re.I)
+        desired_pattern = re.compile(rf"^{decoration}{re.escape(filter_name)}{decoration}$", re.I)
         filter_button = filter_container.locator(
             "button:visible, [role='button']:visible, .dropdown-toggle:visible"
-        ).filter(has_text=re.compile(r"^\s*(Nombre|Email)\s*$", re.I)).first
+        ).filter(has_text=filter_pattern).first
         if not await self._locator_count(filter_button, timeout_ms=1200):
             # El tenant Singapur separa visualmente el botón y el input sin un
             # ancestro .input-group compartido y no siempre usa la clase
@@ -3009,7 +3280,7 @@ class UtelInconcertRunner:
             filter_button = page.locator(
                 "button:visible, [role='button']:visible, .dropdown-toggle:visible"
             ).filter(
-                has_text=re.compile(r"^\s*(Nombre|Email)\s*$", re.I)
+                has_text=filter_pattern
             ).first
         current_filter = ""
         if await self._locator_count(filter_button, timeout_ms=1200) > 0:
@@ -3019,34 +3290,48 @@ class UtelInconcertRunner:
                 current_filter = self._normalize(await filter_button.inner_text(timeout=1000))
             except Exception:
                 current_filter = ""
-            desired_filter = self._normalize(filter_name)
-            if current_filter != desired_filter:
+            if not desired_pattern.fullmatch(current_filter):
                 await filter_button.click(force=True)
-                selected_filter = False
+                # Esperar el menú: contar opciones inmediatamente tras el clic
+                # pierde las listas que Angular renderiza de forma asíncrona.
                 options = page.locator(
                     ".dropdown-menu:visible a, .dropdown-menu:visible button, "
+                    ".dropdown-menu:visible li, .dropdown-menu:visible span, "
                     "[role='menu']:visible [role='menuitem'], "
+                    "[role='listbox']:visible [role='option'], "
                     "a.dropdown-item:visible, button.dropdown-item:visible, "
                     "li:visible a, li:visible button"
-                )
-                for index in range(await options.count()):
-                    option = options.nth(index)
-                    try:
-                        if self._normalize((await option.inner_text()).strip()) == desired_filter:
-                            await option.click(force=True)
-                            selected_filter = True
-                            break
-                    except Exception:
-                        continue
-                if not selected_filter:
-                    close_button = page.locator("button[title='Cerrar']").first
-                    if await self._locator_count(close_button, timeout_ms=1200):
-                        await close_button.click(force=True)
+                ).filter(has_text=desired_pattern)
+                try:
+                    await options.first.wait_for(state="visible", timeout=5000)
+                    await options.first.click(timeout=5000)
+                except Exception as error:
+                    # Algunos tenants renderizan cada opción como texto directo
+                    # dentro de un contenedor sin las clases del dropdown.
+                    # Buscar el nodo de texto exacto evita volver al filtro Nombre.
+                    exact_options = page.locator(
+                        f"xpath=//*[normalize-space(text())='{filter_name}']"
+                    )
+                    clicked_exact = False
+                    for option_index in range(await exact_options.count()):
+                        candidate = exact_options.nth(option_index)
+                        try:
+                            if await candidate.is_visible():
+                                await candidate.click(force=True, timeout=5000)
+                                clicked_exact = True
+                                break
+                        except Exception:
+                            continue
+                    if not clicked_exact:
+                        raise UtelQaError(
+                            "inconcert_search",
+                            f"InConcert no permitió seleccionar '{filter_name}' en el menú. No se ejecutó una búsqueda ambigua.",
+                        ) from error
                 filter_changed = False
                 deadline = perf_counter() + 5
                 while perf_counter() < deadline:
                     try:
-                        if self._normalize(await filter_button.inner_text()) == desired_filter:
+                        if desired_pattern.fullmatch((await filter_button.inner_text()).strip()):
                             filter_changed = True
                             break
                     except Exception:
@@ -3069,18 +3354,34 @@ class UtelInconcertRunner:
         grouped_input = filter_container.locator("input:visible").first
         if await self._locator_count(grouped_input, timeout_ms=1200):
             search_input = grouped_input
-        await search_input.click(force=True)
-        await search_input.press("Control+A")
-        await search_input.press("Backspace")
-        # Este campo de InConcert conserva un modelo Angular distinto del valor
-        # DOM cuando se usa fill() sobre una búsqueda previa. La escritura
-        # secuencial reproduce el evento de teclado que actualiza ambos.
-        await search_input.press_sequentially(value, delay=15)
-        try:
-            await search_input.press("Tab")
-        except Exception:
-            pass
-        typed_value = (await search_input.input_value()).strip()
+        select_all_shortcut = "Meta+A" if sys.platform == "darwin" else "Control+A"
+        typed_value = ""
+        # InConcert remonta el campo mediante Angular. Escribir a 15 ms por
+        # carácter puede perder teclas durante ese render, aunque Playwright
+        # haya terminado la secuencia. Escribimos más despacio y verificamos el
+        # valor final; si no coincide, limpiamos y hacemos un segundo intento.
+        for attempt, typing_delay in enumerate((60, 120)):
+            if attempt:
+                search_input = await self._resolve_inconcert_search_input(page)
+                if search_input is None:
+                    raise UtelQaError(
+                        "inconcert_search",
+                        "El campo de búsqueda desapareció antes de reintentar el correo.",
+                    )
+                grouped_input = filter_container.locator("input:visible").first
+                if await self._locator_count(grouped_input, timeout_ms=1200):
+                    search_input = grouped_input
+            await search_input.click(force=True)
+            await search_input.press(select_all_shortcut)
+            await search_input.press("Backspace")
+            await search_input.press_sequentially(value, delay=typing_delay)
+            try:
+                await search_input.press("Tab")
+            except Exception:
+                pass
+            typed_value = (await search_input.input_value()).strip()
+            if typed_value.casefold() == value.strip().casefold():
+                break
         if typed_value.casefold() != value.strip().casefold():
             raise UtelQaError(
                 "inconcert_search",
@@ -3143,7 +3444,14 @@ class UtelInconcertRunner:
             cells = row.locator("td")
             for cell_index in range(await cells.count()):
                 cell_text = self._normalize((await cells.nth(cell_index).inner_text()).strip()).strip(" .")
-                if cell_text == expected:
+                # Algunos tenants renderizan en la misma celda el texto del
+                # enlace y su etiqueta accesible, duplicando el nombre exacto.
+                # Aceptar solo repeticiones completas evita confundir nombres
+                # parecidos o filas de otros contactos.
+                repeated_name = expected and re.fullmatch(
+                    rf"(?:{re.escape(expected)}\s*)+", cell_text
+                )
+                if cell_text == expected or repeated_name:
                     matching_rows.append(row)
                     break
         return matching_rows
@@ -3710,9 +4018,21 @@ class UtelInconcertRunner:
         raise UtelQaError("utel_fill", f"No se encontro campo para completar el valor requerido.", ", ".join(selectors))
 
     async def _set_country_if_possible(self, form: Any, country: str) -> None:
-        field = form.locator('[data-cy="countryCallingCode"]').first
-        if not await field.count():
-            return
+        """Alinea país de residencia e indicativo con la fila antes del envío."""
+
+        # Las landings Global incluyen ambos controles. Cambiar primero el
+        # país de residencia evita conservar el indicativo de otro mercado.
+        for selector in (
+            'select[name="paisesPIVI"], select[id="paisesPIVI"]',
+            '[data-cy="countryCallingCode"]',
+        ):
+            field = form.locator(selector).first
+            if await field.count() and await field.is_visible():
+                await self._set_country_select(field, country, selector)
+
+    async def _set_country_select(self, field: Any, country: str, selector: str) -> None:
+        """Selecciona el país esperado o falla si la landing lo impide."""
+
         normalized_country = self._normalize(country)
         aliases = self.COUNTRY_OPTION_ALIASES.get(normalized_country, (normalized_country,))
         code = self.COUNTRY_CODES.get(normalized_country, "")
@@ -3721,7 +4041,7 @@ class UtelInconcertRunner:
             raise UtelQaError(
                 "utel_fill",
                 f"El selector de país cambió de formato y no se puede validar de forma segura ({country}, {code}).",
-                '[data-cy="countryCallingCode"]',
+                selector,
             )
 
         # Algunas variantes de la página cargan las opciones después de montar
@@ -3753,20 +4073,17 @@ class UtelInconcertRunner:
             raise UtelQaError(
                 "utel_fill",
                 f"El formulario no ofrece el país requerido: {country}.",
-                '[data-cy="countryCallingCode"]',
+                selector,
             )
 
         current = self._normalize(await field.input_value())
         expected = self._normalize(selected["value"])
-        if current and current != expected:
-            self.logger.info("País ya preseleccionado (%s); se conserva.", current)
-            return
         if current != expected:
             if await field.is_disabled():
                 raise UtelQaError(
                     "utel_fill",
                     f"El formulario fijó el país '{current}' y no permite cambiarlo a '{country}'.",
-                    '[data-cy="countryCallingCode"]',
+                    selector,
                 )
             await field.select_option(value=selected["value"])
             await asyncio.sleep(0.3)
@@ -3776,7 +4093,7 @@ class UtelInconcertRunner:
             raise UtelQaError(
                 "utel_fill",
                 f"No se pudo confirmar el país {country} antes de enviar el formulario.",
-                '[data-cy="countryCallingCode"]',
+                selector,
             )
 
     def _country_option_matches(self, alias: str, option_label: str) -> bool:

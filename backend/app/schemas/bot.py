@@ -34,7 +34,7 @@ class BotConfig(BaseModel):
 
     name: str = Field(min_length=1, max_length=120)
     url: str = Field(min_length=1, max_length=2000)
-    browser: Literal["chromium", "chrome", "firefox", "webkit"] = "chromium"
+    browser: Literal["chromium", "chrome", "chrome_incognito", "firefox", "webkit"] = "chrome"
     headless: bool = True
     keep_browser_open: bool = False
     steps: list[BotStep] = Field(min_length=1, max_length=100)
@@ -93,6 +93,7 @@ class UtelLead(BaseModel):
     name: str = Field(default="pending", min_length=1, max_length=160)
     email: str = Field(default="pending@testingUtel.com", min_length=3, max_length=254)
     phone: str = Field(default="900000000", min_length=5, max_length=30)
+    document_number: str = Field(default="", max_length=80)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -139,7 +140,7 @@ class UtelQaConfig(BaseModel):
     program_name: str = Field(default="", max_length=180)
     submit_success_pattern: str = Field(default="Env\u00edo correcto|Pronto recibir\u00e1s informaci\u00f3n", max_length=240)
     submit_error_pattern: str = Field(default="Error al enviar|Contacta a soporte|error|invalido|inválido|obligatorio|requerido|fall", max_length=240)
-    browser: Literal["chromium", "chrome", "firefox", "webkit"] = "chromium"
+    browser: Literal["chromium", "chrome", "chrome_incognito", "firefox", "webkit"] = "chrome"
     headless: bool = True
     keep_browser_open: bool = False
     workflow_mode: Literal["product_release", "form_validation"] = "product_release"

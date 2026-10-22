@@ -11,6 +11,7 @@ from typing import Any
 from ...config.settings import Settings
 from ...schemas.bot import BotConfig, BotStep, BotStepResult
 from ...services.logging_service import get_logger
+from ...services.browser_service import launch_browser
 
 
 class BotRunner:
@@ -101,20 +102,8 @@ class BotRunner:
                 browser = None
                 context = None
                 launch_headless = True
-                if config.browser == "chrome":
-                    # Usamos una carpeta propia para no tocar el perfil personal
-                    # de Chrome ni provocar conflictos con una ventana abierta.
-                    profile_directory = self.settings.storage_dir / "browser_profiles" / "chrome-qa"
-                    profile_directory.mkdir(parents=True, exist_ok=True)
-                    context = await playwright.chromium.launch_persistent_context(
-                        str(profile_directory),
-                        channel="chrome",
-                        headless=launch_headless,
-                        viewport={"width": 1440, "height": 900},
-                    )
-                else:
-                    browser_type = getattr(playwright, config.browser)
-                    browser = await browser_type.launch(headless=launch_headless)
+                # Contexto temporal: no se carga ningún perfil de Chrome.
+                browser = await launch_browser(playwright, config.browser, headless=launch_headless)
                 try:
                     if context is None:
                         context = await browser.new_context(viewport={"width": 1440, "height": 900})

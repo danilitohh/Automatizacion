@@ -1,0 +1,3436 @@
+{
+  "input": "C:/Users/danil/Downloads/300bf37145c44a2c871dc6d9950071b1_leadsQA_sin_URL_LEAD (1).xlsx",
+  "recovered": [
+    {
+      "email": "Testing2026-09-25N16@testingUtel.com",
+      "name": "Danilo Prueba BKK",
+      "source": "balancer",
+      "url": "https://lead-balancer.scalahed.com/leads/detail/3229190"
+    },
+    {
+      "email": "Testing2026-09-25N19@testingUtel.com",
+      "name": "Danilo Prueba BKN",
+      "source": "balancer",
+      "url": "https://lead-balancer.scalahed.com/leads/detail/3229193"
+    },
+    {
+      "email": "Testing2026-09-25N21@testingUtel.com",
+      "name": "Danilo Prueba BKP",
+      "source": "inconcert",
+      "url": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159600"
+    },
+    {
+      "email": "Testing2026-09-25N22@testingUtel.com",
+      "name": "Danilo Prueba BKQ",
+      "source": "inconcert",
+      "url": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159601"
+    },
+    {
+      "email": "Testing2026-09-25N23@testingUtel.com",
+      "name": "Danilo Prueba BKR",
+      "source": "inconcert",
+      "url": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159602"
+    },
+    {
+      "email": "Testing2026-09-25N26@testingUtel.com",
+      "name": "Danilo Prueba BKU",
+      "source": "inconcert",
+      "url": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159603"
+    },
+    {
+      "email": "Testing2026-09-25N27@testingUtel.com",
+      "name": "Danilo Prueba BKV",
+      "source": "inconcert",
+      "url": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159604"
+    },
+    {
+      "n": 13,
+      "name": "Danilo Prueba BKH",
+      "url": "https://mas-utel.inconcertcc.com/mas/contact/people/view/14555414",
+      "email": "Testing2026-09-25N13@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 38,
+      "name": "Danilo Prueba BLG",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081513",
+      "email": "Testing2026-09-25N38@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 39,
+      "name": "Danilo Prueba BLH",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081516",
+      "email": "Testing2026-09-25N39@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 40,
+      "name": "Danilo Prueba BLI",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081520",
+      "email": "Testing2026-09-25N40@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 41,
+      "name": "Danilo Prueba BLJ",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081521",
+      "email": "Testing2026-09-25N41@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 43,
+      "name": "Danilo Prueba BLL",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081524",
+      "email": "Testing2026-09-25N43@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 45,
+      "name": "Danilo Prueba BLN",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081526",
+      "email": "Testing2026-09-25N45@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 47,
+      "name": "Danilo Prueba BLP",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081529",
+      "email": "Testing2026-09-25N47@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 48,
+      "name": "Danilo Prueba BLQ",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081531",
+      "email": "Testing2026-09-25N48@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 49,
+      "name": "Danilo Prueba BLR",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081533",
+      "email": "Testing2026-09-25N49@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 50,
+      "name": "Danilo Prueba BLS",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081544",
+      "email": "Testing2026-09-25N50@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 52,
+      "name": "Danilo Prueba BLU",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081549",
+      "email": "Testing2026-09-25N52@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 53,
+      "name": "Danilo Prueba BLV",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081551",
+      "email": "Testing2026-09-25N53@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 34,
+      "name": "Danilo Prueba BLC",
+      "url": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4082891",
+      "submitted": true,
+      "document": "QA-20260927-000034",
+      "email": "Testing2026-09-25N34@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 55,
+      "name": "Danilo Prueba BLX",
+      "url": "https://mas-utel-pe.inconcertcc.com/mas/contact/people/view/4032840",
+      "submitted": true,
+      "program": "Administración de Recursos Humanos",
+      "balancer": "https://lead-balancer.scalahed.com/leads/detail/3234902",
+      "email": "Testing2026-09-25N55@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 57,
+      "name": "Danilo Prueba BLZ",
+      "url": "https://mas-utel-pe.inconcertcc.com/mas/contact/people/view/4032839",
+      "submitted": true,
+      "program": "Pedagogía",
+      "balancer": "https://lead-balancer.scalahed.com/leads/detail/3234908",
+      "email": "Testing2026-09-25N57@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 71,
+      "name": "Danilo Prueba BMN",
+      "url": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607610",
+      "email": "Testing2026-09-25N71@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 70,
+      "name": "Danilo Prueba BMM",
+      "url": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607609",
+      "email": "Testing2026-09-25N70@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 69,
+      "name": "Danilo Prueba BML",
+      "url": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607608",
+      "email": "Testing2026-09-25N69@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 68,
+      "name": "Danilo Prueba BMK",
+      "url": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607606",
+      "email": "Testing2026-09-25N68@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 66,
+      "name": "Danilo Prueba BMI",
+      "url": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607604",
+      "email": "Testing2026-09-25N66@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 62,
+      "name": "Danilo Prueba BME",
+      "url": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607603",
+      "email": "Testing2026-09-25N62@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 61,
+      "name": "Danilo Prueba BMD",
+      "url": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607601",
+      "email": "Testing2026-09-25N61@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 60,
+      "name": "Danilo Prueba BMC",
+      "url": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607600",
+      "email": "Testing2026-09-25N60@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 59,
+      "name": "Danilo Prueba BMB",
+      "url": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607598",
+      "email": "Testing2026-09-25N59@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 58,
+      "name": "Danilo Prueba BMA",
+      "url": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607597",
+      "email": "Testing2026-09-25N58@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 100,
+      "name": "Danilo Prueba BNQ",
+      "url": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411386",
+      "email": "Testing2026-09-25N100@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 99,
+      "name": "Danilo Prueba BNP",
+      "url": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411385",
+      "email": "Testing2026-09-25N99@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 98,
+      "name": "Danilo Prueba BNO",
+      "url": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411384",
+      "email": "Testing2026-09-25N98@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 97,
+      "name": "Danilo Prueba BNN",
+      "url": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411383",
+      "email": "Testing2026-09-25N97@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 96,
+      "name": "Danilo Prueba BNM",
+      "url": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411382",
+      "email": "Testing2026-09-25N96@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 92,
+      "name": "Danilo Prueba BNI",
+      "url": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411381",
+      "email": "Testing2026-09-25N92@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 91,
+      "name": "Danilo Prueba BNH",
+      "url": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411380",
+      "email": "Testing2026-09-25N91@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 89,
+      "name": "Danilo Prueba BNF",
+      "url": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411379",
+      "email": "Testing2026-09-25N89@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 85,
+      "name": "Danilo Prueba BNB",
+      "url": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628621",
+      "email": "Testing2026-09-25N85@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 81,
+      "name": "Danilo Prueba BMX",
+      "url": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628620",
+      "email": "Testing2026-09-25N81@testingUtel.com",
+      "source": "inconcert"
+    },
+    {
+      "n": 76,
+      "name": "Danilo Prueba BMS",
+      "url": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628619",
+      "email": "Testing2026-09-25N76@testingUtel.com",
+      "source": "inconcert"
+    }
+  ],
+  "changes": [
+    {
+      "sheet": "Hoja 1",
+      "address": "O3",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229190"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA3",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB3",
+      "value": "Reverificado 27/09/2026: encontrado en Balancer con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Dirección de Ventas', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo. | Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Dirección de Ventas', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo. Se agotaron los 3 intentos automáticos; realiza este caso manualmente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AO3",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AP3",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229190"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ3",
+      "value": "balancer"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS3",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "K3",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "L3",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229190"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M3",
+      "value": "balancer"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O3",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O4",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229193"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA4",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB4",
+      "value": "Reverificado 27/09/2026: encontrado en Balancer con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Gestión Estratégica del Capital Humano', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo. | Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'Híbrida', 'area': 'Maestría Híbrida', 'program': 'Gestión Estratégica del Capital Humano', 'siuKey': None, 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo. Se agotaron los 3 intentos automáticos; realiza este caso manualmente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AO4",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AP4",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229193"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ4",
+      "value": "balancer"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS4",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "K4",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "L4",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3229193"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M4",
+      "value": "balancer"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O4",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O5",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159600"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA5",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB5",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N21@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM5",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN5",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159600"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ5",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS5",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I6",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J6",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159600"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M6",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O6",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O6",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159601"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA6",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB6",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: InConcert mantuvo el filtro 'nombre' y no permitió cambiarlo a 'Email'. No se ejecutó una búsqueda ambigua. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM6",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN6",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159601"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ6",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS6",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I7",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J7",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159601"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M7",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O7",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O7",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159602"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA7",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB7",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: InConcert mantuvo el filtro 'nombre' y no permitió cambiarlo a 'Email'. No se ejecutó una búsqueda ambigua. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM7",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN7",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159602"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ7",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS7",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I8",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J8",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159602"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M8",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O8",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O10",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159603"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA10",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB10",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N26@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM10",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN10",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159603"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ10",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS10",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I11",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J11",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159603"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M11",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O11",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O11",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159604"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA11",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB11",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N27@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM11",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN11",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159604"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ11",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS11",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I12",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J12",
+      "value": "https://mas-utel-singapur.infunnel.inconcert.cloud/mas/contact/people/view/159604"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M12",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O12",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O2",
+      "value": "https://mas-utel.inconcertcc.com/mas/contact/people/view/14555414"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA2",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB2",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'En línea', 'area': 'Diplomados', 'program': 'Desarrollo de E-learning', 'siuKey': 'UTSDIPMNAS', 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo. | Error al enviar / Contacta a soporte. UTEL mostró Error al enviar / Contacta a soporte. POST /api/forms: HTTP 500. Detalle: Internal server error Datos técnicos: {'formId': '103', 'integration': 'balanceador', 'modality': 'En línea', 'area': 'Diplomados', 'program': 'Desarrollo de E-learning', 'siuKey': 'UTSDIPMNAS', 'nombre_presente': True, 'correo_presente': True, 'telefono_presente': True}. UTEL confirmó que el formulario no fue aceptado; Leads Deploy no consultará InConcert ni Balanceador para este caso. Leads Deploy reintentará este caso con otro teléfono de prueba antes de marcarlo como fallo definitivo. Se agotaron los 3 intentos automáticos; realiza este caso manualmente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM2",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN2",
+      "value": "https://mas-utel.inconcertcc.com/mas/contact/people/view/14555414"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ2",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS2",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I2",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J2",
+      "value": "https://mas-utel.inconcertcc.com/mas/contact/people/view/14555414"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M2",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O2",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O19",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081513"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA19",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB19",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N38@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM19",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN19",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081513"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ19",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS19",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I23",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J23",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081513"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M23",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O23",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O20",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081516"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA20",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB20",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N39@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM20",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN20",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081516"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ20",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS20",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I24",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J24",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081516"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M24",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O24",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O21",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081520"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA21",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB21",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N40@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM21",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN21",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081520"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ21",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS21",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I25",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J25",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081520"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M25",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O25",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O22",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081521"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA22",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB22",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N41@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM22",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN22",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081521"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ22",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS22",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I26",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J26",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081521"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M26",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O26",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O24",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081524"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA24",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB24",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N43@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM24",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN24",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081524"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ24",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS24",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I28",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J28",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081524"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M28",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O28",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O26",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081526"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA26",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB26",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N45@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM26",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN26",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081526"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ26",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS26",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I30",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J30",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081526"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M30",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O30",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O28",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081529"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA28",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB28",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N47@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM28",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN28",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081529"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ28",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS28",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I32",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J32",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081529"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M32",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O32",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O29",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081531"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA29",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB29",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N48@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM29",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN29",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081531"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ29",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS29",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I33",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J33",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081531"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M33",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O33",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O30",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081533"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA30",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB30",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N49@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM30",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN30",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081533"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ30",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS30",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I34",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J34",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081533"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M34",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O34",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O31",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081544"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA31",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB31",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N50@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM31",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN31",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081544"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ31",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS31",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I35",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J35",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081544"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M35",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O35",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O33",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081549"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA33",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB33",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N52@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM33",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN33",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081549"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ33",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS33",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I37",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J37",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081549"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M37",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O37",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O34",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081551"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA34",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB34",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N53@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM34",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN34",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081551"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ34",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS34",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I38",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J38",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4081551"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M38",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O38",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O15",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4082891"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA15",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB15",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Envío corregido con los mismos nombre, correo y teléfono. Graduación: SI. Privacidad: Sí. Documento sintético QA: QA-20260927-000034. Consentimiento multicanal opcional: No. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM15",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN15",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4082891"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ15",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS15",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I19",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J19",
+      "value": "https://mas-utel-col.inconcertcc.com/mas/contact/people/view/4082891"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M19",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O19",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AL15",
+      "value": "success"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "H19",
+      "value": "success"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O36",
+      "value": "https://mas-utel-pe.inconcertcc.com/mas/contact/people/view/4032840"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA36",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB36",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Envío corregido con los mismos nombre, correo y teléfono. Graduación: SI. Privacidad: Sí. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM36",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN36",
+      "value": "https://mas-utel-pe.inconcertcc.com/mas/contact/people/view/4032840"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ36",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS36",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I40",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J40",
+      "value": "https://mas-utel-pe.inconcertcc.com/mas/contact/people/view/4032840"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M40",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O40",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AL36",
+      "value": "success"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "H40",
+      "value": "success"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AD36",
+      "value": "Administración de Recursos Humanos"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AK36",
+      "value": "Administración de Recursos Humanos"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "G40",
+      "value": "Administración de Recursos Humanos"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AO36",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AP36",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3234902"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "K40",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "L40",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3234902"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O37",
+      "value": "https://mas-utel-pe.inconcertcc.com/mas/contact/people/view/4032839"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA37",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB37",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Envío corregido con los mismos nombre, correo y teléfono. Graduación: SI. Privacidad: Sí. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM37",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN37",
+      "value": "https://mas-utel-pe.inconcertcc.com/mas/contact/people/view/4032839"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ37",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS37",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I42",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J42",
+      "value": "https://mas-utel-pe.inconcertcc.com/mas/contact/people/view/4032839"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M42",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O42",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AL37",
+      "value": "success"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "H42",
+      "value": "success"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AD37",
+      "value": "Pedagogía"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AK37",
+      "value": "Pedagogía"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "G42",
+      "value": "Pedagogía"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AO37",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AP37",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3234908"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "K42",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "L42",
+      "value": "https://lead-balancer.scalahed.com/leads/detail/3234908"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O51",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607610"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA51",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB51",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N71@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM51",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN51",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607610"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ51",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS51",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I56",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J56",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607610"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M56",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O56",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O50",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607609"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA50",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB50",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N70@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM50",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN50",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607609"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ50",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS50",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I55",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J55",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607609"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M55",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O55",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O49",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607608"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA49",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB49",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N69@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM49",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN49",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607608"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ49",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS49",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I54",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J54",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607608"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M54",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O54",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O48",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607606"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA48",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB48",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N68@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM48",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN48",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607606"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ48",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS48",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I53",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J53",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607606"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M53",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O53",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O46",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607604"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA46",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB46",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N66@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM46",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN46",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607604"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ46",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS46",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I51",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J51",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607604"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M51",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O51",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O42",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607603"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA42",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB42",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N62@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM42",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN42",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607603"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ42",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS42",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I47",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J47",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607603"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M47",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O47",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O41",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607601"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA41",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB41",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N61@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM41",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN41",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607601"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ41",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS41",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I46",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J46",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607601"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M46",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O46",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O40",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607600"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA40",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB40",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N60@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM40",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN40",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607600"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ40",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS40",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I45",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J45",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607600"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M45",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O45",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O39",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607598"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA39",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB39",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N59@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM39",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN39",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607598"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ39",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS39",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I44",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J44",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607598"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M44",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O44",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O38",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607597"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA38",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB38",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N58@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM38",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN38",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607597"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ38",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS38",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I43",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J43",
+      "value": "https://mas-utel-dom.inconcertcc.com/mas/contact/people/view/607597"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M43",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O43",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O77",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411386"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA77",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB77",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N100@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM77",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN77",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411386"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ77",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS77",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I85",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J85",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411386"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M85",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O85",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O76",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411385"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA76",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB76",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N99@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM76",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN76",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411385"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ76",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS76",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I84",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J84",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411385"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M84",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O84",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O75",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411384"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA75",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB75",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N98@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM75",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN75",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411384"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ75",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS75",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I83",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J83",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411384"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M83",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O83",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O74",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411383"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA74",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB74",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N97@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM74",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN74",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411383"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ74",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS74",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I82",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J82",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411383"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M82",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O82",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O73",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411382"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA73",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB73",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N96@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM73",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN73",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411382"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ73",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS73",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I81",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J81",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411382"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M81",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O81",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O69",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411381"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA69",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB69",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N92@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM69",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN69",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411381"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ69",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS69",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I77",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J77",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411381"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M77",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O77",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O68",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411380"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA68",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB68",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N91@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM68",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN68",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411380"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ68",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS68",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I76",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J76",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411380"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M76",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O76",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O66",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411379"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA66",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB66",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N89@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM66",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN66",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411379"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ66",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS66",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I74",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J74",
+      "value": "https://mas-utel-arg.inconcertcc.com/mas/contact/people/view/411379"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M74",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O74",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O62",
+      "value": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628621"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA62",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB62",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N85@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM62",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN62",
+      "value": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628621"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ62",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS62",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I70",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J70",
+      "value": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628621"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M70",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O70",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O58",
+      "value": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628620"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA58",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB58",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N81@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM58",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN58",
+      "value": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628620"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ58",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS58",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I66",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J66",
+      "value": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628620"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M66",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O66",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "O53",
+      "value": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628619"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA53",
+      "value": "VERIFICADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB53",
+      "value": "Reverificado 27/09/2026: encontrado en inConcert con el mismo correo e identidad. Lead existente. Sin reenviar ni generar datos nuevos. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N76@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AM53",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AN53",
+      "value": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628619"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AQ53",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS53",
+      "value": ""
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "I61",
+      "value": "Sí"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "J61",
+      "value": "https://mas-utel-emergentes.inconcertcc.com/mas/contact/people/view/628619"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "M61",
+      "value": "inconcert"
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O61",
+      "value": ""
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA12",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB12",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El formulario conserva campos obligatorios sin completar: FechaNacimiento-input"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA13",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB13",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N30@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA14",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB14",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El listado se abrio, pero no se encontro una tarjeta o enlace valido de programa."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA16",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB16",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N35@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA17",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB17",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA18",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB18",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA23",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB23",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA25",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB25",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA27",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB27",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA32",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB32",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA35",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB35",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA43",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB43",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA44",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB44",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA45",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB45",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA47",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB47",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA52",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB52",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA54",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB54",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N77@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA55",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB55",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N78@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA56",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB56",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N79@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA57",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB57",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA59",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB59",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA60",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB60",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA61",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB61",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA63",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB63",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N86@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA64",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB64",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N87@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA65",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB65",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N88@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA67",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB67",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA70",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB70",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA71",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB71",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA72",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB72",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA78",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB78",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA79",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB79",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N102@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA80",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB80",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA81",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB81",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA82",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB82",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA83",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB83",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA84",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB84",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA85",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB85",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA86",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB86",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA87",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB87",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA88",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB88",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El formulario no tiene un botón de envío visible."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA89",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB89",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El formulario no tiene un botón de envío visible."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA90",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB90",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El formulario no tiene un botón de envío visible."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA91",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB91",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El formulario no tiene un botón de envío visible."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA92",
+      "value": "PENDIENTE REVISIÓN"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB92",
+      "value": "27/09/2026: pendiente de revisión actual. Varias landings de este dominio devuelven HTTP 520 del origen. Esta URL no se volvió a probar individualmente en esta continuación. No se realizó un nuevo envío. Se conserva el diagnóstico histórico. Diagnóstico anterior: El formulario no tiene un botón de envío visible."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA17",
+      "value": "ERROR EXTERNO 520"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB17",
+      "value": "27/09/2026: HTTP 520 del servidor de origen. Formulario inaccesible; no se realizó un nuevo envío. Ray ID: a41eb7f70b97e419. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA18",
+      "value": "ERROR EXTERNO 520"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB18",
+      "value": "27/09/2026: HTTP 520 del servidor de origen. Formulario inaccesible; no se realizó un nuevo envío. Ray ID: a41eb85a4f5be419. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA25",
+      "value": "ERROR EXTERNO 520"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB25",
+      "value": "27/09/2026: HTTP 520 del servidor de origen. Formulario inaccesible; no se realizó un nuevo envío. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA52",
+      "value": "ERROR EXTERNO 520"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB52",
+      "value": "27/09/2026: HTTP 520 del servidor de origen. Formulario inaccesible; no se realizó un nuevo envío. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA78",
+      "value": "ERROR EXTERNO 520"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB78",
+      "value": "27/09/2026: HTTP 520 del servidor de origen. Formulario inaccesible; no se realizó un nuevo envío. Ray ID: a41eedf1385c07d9. Diagnóstico anterior: El botón fue accionado, pero la página no generó una solicitud POST. No se buscará un lead que no fue enviado."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA8",
+      "value": "PAÍS NO DISPONIBLE"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB8",
+      "value": "27/09/2026: El Excel pide México, pero paisesPIVI solo ofrece Philippines, India y Vietnam. No se cambió el país ni se envió el formulario. Diagnóstico anterior: El formulario no ofrece el país requerido: Mexico."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS8",
+      "value": "El Excel pide México, pero paisesPIVI solo ofrece Philippines, India y Vietnam. No se cambió el país ni se envió el formulario."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O9",
+      "value": "El Excel pide México, pero paisesPIVI solo ofrece Philippines, India y Vietnam. No se cambió el país ni se envió el formulario."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA9",
+      "value": "PAÍS NO DISPONIBLE"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB9",
+      "value": "27/09/2026: Misma URL global que fila 8. El selector de residencia no ofrece México. Se necesita una URL compatible o corregir el país y sus datos QA. Diagnóstico anterior: El formulario no ofrece el país requerido: Mexico."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS9",
+      "value": "Misma URL global que fila 8. El selector de residencia no ofrece México. Se necesita una URL compatible o corregir el país y sus datos QA."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O10",
+      "value": "Misma URL global que fila 8. El selector de residencia no ofrece México. Se necesita una URL compatible o corregir el país y sus datos QA."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA93",
+      "value": "MANUAL SIN FORMULARIO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB93",
+      "value": "27/09/2026: Se revisó la página Expansión Profesional. No muestra formulario de contacto utilizable en esta URL. No se realizó envío. Diagnóstico anterior: La página no contiene un formulario de lead utilizable. La celda Lead se dejará en blanco para completar esta fila manualmente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS93",
+      "value": "Se revisó la página Expansión Profesional. No muestra formulario de contacto utilizable en esta URL. No se realizó envío."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O103",
+      "value": "Se revisó la página Expansión Profesional. No muestra formulario de contacto utilizable en esta URL. No se realizó envío."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA94",
+      "value": "CORREO RECHAZADO"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB94",
+      "value": "27/09/2026: UTEL X muestra un formulario HubSpot de newsletter. Al llenar la identidad original aparece: Ingresa una dirección de correo válida. No se volvió a pulsar Suscríbete. La integración de este newsletter con inConcert/Balancer no está confirmada. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N119@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS94",
+      "value": "UTEL X muestra un formulario HubSpot de newsletter. Al llenar la identidad original aparece: Ingresa una dirección de correo válida. No se volvió a pulsar Suscríbete. La integración de este newsletter con inConcert/Balancer no está confirmada."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O104",
+      "value": "UTEL X muestra un formulario HubSpot de newsletter. Al llenar la identidad original aparece: Ingresa una dirección de correo válida. No se volvió a pulsar Suscríbete. La integración de este newsletter con inConcert/Balancer no está confirmada."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AA95",
+      "value": "LLENADO VERIFICADO / CRM PENDIENTE"
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AB95",
+      "value": "27/09/2026: UCamp: nombre Danilo, apellidos Prueba BOK, correo y teléfono originales, Fundamentos de desarrollo web y privacidad completos. Los controles pasan la validación HTML. No se repitió el envío ya registrado como success. No se encontró el correo en inConcert México ni Balancer. Diagnóstico anterior: No se encontro el lead por email (Testing2026-09-25N120@testingUtel.com) en el Balanceador despues de esperar su indexacion. | Formulario enviado y confirmado correctamente."
+    },
+    {
+      "sheet": "Hoja 1",
+      "address": "AS95",
+      "value": "UCamp: nombre Danilo, apellidos Prueba BOK, correo y teléfono originales, Fundamentos de desarrollo web y privacidad completos. Los controles pasan la validación HTML. No se repitió el envío ya registrado como success. No se encontró el correo en inConcert México ni Balancer."
+    },
+    {
+      "sheet": "Form Validation resultados",
+      "address": "O105",
+      "value": "UCamp: nombre Danilo, apellidos Prueba BOK, correo y teléfono originales, Fundamentos de desarrollo web y privacidad completos. Los controles pasan la validación HTML. No se repitió el envío ya registrado como success. No se encontró el correo en inConcert México ni Balancer."
+    }
+  ]
+}

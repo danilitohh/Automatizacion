@@ -17,6 +17,8 @@ from pydantic import SecretStr
 from ...config.settings import Settings
 from ...schemas.bot import UtelQaConfig, UtelQaStageResult
 from ...services.logging_service import get_logger
+from ...services.browser_service import launch_browser
+from ...services.form_field_evidence import capture_visible_form_fields
 from ...services.doctorate_link_catalog import DoctorateLinkCatalog
 from ...services.program_rotation_service import ProgramRotationService
 
@@ -110,6 +112,7 @@ class UtelInconcertRunner:
         self.evidence_directory: Path | None = None
         self.lead_url: str | None = None
         self.selected_program_name = ""
+        self.form_fields: list[dict[str, str]] = []
         self._selected_direct_url = ""
         self._selected_direct_page_program = ""
         self._rotation_config = None
@@ -143,6 +146,7 @@ class UtelInconcertRunner:
         self.screenshots = []
         self.lead_url = None
         self.selected_program_name = ""
+        self.form_fields = []
         self._selected_direct_url = ""
         self._selected_direct_page_program = ""
         self._rotation_config = config
@@ -175,19 +179,9 @@ class UtelInconcertRunner:
                 browser = None
                 context = None
                 launch_headless = False if config.keep_browser_open else config.headless
-                if config.browser == "chrome":
-                    profile_directory = self.settings.storage_dir / "browser_profiles" / "chrome-qa"
-                    profile_directory.mkdir(parents=True, exist_ok=True)
-                    context = await playwright.chromium.launch_persistent_context(
-                        str(profile_directory),
-                        channel="chrome",
-                        headless=launch_headless,
-                        viewport={"width": 1440, "height": 900},
-                    )
-                else:
-                    browser_type = getattr(playwright, config.browser)
-                    browser = await browser_type.launch(headless=launch_headless)
-                    context = await browser.new_context(viewport={"width": 1440, "height": 900})
+                # Contexto temporal: no se carga ningún perfil de Chrome.
+                browser = await launch_browser(playwright, config.browser, headless=launch_headless)
+                context = await browser.new_context(viewport={"width": 1440, "height": 900})
                 try:
                     if config.verification_only:
                         self.status_flags["utel_submission"] = "skipped"
@@ -265,7 +259,15 @@ class UtelInconcertRunner:
                     await self._run_stage(2, "utel_navigation", "Modalidad, nivel y programa resueltos", utel_page, lambda: self._navigate_utel(utel_page, config))
                     self._raise_if_stop_requested(should_stop)
                     form = await self._run_stage(3, "utel_form", "Formulario identificado", utel_page, lambda: self._find_utel_form(utel_page, config))
-                    await self._run_stage(4, "utel_fill", "Formulario rellenado", utel_page, lambda: self._fill_utel_form(utel_page, form, config), "02_formulario_lleno")
+                    try:
+                        await self._run_stage(4, "utel_fill", "Formulario rellenado", utel_page, lambda: self._fill_utel_form(utel_page, form, config), "02_formulario_lleno")
+                    finally:
+                        # Guardar también campos parciales cuando la validación
+                        # falla; no modificar el resultado ni intentar enviar.
+                        try:
+                            self.form_fields = await capture_visible_form_fields(form)
+                        except Exception as error:  # noqa: BLE001 - preservar el error original
+                            self.logger.warning("No se pudieron leer los campos del formulario: %s", error)
                     self._raise_if_stop_requested(should_stop)
                     if config.dry_run:
                         await self._run_stage(5, "dry_run_stop", "Dry run: formulario listo, envio omitido", utel_page, lambda: self._dry_run_stop(), "03_dry_run_pre_envio")
@@ -532,6 +534,7 @@ class UtelInconcertRunner:
             "lead_phone": config.lead.phone,
             "utel_submission_attempted": self._submission_attempted,
             "selected_program_name": self.selected_program_name,
+            "form_fields": self.form_fields,
             "program_selection_notice": self.program_selection_notice,
             "lead_url": self.lead_url,
             "environment": config.environment,
@@ -580,19 +583,9 @@ class UtelInconcertRunner:
         try:
             async with self._playwright(async_playwright, keep_open) as playwright:
                 try:
-                    if safe_config.browser == "chrome":
-                        profile_directory = self.settings.storage_dir / "browser_profiles" / "chrome-qa"
-                        profile_directory.mkdir(parents=True, exist_ok=True)
-                        context = await playwright.chromium.launch_persistent_context(
-                            str(profile_directory),
-                            channel="chrome",
-                            headless=safe_config.headless,
-                            viewport={"width": 1440, "height": 900},
-                        )
-                    else:
-                        browser_type = getattr(playwright, safe_config.browser)
-                        browser = await browser_type.launch(headless=safe_config.headless)
-                        context = await browser.new_context(viewport={"width": 1440, "height": 900})
+                    # Contexto temporal: no se carga ningún perfil de Chrome.
+                    browser = await launch_browser(playwright, safe_config.browser, headless=safe_config.headless)
+                    context = await browser.new_context(viewport={"width": 1440, "height": 900})
                     page = await context.new_page()
                     page.set_default_timeout(30000)
                     await self._open_inconcert(page, safe_config)
@@ -2169,7 +2162,7 @@ class UtelInconcertRunner:
         challenge_resolved = not challenge_detected
         if challenge_detected:
             # En Chrome visible, Cloudflare puede completar su comprobación y
-            # guardar la autorización en el perfil QA. Se espera una sola vez
+            # conservar la autorización en la sesión actual. Se espera una sola vez
             # antes de clasificar el acceso como bloqueo temporal.
             deadline = perf_counter() + 45
             while perf_counter() < deadline:

@@ -11,7 +11,7 @@ class WeeklyAutoConfig(BaseModel):
     name: str = Field(default="Weekly Auto", min_length=1, max_length=120)
     urls: list[str] = Field(default_factory=list)
     use_default_urls: bool = True
-    browser: Literal["chromium", "chrome", "firefox", "webkit"] = "chromium"
+    browser: Literal["chromium", "chrome", "chrome_incognito", "firefox", "webkit"] = "chrome"
     headless: bool = True
     keep_browser_open: bool = False
     viewport_width: int = 1280

@@ -23,6 +23,10 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
     """Detecta controles por semántica y reutiliza la búsqueda dual de CRM."""
 
     GENERIC_FORM_TIMEOUT_MS = 30000
+    DOCUMENT_FIELD_PATTERN = (
+        r"document|identificaci[oó]n|identificacion|identidad|identity|"
+        r"c[eé]dula|cedula|\bdni\b|passport|numero.*documento|document.*number"
+    )
 
     def _is_generic_lp(self, config: WeeklyFormsCaseConfig | None = None) -> bool:
         current = config or getattr(self, "_rotation_config", None)
@@ -43,6 +47,22 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             candidate = await self._best_semantic_form(page)
             if candidate is not None:
                 await candidate.scroll_into_view_if_needed()
+                # Las LP de UTEL renderizan primero el HTML y habilitan el
+                # botón cuando termina de cargar su librería de formularios.
+                # Esperar aquí evita pulsar un botón visualmente presente pero
+                # todavía marcado con ``data-ic-button-disabled``.
+                with suppress(Exception):
+                    await page.wait_for_function(
+                        """() => {
+                          const button = document.querySelector(
+                            'form button[type="submit"], form input[type="submit"]'
+                          );
+                          return button && !button.disabled
+                            && !button.hasAttribute('data-ic-button-disabled')
+                            && button.getClientRects().length > 0;
+                        }""",
+                        timeout=12000,
+                    )
                 return candidate
             await asyncio.sleep(0.5)
         raise UtelQaError(
@@ -66,6 +86,13 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                             continue
                         score = await candidate.evaluate(
                             """element => {
+                                const style = getComputedStyle(element);
+                                const box = element.getBoundingClientRect();
+                                // Algunas LP montan una variante desktop/móvil oculta
+                                // que Playwright considera visible por tener layout.
+                                if (style.display === 'none' || style.visibility === 'hidden'
+                                  || Number.parseFloat(style.opacity || '1') === 0
+                                  || box.width === 0 || box.height === 0) return -100;
                                 const controls = [...element.querySelectorAll('input, select, textarea')];
                                 const text = (element.innerText || '').toLowerCase();
                                 const signature = controls.map(control => [
@@ -87,7 +114,25 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                         best = (score, candidate)
         return best[1] if best else None
 
+    async def _is_rendered_control(self, field: Any) -> bool:
+        """Evita duplicados ocultos que comparten los mismos nombres de campo."""
+
+        try:
+            return bool(await field.evaluate(
+                """element => {
+                  const style = getComputedStyle(element);
+                  const box = element.getBoundingClientRect();
+                  return style.display !== 'none' && style.visibility !== 'hidden'
+                    && Number.parseFloat(style.opacity || '1') > 0
+                    && box.width > 0 && box.height > 0;
+                }"""
+            ))
+        except Exception:
+            return await field.is_visible()
+
     async def _fill_utel_form(self, page: Any, form: Any, config: WeeklyFormsCaseConfig) -> None:
+        # El campo puede aparecer en cualquier variante de formulario del lote.
+        await self._fill_document_number(form, config)
         if not self._is_generic_lp(config):
             if config.program_name:
                 await super()._fill_utel_form(page, form, config)
@@ -113,56 +158,127 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             config.lead.phone,
             required=False,
         )
+        await self._fill_required_date_fields(form)
 
         selects = form.locator("select")
         for index in range(await selects.count()):
             field = selects.nth(index)
-            if not await field.is_visible():
+            if not await field.is_visible() or not await self._is_rendered_control(field):
                 continue
             descriptor = self._normalize(await self._control_descriptor(field))
-            if re.search(r"programa|program|carrera|curso|producto|licenciatura|maestria|master", descriptor):
-                selected = await self._select_semantic_option(field, config.level, "program")
+            # Varias LP rotulan horario, bachillerato y lada como Licenciaturas.
+            # Reconocer primero esos controles evita sobrescribir el programa.
+            if re.search(r"bachiller|titulo|t[ií]tulo|graduaste|secundaria|high.?school", descriptor):
+                await self._select_semantic_option(field, "si", "first")
+            elif re.search(r"codigo.*pais|country.*code|indicativo|lada|prefix|pais|country", descriptor):
+                await self._select_semantic_option(field, config.country, "country")
+            elif re.search(r"estado|state|ciudad|city|provincia|residencia|location|ubicacion", descriptor):
+                await self._select_semantic_option(field, "", "first")
+            elif re.search(r"horario|hora|time|schedule", descriptor):
+                await self._select_semantic_option(field, "", "first")
+            elif re.search(r"canal|contacto|contact.?method", descriptor):
+                await self._select_semantic_option(field, "", "first")
+            elif re.search(r"programa|program|carrera|curso|producto|licenciatura|maestria|master", descriptor):
+                selected = await self._select_semantic_option(
+                    field, config.program_name or config.level, "program",
+                )
                 if selected:
                     self.selected_program_name = selected
             elif re.search(r"area|nivel|level|grado|interes", descriptor):
                 await self._select_semantic_option(field, config.level, "level")
-                # React suele cargar el catálogo de programas de forma
-                # asíncrona después del cambio de nivel.
+                # Espera el catálogo dependiente del nivel seleccionado.
                 await asyncio.sleep(0.8)
-            elif re.search(r"codigo.*pais|country.*code|indicativo|lada|prefix", descriptor):
-                await self._select_semantic_option(field, config.country, "country")
-            elif re.search(r"estado|state|ciudad|city|provincia|residencia", descriptor):
-                await self._select_semantic_option(field, "", "first")
-            elif re.search(r"bachiller|titulo|t[ií]tulo|graduaste|canal|contacto", descriptor):
-                await self._select_semantic_option(field, "si", "first")
 
         # Radios y selects no etiquetados que sean obligatorios también reciben
         # una opción válida. Así se cubren LP antiguas con nombres input_9.
         for index in range(await selects.count()):
             field = selects.nth(index)
-            if await field.is_visible() and not await self._has_real_select_value(field):
+            if await field.is_visible() and await self._is_rendered_control(field) and not await self._has_real_select_value(field):
                 await self._select_semantic_option(field, config.level, "first")
 
         radios = form.locator('input[type="radio"]:not(:checked)')
-        if await form.locator('input[type="radio"]:checked').count() == 0 and await radios.count():
+        for index in range(await radios.count()):
+            radio = radios.nth(index)
+            if not await self._is_rendered_control(radio) or await radio.get_attribute("required") is None:
+                continue
+            descriptor = self._normalize(await self._control_descriptor(radio))
+            if re.search(r"privacidad|privacy|marketing|publicidad|promocion|promoción|contact", descriptor):
+                continue
             with suppress(Exception):
-                await radios.first.check(force=True)
+                await radio.check(force=True)
+            if await form.locator('input[type="radio"]:checked').count():
+                break
 
         checkboxes = form.locator('input[type="checkbox"]')
-        checked = 0
         for index in range(await checkboxes.count()):
             checkbox = checkboxes.nth(index)
-            if not await checkbox.is_visible():
+            if not await checkbox.is_visible() or not await self._is_rendered_control(checkbox):
                 continue
             descriptor = self._normalize(await self._control_descriptor(checkbox))
-            if re.search(r"privacidad|privacy|termin|aviso|acepto|agree|consent", descriptor):
+            if re.search(r"privacidad|privacy|politica|policy|terminos|terms|aviso", descriptor):
                 await self._ensure_checkbox_checked(checkbox)
-                checked += 1
-        if checked == 0 and await checkboxes.count() == 1:
-            await self._ensure_checkbox_checked(checkboxes.first)
 
         await asyncio.sleep(0.8)
         await self._validate_generic_form(form)
+
+    async def _fill_required_date_fields(self, form: Any) -> None:
+        """Completa fechas QA obligatorias que algunas LP agregan al formulario."""
+
+        # Algunas LP declaran la fecha como texto (por ejemplo
+        # ``FechaNacimiento-input``) aunque la validación HTML la trate como
+        # obligatoria; por eso se inspeccionan también inputs semánticos.
+        fields = form.locator("input, textarea")
+        for index in range(await fields.count()):
+            field = fields.nth(index)
+            if not await field.is_visible() or not await self._is_rendered_control(field) or await field.is_disabled():
+                continue
+            input_type = (await field.get_attribute("type") or "text").lower()
+            if input_type in {"hidden", "checkbox", "radio", "file", "submit", "button"}:
+                continue
+            descriptor = self._normalize(await self._control_descriptor(field))
+            required = await field.get_attribute("required") is not None
+            if not required and not re.search(r"fecha|nacimiento|birth|date", descriptor):
+                continue
+            if (await field.input_value()).strip():
+                continue
+            # Fecha adulta sintética y estable para validaciones QA; no representa
+            # la identidad de una persona real.
+            await field.fill("1990-01-15")
+            await field.press("Tab")
+
+    async def _fill_document_number(self, form: Any, config: WeeklyFormsCaseConfig) -> None:
+        """Completa documentos visibles en cualquier variante de Weekly Forms."""
+
+        controls = form.locator(
+            'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea'
+        )
+        for index in range(await controls.count()):
+            field = controls.nth(index)
+            if not await field.is_visible() or await field.is_disabled():
+                continue
+            descriptor = self._normalize(await self._control_descriptor(field))
+            if not re.search(self.DOCUMENT_FIELD_PATTERN, descriptor, re.I):
+                continue
+
+            # No se inventa identidad nacional salvo el QA sintético habilitado
+            # por el lote colombiano; el Excel puede proporcionar uno aprobado.
+            value = str(getattr(config.lead, "document_number", "") or "").strip()
+            required = (
+                (config.qa_document_required and self._normalize(config.country) == "colombia")
+                or await field.get_attribute("required") is not None
+                or await field.get_attribute("aria-required") == "true"
+            )
+            if value:
+                await field.fill(value)
+                await field.press("Tab")
+            elif required:
+                raise UtelQaError(
+                    "utel_fill",
+                    "La landing solicita número de documento y esta fila no tiene un dato QA. "
+                    "Agrega el valor autorizado en la columna Documento de prueba.",
+                    self.DOCUMENT_FIELD_PATTERN,
+                )
+            return
 
     async def _fill_blc_without_catalog_program(
         self,
@@ -235,7 +351,7 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         matches = []
         for index in range(await controls.count()):
             field = controls.nth(index)
-            if not await field.is_visible() or await field.is_disabled():
+            if not await field.is_visible() or not await self._is_rendered_control(field) or await field.is_disabled():
                 continue
             descriptor = self._normalize(await self._control_descriptor(field))
             if re.search(pattern, descriptor, re.I):
@@ -253,14 +369,25 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         await field.press("Tab")
 
     async def _control_descriptor(self, field: Any) -> str:
+        """Describe solo el control; un contenedor compartido no es su etiqueta."""
         return await field.evaluate(
             """element => {
+                const parent = element.parentElement;
+                // Las LP antiguas agrupan todo el formulario en un mismo div.
+                // Solo usar su texto cuando pertenece a un único control.
+                const localText = parent?.querySelectorAll('input, select, textarea').length === 1
+                  ? [...parent.childNodes].filter(node => node.nodeType === 3)
+                      .map(node => node.textContent).join(' ') : '';
                 const label = element.labels?.[0]?.innerText
                   || element.closest('label')?.innerText
                   || (element.id ? document.querySelector(`label[for="${CSS.escape(element.id)}"]`)?.innerText : '')
-                  || element.parentElement?.innerText || '';
+                  || localText;
+                const labelledBy = element.getAttribute('aria-labelledby')
+                  ?.split(/\\s+/).map(id => document.getElementById(id)?.innerText || '').join(' ') || '';
                 return [element.name, element.id, element.type, element.placeholder,
-                  element.getAttribute('aria-label'), element.dataset?.cy, label]
+                  element.getAttribute('aria-label'), labelledBy, element.dataset?.cy, label,
+                  element.tagName === 'SELECT' && !element.options[0]?.value
+                    ? element.options[0]?.textContent : '']
                   .filter(Boolean).join(' ');
             }"""
         )
@@ -308,8 +435,17 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         return bool(value and label and not placeholder.search(label))
 
     async def _select_semantic_option(self, field: Any, expected: str, kind: str) -> str:
-        if await self._has_real_select_value(field):
-            return (await field.evaluate("element => element.selectedOptions[0]?.textContent || ''")).strip()
+        # Los formularios pueden iniciar con un país distinto al de la fila;
+        # solo se conserva la selección previa para los demás campos.
+        has_current_value = await self._has_real_select_value(field)
+        current_value = await field.input_value() if has_current_value else ""
+        current_label = (
+            await field.evaluate("element => element.selectedOptions[0]?.textContent || ''")
+            if has_current_value
+            else ""
+        ).strip()
+        if has_current_value and kind != "country":
+            return current_label
         deadline = perf_counter() + (12 if kind == "program" else 2)
         real = []
         while perf_counter() < deadline:
@@ -339,16 +475,44 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                 aliases += ["diplomado", "educacion continua"]
         elif kind == "country":
             country_codes = {
-                "mexico": ("mexico", "+52"), "usa": ("estados unidos", "united states", "+1"),
-                "colombia": ("colombia", "+57"), "ecuador": ("ecuador", "+593"),
-                "peru": ("peru", "+51"), "argentina": ("argentina", "+54"),
-                "filipinas": ("philippines", "+63"), "indonesia": ("indonesia", "+62"),
+                "mexico": ("méxico", "+52"),
+                "usa": ("estados unidos", "united states", "+1"),
+                "united states": ("estados unidos", "usa", "+1"),
+                "estados unidos": ("united states", "usa", "+1"),
+                "colombia": ("colombia", "+57"),
+                "ecuador": ("ecuador", "+593"),
+                "peru": ("perú", "+51"),
+                "argentina": ("argentina", "+54"),
+                "bolivia": ("bolivia", "+591"),
+                "dominicana": ("republica dominicana", "dominican republic", "+1"),
+                "republica dominicana": ("dominicana", "dominican republic", "+1"),
+                "chile": ("chile", "+56"),
+                "paraguay": ("paraguay", "+595"),
+                "guatemala": ("guatemala", "+502"),
+                "panama": ("panamá", "+507"),
+                "el salvador": ("el salvador", "+503"),
+                "filipinas": ("philippines", "+63"),
+                "philippines": ("filipinas", "+63"),
+                "indonesia": ("indonesia", "+62"),
+                "vietnam": ("vietnam", "viet nam", "+84"),
+                "india": ("india", "+91"), "singapur": ("singapore", "singapur", "+65"),
+                "singapore": ("singapur", "+65"),
             }
             aliases += list(country_codes.get(normalized_expected, ()))
         matching = [
             item for item in real
             if any(alias and alias in self._normalize(item["text"]) for alias in aliases)
         ]
+        if kind == "country" and not matching:
+            raise UtelQaError(
+                "utel_fill",
+                f"No se encontró la opción del país {expected!r} en el formulario; se detuvo para no enviar el lead a otro país.",
+                await self._control_descriptor(field),
+            )
+        if kind == "country" and current_value and any(
+            item["value"] == current_value for item in matching
+        ):
+            return current_label
         # Form Validation puede probar opciones reales distintas entre URLs; si
         # no se solicita aleatoriedad se conserva la selección histórica exacta.
         if getattr(getattr(self, "_rotation_config", None), "randomize_academic_selections", False) and kind in {"level", "program"}:
@@ -361,19 +525,27 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         return chosen["text"]
 
     async def _validate_generic_form(self, form: Any) -> None:
+        """Comprueba restricciones HTML y rechazos visibles del validador de la LP."""
         invalid = await form.evaluate(
             """element => {
               const owner = element.matches('form') ? element : element.querySelector('form') || element.closest('form');
               if (!owner) return [];
-              return [...owner.querySelectorAll(':invalid')].filter(field => field.getClientRects().length)
+              const visible = field => field.getClientRects().length && getComputedStyle(field).visibility !== 'hidden';
+              const fields = [...owner.querySelectorAll(':invalid, [aria-invalid="true"]')].filter(visible)
                 .map(field => field.name || field.id || field.placeholder || field.type);
+              // Los validadores externos pueden rechazar datos válidos para HTML.
+              // Ignorar mensajes ocultos o informativos evita falsos bloqueos.
+              const messages = [...owner.querySelectorAll('[role="alert"]')].filter(visible)
+                .map(alert => (alert.innerText || '').trim())
+                .filter(text => /error|invalid|incorrect|requerid|required|obligatori|ingresa.*v[aá]lid|enter.*valid/i.test(text));
+              return [...new Set([...fields, ...messages])];
             }"""
         )
         if invalid:
             raise UtelQaError(
                 "utel_fill",
-                "El formulario conserva campos obligatorios sin completar: " + ", ".join(invalid[:8]),
-                ":invalid",
+                "El formulario conserva campos incompletos o rechazados: " + ", ".join(invalid[:8]),
+                ':invalid, [aria-invalid="true"], [role="alert"]',
             )
 
     async def _submit_utel_form(
@@ -387,14 +559,26 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             return
 
         await self._validate_generic_form(form)
-        submit = form.locator('button[type="submit"], input[type="submit"]').first
-        if not await submit.count():
+        submit = form.locator('button[type="submit"], input[type="submit"]')
+        rendered_submit = None
+        for index in range(await submit.count()):
+            candidate = submit.nth(index)
+            if await candidate.is_visible() and await self._is_rendered_control(candidate) and not await candidate.is_disabled():
+                rendered_submit = candidate
+                break
+        if rendered_submit is None:
             submit = form.get_by_role(
                 "button",
                 name=re.compile(r"enviar|solicitar|registr|acceder|contact|send|submit", re.I),
-            ).first
-        if not await submit.count() or not await submit.is_visible():
+            )
+            for index in range(await submit.count()):
+                candidate = submit.nth(index)
+                if await candidate.is_visible() and await self._is_rendered_control(candidate) and not await candidate.is_disabled():
+                    rendered_submit = candidate
+                    break
+        if rendered_submit is None:
             raise UtelQaError("utel_submit", "El formulario no tiene un botón de envío visible.", 'button[type="submit"]')
+        submit = rendered_submit
 
         self._raise_if_stop_requested(should_stop)
         loop = asyncio.get_running_loop()
@@ -422,7 +606,17 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         page.on("response", capture_response)
         try:
             await submit.scroll_into_view_if_needed()
-            await submit.click(force=True, timeout=12000)
+            try:
+                await submit.click(force=True, timeout=12000)
+            except Exception as error:
+                # Algunos contenedores Chakra mantienen el botón fuera del
+                # viewport lógico aunque sea el botón visible. El click nativo
+                # conserva sus handlers y evita perder el envío por geometría.
+                if "outside of the viewport" not in str(error).lower():
+                    raise
+                await submit.evaluate(
+                    "element => { element.scrollIntoView({block: 'center', inline: 'nearest'}); element.click(); }"
+                )
             deadline = perf_counter() + 20
             while not request_future.done() and perf_counter() < deadline:
                 self._raise_if_stop_requested(should_stop)
@@ -450,6 +644,13 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             status = int(getattr(response, "status", 0) or 0)
             if 200 <= status < 400:
                 return
+            # Las LP genéricas también pueden registrar el lead antes de un 5xx.
+            if status >= 500 or status == 0:
+                raise UnconfirmedSubmission(
+                    "utel_submit",
+                    f"La landing respondió HTTP {status or 'desconocido'} después del POST. "
+                    "Se verificará el mismo lead en CRM sin reenviar.",
+                )
             raise RejectedSubmission(
                 "utel_submit",
                 f"La landing rechazó el envío con HTTP {status}. No se consultará CRM.",

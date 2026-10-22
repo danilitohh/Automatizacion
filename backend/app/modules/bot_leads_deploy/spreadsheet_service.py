@@ -44,6 +44,7 @@ class LeadsDeploySpreadsheetService(BaseBotSpreadsheetService):
         "filipinas": "filipinas",
         "philippines": "filipinas",
         "india": "india",
+        "vietnam": "vietnam",
         "indonesia": "indonesia",
         "global": "global",
     }

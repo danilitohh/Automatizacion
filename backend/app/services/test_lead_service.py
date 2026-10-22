@@ -45,6 +45,7 @@ class TestLeadService:
         "philippines": ("9", 10),
         "india": ("9", 10),
         "indonesia": ("812", 11),
+        "vietnam": ("0", 10),
     }
 
     # Algunos países tienen prefijos móviles válidos dentro de un rango
@@ -113,6 +114,9 @@ class TestLeadService:
             "878", "879", "881", "882", "883", "884", "885", "886",
             "887", "888", "889",
         ),
+        # Prefijos móviles nacionales de diez dígitos reconocidos por
+        # libphonenumber; el selector del formulario aporta +84 por separado.
+        "vietnam": ("032", "033", "034", "035", "036", "037", "038", "039", "070", "076", "077", "078", "079", "090", "091", "093", "094", "096", "097", "098"),
     }
 
     # Región ISO usada por libphonenumber para comprobar que un número
@@ -140,6 +144,7 @@ class TestLeadService:
         "philippines": "PH",
         "india": "IN",
         "indonesia": "ID",
+        "vietnam": "VN",
     }
     COUNTRY_POOL_ALIASES = {
         "mexico": ("mexico",),
@@ -164,6 +169,7 @@ class TestLeadService:
         "philippines": ("filipinas", "philippines"),
         "india": ("india",),
         "indonesia": ("indonesia",),
+        "vietnam": ("vietnam",),
     }
 
     def __init__(

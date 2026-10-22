@@ -3,9 +3,13 @@ import io
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
+import pytest
 from openpyxl import Workbook, load_workbook
 
+from backend.app.api.routes import _run_utel_batch_job
 from backend.app.config.settings import Settings
+from backend.app.database.connection import get_connection
+from backend.app.main import create_app
 from backend.app.modules.weekly_auto.weekly_forms import (
     WeeklyFormsCaseConfig,
     WeeklyFormsRunner,
@@ -13,6 +17,7 @@ from backend.app.modules.weekly_auto.weekly_forms import (
 )
 from backend.app.modules.bot_leads_deploy.runner import UtelQaError
 from backend.app.services.bot_report_service import BotReportService
+from backend.app.schemas.bot import UtelQaStageResult
 
 
 def _workbook_bytes(rows):
@@ -72,6 +77,105 @@ def test_weekly_forms_requires_lead_output_column():
     assert WeeklyFormsSpreadsheetService().preview(output.getvalue(), "QA.xlsx")["sheets"] == []
 
 
+def test_weekly_forms_accepts_plural_url_leads_column():
+    """La matriz QA usa URL LEADS y debe reconocer sus filas pendientes."""
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Country", "Nivel", "Activo de Test", "Location", "URL LEADS"])
+    sheet.append(["México", "Licenciatura", "https://utel.edu.mx/programa", "Tarjeta", ""])
+    sheet.append(["México", "Licenciatura", "https://utel.edu.mx/otro", "Tarjeta", "https://crm.test/lead/1"])
+    output = io.BytesIO()
+    workbook.save(output)
+
+    service = WeeklyFormsSpreadsheetService()
+    preview = service.preview(output.getvalue(), "leadsQA_sin_URL_LEAD.xlsx")
+
+    assert len(preview["sheets"]) == 1
+    assert preview["sheets"][0]["mapping"]["lead_url"] == "URL LEADS"
+    assert preview["sheets"][0]["total_rows"] == 1
+    rows = service.rows_for_mapping(output.getvalue(), preview["sheets"][0]["mapping"])
+    assert [row["row_number"] for row in rows] == [2]
+
+
+def test_weekly_forms_infers_country_from_url_and_global_level():
+    """Country fallback handles UTEL paths and country labels in Global rows."""
+
+    service = WeeklyFormsSpreadsheetService()
+    assert service.infer_country("https://utel.edu.mx/colombia/licenciaturas") == "Colombia"
+    assert service.infer_country("https://utlenlinea.com/programa") == "Peru"
+    assert service.infer_country("https://utel.edu.mx/vietnam/licenciaturas") == "Vietnam"
+    assert service.infer_country("https://utel.edu.mx/philippines/programa") == "Filipinas"
+    assert service.effective_country(
+        "Global", "Vietnam Bachelor", "https://utel.edu.mx/global/"
+    ) == "Vietnam"
+    assert service.effective_country(
+        "Global", "Bachelor", "https://utel.edu.mx/usa"
+    ) == "USA"
+
+
+@pytest.mark.parametrize(
+    ("message", "submission_attempted"),
+    [
+        ("Error al enviar. Contacta a soporte", True),
+        ("Cloudflare bloqueó esta sesión antes del envío", False),
+    ],
+)
+def test_weekly_forms_does_not_retry_or_reserve_another_phone(
+    tmp_path: Path, monkeypatch, message: str, submission_attempted: bool
+):
+    """Un rechazo o bloqueo registra una sola ejecución y un solo teléfono."""
+    calls = []
+
+    async def fake_run(self, config):
+        calls.append(config)
+        return {
+            "status": "FAIL",
+            "dry_run": False,
+            "summary": message,
+            "utel_submission_message": message,
+            "utel_submission_attempted": submission_attempted,
+            "utel_submission": "failed" if submission_attempted else "skipped",
+            "lead_url": None,
+            "lead_found": "failed",
+            "stages": [],
+            "screenshots": [],
+        }
+
+    monkeypatch.setattr(WeeklyFormsRunner, "run", fake_run)
+    content = _workbook_bytes([
+        ["Mexico", "Licenciatura", "https://utel.edu.mx/programa", "Form Lp", "QA", ""],
+    ])
+    mapping = WeeklyFormsSpreadsheetService().preview(content, "QA.xlsx")["sheets"][0]["mapping"]
+    settings = Settings(
+        database_path=tmp_path / "test.db",
+        storage_dir=tmp_path / "storage",
+        utel_test_phones_json='{"Mexico":["+525512345678","+525512345679"]}',
+    )
+    app = create_app(settings)
+    job_id = "weekly-single-attempt"
+    app.state.utel_batch_jobs[job_id] = {
+        "status": "RUNNING", "total": 1, "completed": 0,
+        "success": 0, "failed": 0, "pending": 0, "cancel_requested": False,
+    }
+    asyncio.run(_run_utel_batch_job(
+        app, job_id, content, "QA.xlsx",
+        {"automation_module": "weekly_forms", "lead_search_destination": "balanceador"},
+        mapping,
+    ))
+    job = app.state.utel_batch_jobs[job_id]
+
+    with get_connection(settings.database_path) as connection:
+        reserved_count = connection.execute("SELECT COUNT(*) FROM test_leads").fetchone()[0]
+
+    assert len(calls) == reserved_count == 1, job
+    assert job["status"] == "FAIL"
+    assert len(job["results"][0]["result"]["form_attempts"]) == 1
+    report = load_workbook(settings.storage_dir / "reports" / "bot" / f"{job_id}_QA.xlsx")
+    assert report["Datos del formulario"].max_row == 2
+    if submission_attempted:
+        assert "revisar antes de reenviar" in job["results"][0]["result"]["summary"]
+
+
 def test_manual_form_failure_keeps_lead_cell_blank():
     content = _workbook_bytes([
         ["USA", "Licenciatura", "https://example.test/no-form", "Form Lp", "LatAm", ""],
@@ -96,6 +200,71 @@ def test_manual_form_failure_keeps_lead_cell_blank():
     workbook.save(saved)
     output = load_workbook(io.BytesIO(saved.getvalue()), data_only=True)
     assert output["QA"].cell(2, 6).value is None
+
+
+@pytest.mark.parametrize("destination", ["both", "balanceador"])
+def test_weekly_incognito_survives_batch_preflight_and_crm_retry(tmp_path, monkeypatch, destination):
+    """El worker real no sustituye incógnito por QA en ninguna fase del lote."""
+    calls, preflights = [], []
+
+    async def preflight(self, config):
+        preflights.append((id(self._batch_browser), config.browser))
+
+    async def run(self, config):
+        assert self._batch_browser is not None
+        calls.append((id(self._batch_browser), config.browser, config.verification_only))
+        pending = len(calls) == 1
+        return {
+            "status": "FAIL" if pending else "PASS", "dry_run": False,
+            "summary": "Sin confirmar" if pending else "Confirmado",
+            "utel_submission_attempted": not config.verification_only,
+            "utel_submission": "pending" if pending else "success",
+            "lead_found": "failed" if pending else "success",
+            "lead_url": None if pending else f"https://crm.test/lead/{len(calls)}",
+            "stages": [UtelQaStageResult(step_number=9, stage="inconcert_search", status="FAIL",
+                                         message="Pendiente de indexación")] if pending else [],
+            "screenshots": [],
+        }
+
+    monkeypatch.setattr(WeeklyFormsRunner, "run", run)
+    monkeypatch.setattr(WeeklyFormsRunner, "preflight_inconcert", preflight)
+    content = _workbook_bytes([
+        ["Mexico", "Licenciatura", f"https://utel.edu.mx/programa-{i}", "Form Lp", "QA", ""]
+        for i in range(2)
+    ])
+    mapping = WeeklyFormsSpreadsheetService().preview(content, "QA.xlsx")["sheets"][0]["mapping"]
+    app = create_app(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage",
+                              utel_allow_synthetic_real_phones=False,
+                              utel_test_phones_json='{"Mexico":["+525512345678","+525512345679"]}'))
+    app.state.utel_batch_jobs["incognito"] = {
+        "status": "RUNNING", "total": 2, "completed": 0, "cancel_requested": False,
+    }
+    asyncio.run(_run_utel_batch_job(app, "incognito", content, "QA.xlsx", {
+        "automation_module": "weekly_forms", "browser": "chrome_incognito",
+        "lead_search_destination": destination,
+    }, mapping))
+    job = app.state.utel_batch_jobs["incognito"]
+    assert job["status"] == "PASS", job
+    assert len(calls) == 3, calls
+    assert [call[2] for call in calls] == [False, False, True]
+    assert len({call[0] for call in calls}) == 1
+    assert all(call[1] == "chrome_incognito" for call in calls)
+    assert preflights == ([(calls[0][0], "chrome_incognito")] if destination == "both" else [])
+    assert not app.state.leads_deploy_browser_lock.locked()
+
+
+def test_weekly_incognito_is_preserved_in_secondary_balancer_config(tmp_path):
+    """El respaldo independiente también conserva el navegador seleccionado."""
+    runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
+    config = WeeklyFormsCaseConfig(country="Mexico", level="Licenciatura", modality="En linea",
+                                   utel_url="https://utel.edu.mx", browser="chrome_incognito", lead={})
+    secondary = runner._secondary_verification_config(config, {
+        "status": "FAIL", "utel_submission_attempted": True, "utel_submission": "success",
+        "stages": [{"stage": "inconcert_login", "status": "FAIL", "message": "Sin sesión"}],
+    })
+    assert secondary is not None
+    assert secondary.browser == "chrome_incognito"
+    assert secondary.verification_only
 
 
 def test_generic_lp_form_is_identified_and_filled(tmp_path: Path):
@@ -145,6 +314,205 @@ def test_generic_lp_form_is_identified_and_filled(tmp_path: Path):
     asyncio.run(scenario())
 
 
+def test_generic_lp_ignores_hidden_duplicate_form(tmp_path: Path):
+    """La variante visible no debe confundirse con el formulario oculto responsive."""
+    async def scenario():
+        from playwright.async_api import async_playwright
+
+        runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
+        config = WeeklyFormsCaseConfig.model_validate({
+            "country": "Mexico", "level": "Licenciatura", "modality": "En linea",
+            "utel_url": "https://example.test/form", "form_type": "lateral",
+            "weekly_form_type": "form_lp", "workflow_mode": "form_validation",
+            "lead": {"name": "Persona QA", "email": "qa@example.test", "phone": "5555555555"},
+        })
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_content("""
+              <form style="opacity:0">
+                <input name="name"><input name="email"><input name="phone">
+                <button type="submit">Solicitar información</button>
+              </form>
+              <form id="visible">
+                <input name="name"><input name="email"><input name="phone">
+                <button type="submit">Solicitar información</button>
+              </form>
+            """)
+            form = await runner._find_utel_form(page, config)
+            assert await form.get_attribute("id") == "visible"
+            await browser.close()
+
+    asyncio.run(scenario())
+
+
+def test_inconcert_matches_accessible_name_duplicate(tmp_path: Path):
+    """InConcert puede repetir el mismo nombre en una celda por su etiqueta accesible."""
+    async def scenario():
+        from playwright.async_api import async_playwright
+
+        runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_content("""
+              <table><tbody>
+                <tr><td>Danilo Prueba CAU Danilo Prueba CAU</td><td>Colombia</td></tr>
+              </tbody></table>
+            """)
+            assert len(await runner._matching_contact_rows(page, "Danilo Prueba CAU")) == 1
+            await browser.close()
+
+    asyncio.run(scenario())
+
+
+def test_lp_fields_do_not_inherit_sibling_options(tmp_path: Path):
+    """Los selects sin label no heredan programas del contenedor completo."""
+
+    async def scenario():
+        from playwright.async_api import async_playwright
+
+        runner = WeeklyFormsRunner(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage"))
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_content("""
+              <form>
+                <input id="firstname_input" placeholder="Nombre y apellido">
+                <select id="programs"><option value="">Selecciona un programa</option>
+                  <option value="adm">Administración</option></select>
+                <select id="horario"><option value="">Horario</option><option value="pm">1pm - 5pm</option></select>
+                <select id="country_code"><option value="+1">+1</option><option value="+52">+52</option></select>
+                <select id="eresBachiller_select"><option value="">¿Te graduaste?</option><option value="SI">SI</option></select>
+              </form>
+            """)
+            for selector in ("#horario", "#country_code", "#eresBachiller_select"):
+                descriptor = await runner._control_descriptor(page.locator(selector))
+                assert "Administración" not in descriptor
+                assert "programa" not in descriptor
+            assert "program" in await runner._control_descriptor(page.locator("#programs"))
+            # Algunas LP reutilizan erróneamente la etiqueta Licenciaturas.
+            await page.set_content("""
+              <form>
+                <input name="name"><input name="email" type="email"><input name="phone">
+                <label for="program">Licenciaturas</label>
+                <select id="program"><option value="">Selecciona</option><option value="adm">Administración</option></select>
+                <label for="horaContactacion_select">Licenciaturas</label>
+                <select id="horaContactacion_select"><option value="">Horario</option><option value="pm">1pm - 5pm</option></select>
+                <label for="eresBachiller_select">Licenciaturas</label>
+                <select id="eresBachiller_select"><option value="">¿Te graduaste?</option><option value="NO">NO</option><option value="SI">SI</option></select>
+                <label for="country_code">Licenciaturas</label>
+                <select id="country_code"><option value="+52">+52</option><option value="+1">+1</option></select>
+              </form>
+            """)
+            config = WeeklyFormsCaseConfig(country="USA", utel_url="https://landing.test/", level="Licenciatura",
+                modality="En linea", weekly_form_type="form_lp", lead={"name":"Persona QA", "email":"qa@example.test", "phone":"2125550199"})
+            await runner._fill_utel_form(page, page.locator("form"), config)
+            assert runner.selected_program_name == "Administración"
+            assert await page.locator("#eresBachiller_select").input_value() == "SI"
+            assert await page.locator("#country_code").input_value() == "+1"
+            await browser.close()
+
+    asyncio.run(scenario())
+
+
+def test_lp_rejects_visible_custom_validation_before_submit(tmp_path: Path):
+    """HubSpot puede rechazar el correo aunque su input sea válido para HTML."""
+    async def scenario():
+        from playwright.async_api import async_playwright
+
+        runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_content('''<form>
+              <input type="email" value="qa@example.test">
+              <div role="alert">Ingresa una dirección de correo válida.</div>
+              <div role="alert" hidden>Error de un intento anterior.</div>
+            </form>''')
+            form = page.locator("form")
+            with pytest.raises(UtelQaError, match="correo válida"):
+                await runner._validate_generic_form(form)
+            # Un aviso informativo y un error oculto no bloquean el siguiente caso.
+            await page.get_by_role("alert").evaluate("el => el.textContent = 'Información de contacto'")
+            await runner._validate_generic_form(form)
+            await browser.close()
+
+    asyncio.run(scenario())
+
+
+def test_lp_submits_request_not_multichannel_consent(tmp_path: Path):
+    """El botón de consentimiento no sustituye a Solicitar información."""
+
+    async def scenario():
+        from playwright.async_api import async_playwright
+        from types import SimpleNamespace
+
+        runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
+        runner._rotation_config = SimpleNamespace(weekly_form_type="form_lp")
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.route("**/*", lambda route: route.fulfill(status=200, body="ok"))
+            await page.goto("https://landing.test/")
+            await page.set_content("""
+              <form>
+                <button type="button" onclick="this.dataset.clicked='yes'">✓ Sí, contáctenme</button>
+                <button type="button" onclick="fetch('/submit', {method:'POST'})">Solicitar información</button>
+              </form>
+            """)
+            await runner._submit_utel_form(page, page.locator("form"))
+            assert runner._submission_attempted
+            assert await page.get_by_role("button", name="✓ Sí, contáctenme").get_attribute("data-clicked") is None
+            await browser.close()
+
+    asyncio.run(scenario())
+
+
+def test_colombian_document_and_country_selection_are_corrected(tmp_path: Path):
+    """Weekly Forms fills the QA document and replaces a wrong default country."""
+
+    async def scenario():
+        from playwright.async_api import async_playwright
+
+        runner = WeeklyFormsRunner(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage"))
+        config = WeeklyFormsCaseConfig.model_validate({
+            "country": "Colombia",
+            "utel_url": "https://example.test/colombia/form",
+            "modality": "En linea",
+            "level": "Licenciatura",
+            "weekly_form_type": "form_lp",
+            "qa_document_required": True,
+            "workflow_mode": "form_validation",
+            "lead": {
+                "name": "Persona QA",
+                "email": "persona@example.test",
+                "phone": "3001234567",
+                "document_number": "QA-20260925-000001",
+            },
+        })
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_content("""
+              <form>
+                <label>País <select name="country">
+                  <option value="mx" selected>México (+52)</option>
+                  <option value="co">Colombia (+57)</option>
+                </select></label>
+                <label>Número de documento <input id="numeroDocumento_input" required></label>
+              </form>
+            """)
+            form = page.locator("form")
+            await runner._fill_document_number(form, config)
+            await runner._select_semantic_option(form.locator('[name="country"]'), "Colombia", "country")
+            assert await form.locator("#numeroDocumento_input").input_value() == "QA-20260925-000001"
+            assert await form.locator('[name="country"]').input_value() == "co"
+            await browser.close()
+
+    asyncio.run(scenario())
+
+
 def test_page_without_lead_form_is_reported_for_manual_work(tmp_path: Path):
     async def scenario():
         from playwright.async_api import async_playwright
@@ -170,6 +538,20 @@ def test_page_without_lead_form_is_reported_for_manual_work(tmp_path: Path):
             await browser.close()
 
     asyncio.run(scenario())
+
+
+def test_cloudflare_origin_error_is_not_reported_as_missing_form(tmp_path: Path):
+    """Un 520 del origen queda diagnosticado sin declarar un bloqueo antibot."""
+    runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
+    page = Mock()
+    page.locator.return_value.inner_text = AsyncMock(return_value=(
+        "Web server is returning an unknown error Error code 520 "
+        "Cloudflare Working Host Error Cloudflare Ray ID: abc123def456"
+    ))
+    with pytest.raises(UtelQaError, match="520.*servidor") as error:
+        asyncio.run(runner._check_access(page))
+    assert error.value.stage == "utel_access"
+    assert "abc123def456" in str(error.value)
 
 
 def test_custom_privacy_checkbox_is_activated(tmp_path: Path):
@@ -259,5 +641,122 @@ def test_parallel_crm_uses_the_first_detail_as_primary_result(tmp_path: Path):
         assert result["lead_source"] == "balanceador"
         assert result["source_final"] == "balanceador"
         assert result["first_crm_source"] == "balanceador"
+
+    asyncio.run(scenario())
+
+
+def test_parallel_crm_records_both_failures_and_does_not_claim_a_verified_link(tmp_path: Path):
+    """Si ambos CRM no confirman el lead, el reporte falla con trazas explícitas."""
+
+    async def scenario():
+        runner = WeeklyFormsRunner(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage"))
+        runner._submission_attempted = True
+        inconcert_page = Mock(url="https://crm.test/inconcert/contacts")
+        balancer_page = Mock(url="https://lead-balancer.scalahed.com/leads/")
+        inconcert_page.set_default_timeout = Mock()
+        balancer_page.set_default_timeout = Mock()
+        context = Mock(new_page=AsyncMock(side_effect=[inconcert_page, balancer_page]))
+
+        async def run_stage(_number, _stage, _message, _page, action, _screenshot=None):
+            # Imitar la excepción real de una etapa; el wrapper paralelo es
+            # responsable de conservarla antes de continuar con el otro CRM.
+            return await action()
+
+        async def not_found(stage, _page, *_args):
+            raise UtelQaError(stage, "El lead no aparece en el CRM.")
+
+        runner._run_stage = run_stage
+        runner._open_inconcert = AsyncMock()
+        runner._login_inconcert = AsyncMock()
+        runner._open_contacts = AsyncMock()
+        runner._search_lead = lambda page, email, name: not_found("inconcert_search", page, email, name)
+        runner._search_lead_balancer = lambda page, email, name: not_found("lead_balancer_search", page, email, name)
+
+        config = WeeklyFormsCaseConfig.model_validate({
+            "name": "Weekly Forms CRM sin resultados",
+            "environment": "production",
+            "dry_run": False,
+            "country": "Mexico",
+            "utel_url": "https://utel.edu.mx/programa",
+            "inconcert_url": "https://crm.test",
+            "modality": "En linea",
+            "level": "Licenciatura",
+            "workflow_mode": "form_validation",
+            "lead": {"name": "Persona QA", "email": "persona@example.test", "phone": "5551234567"},
+        })
+
+        result = await runner._verify_crm_parallel(
+            context,
+            config,
+            None,
+            "2026-09-24T10:00:00",
+            0.0,
+        )
+
+        failed_stages = {stage.stage for stage in result["stages"] if stage.status == "FAIL"}
+        assert failed_stages == {"inconcert_search", "lead_balancer_search"}
+        assert result["lead_found"] == "failed"
+        assert result["lead_url"] is None
+        assert result["status"] == "FAIL"
+        assert "no se encontró ni se pudo verificar" in result["summary"]
+        assert "enlace del lead verificado" not in result["summary"]
+
+    asyncio.run(scenario())
+
+
+def test_parallel_crm_keeps_success_when_one_crm_finds_lead(tmp_path: Path):
+    """Un resultado confirmado sigue siendo suficiente si el otro CRM falla."""
+
+    async def scenario():
+        runner = WeeklyFormsRunner(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage"))
+        runner._submission_attempted = True
+        balancer_url = "https://lead-balancer.scalahed.com/leads/detail/3"
+        inconcert_page = Mock(url="https://crm.test/inconcert/contacts")
+        balancer_page = Mock(url="https://lead-balancer.scalahed.com/leads/")
+        inconcert_page.set_default_timeout = Mock()
+        balancer_page.set_default_timeout = Mock()
+        context = Mock(new_page=AsyncMock(side_effect=[inconcert_page, balancer_page]))
+
+        async def run_stage(_number, _stage, _message, _page, action, _screenshot=None):
+            return await action()
+
+        async def fail_inconcert(_page, _email, _name):
+            raise UtelQaError("inconcert_search", "InConcert no confirmó el lead.")
+
+        async def find_balancer(_page, _email, _name):
+            runner.lead_url = balancer_url
+
+        runner._run_stage = run_stage
+        runner._open_inconcert = AsyncMock()
+        runner._login_inconcert = AsyncMock()
+        runner._open_contacts = AsyncMock()
+        runner._search_lead = fail_inconcert
+        runner._search_lead_balancer = find_balancer
+
+        config = WeeklyFormsCaseConfig.model_validate({
+            "name": "Weekly Forms CRM parcial",
+            "environment": "production",
+            "dry_run": False,
+            "country": "Mexico",
+            "utel_url": "https://utel.edu.mx/programa",
+            "inconcert_url": "https://crm.test",
+            "modality": "En linea",
+            "level": "Licenciatura",
+            "workflow_mode": "form_validation",
+            "lead": {"name": "Persona QA", "email": "persona@example.test", "phone": "5551234567"},
+        })
+
+        result = await runner._verify_crm_parallel(
+            context,
+            config,
+            None,
+            "2026-09-24T10:00:00",
+            0.0,
+        )
+
+        assert result["status"] == "PASS"
+        assert result["lead_url"] == balancer_url
+        assert result["first_crm_source"] == "balanceador"
+        assert any(stage.stage == "inconcert_search" and stage.status == "FAIL" for stage in result["stages"])
 
     asyncio.run(scenario())
