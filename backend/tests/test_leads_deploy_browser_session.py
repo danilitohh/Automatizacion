@@ -14,6 +14,7 @@ from backend.app.automations.leads_deploy.runner import LeadsDeployRunner
 from backend.app.config.settings import Settings
 from backend.app.main import create_app
 from backend.app.modules.bot_leads_deploy.browser_session import LeadsDeployBrowserSession
+from backend.app.modules.bot_leads_deploy.runner import UtelQaError
 from backend.app.modules.weekly_auto.weekly_forms import WeeklyFormsCaseConfig
 from backend.app.schemas.bot import UtelLead, UtelQaConfig
 
@@ -136,6 +137,32 @@ def test_balancer_reuse_requires_ready_list(tmp_path, path, password, expected):
         for locator in (page.get_by_label.return_value, page.get_by_role.return_value):
             locator.first.is_visible = AsyncMock(return_value=True)
         assert await runner._balancer_list_ready(page, "https://lead-balancer.scalahed.com/leads/") is expected
+
+    asyncio.run(scenario())
+
+
+def test_inconcert_login_uses_fallback_account_after_tenant_rejection(tmp_path):
+    """Un 401 de la cuenta principal prueba la cuenta regional alternativa."""
+
+    async def scenario():
+        runner = LeadsDeployRunner(Settings(
+            storage_dir=tmp_path,
+            inconcert_username="primary-user",
+            inconcert_password="primary-secret",
+            inconcert_fallback_username="fallback-user",
+            inconcert_fallback_password="fallback-secret",
+        ))
+        runner._crm_origin = "https://mas-utel.inconcertcc.com"
+        page = Mock(url="https://mas-utel.inconcertcc.com/login")
+        rejection = UtelQaError("inconcert_login", "InConcert rechazo las credenciales (HTTP 401).")
+        runner._login_inconcert_once = AsyncMock(side_effect=[rejection, None])
+        await runner._login_inconcert(page)
+        assert runner._login_inconcert_once.await_args_list[0].args[1:] == (
+            "primary-user", "primary-secret"
+        )
+        assert runner._login_inconcert_once.await_args_list[1].args[1:] == (
+            "fallback-user", "fallback-secret"
+        )
 
     asyncio.run(scenario())
 

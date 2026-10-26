@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     crm_password: str = ""
     inconcert_username: str = ""
     inconcert_password: str = ""
+    # Cuenta alternativa para el tenant regional cuando la principal es
+    # rechazada por InConcert (401/403). Nunca se expone en respuestas.
+    inconcert_fallback_username: str = ""
+    inconcert_fallback_password: str = ""
     lead_balancer_url: str = "https://lead-balancer.scalahed.com/leads/"
     lead_balancer_username: str = ""
     lead_balancer_password: SecretStr = SecretStr("")

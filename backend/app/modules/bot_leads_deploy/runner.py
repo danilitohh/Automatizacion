@@ -2723,10 +2723,42 @@ class UtelInconcertRunner:
             raise UtelQaError("inconcert_login", "El CRM redirigio a un dominio distinto del configurado. No se introdujeron credenciales.")
         if self._is_crm_route(page.url) and not await self._is_inconcert_login(page):
             return
-        username = self._inconcert_username()
-        password = self._inconcert_password()
-        if not username or not password:
+        credentials = self._inconcert_credentials()
+        if not credentials:
             raise UtelQaError("inconcert_login", "Faltan las credenciales comunes de InConcert en la configuración.")
+        last_error: UtelQaError | None = None
+        for index, (username, password) in enumerate(credentials):
+            try:
+                await self._login_inconcert_once(page, username, password)
+                return
+            except UtelQaError as error:
+                last_error = error
+                if index == len(credentials) - 1 or not self._is_rejected_login(error):
+                    raise
+                self.logger.warning("InConcert rechazo la cuenta principal; probando la cuenta alternativa sin reenviar el formulario.")
+        if last_error is not None:
+            raise last_error
+
+    @staticmethod
+    def _is_rejected_login(error: UtelQaError) -> bool:
+        message = str(error)
+        return "HTTP 401" in message or "HTTP 403" in message
+
+    def _inconcert_credentials(self) -> list[tuple[str, str]]:
+        candidates = [
+            (self._inconcert_username(), self._inconcert_password()),
+            (
+                self._secret_value(getattr(self.settings, "inconcert_fallback_username", "")),
+                self._secret_value(getattr(self.settings, "inconcert_fallback_password", "")),
+            ),
+        ]
+        credentials: list[tuple[str, str]] = []
+        for username, password in candidates:
+            if username and password and (username, password) not in credentials:
+                credentials.append((username, password))
+        return credentials
+
+    async def _login_inconcert_once(self, page: Any, username: str, password: str) -> None:
         try:
             # Todos los países usan las mismas credenciales configuradas.
             # Las variantes regionales pueden cambiar los identificadores HTML.
@@ -2763,7 +2795,8 @@ class UtelInconcertRunner:
             else:
                 await submit.click()
             if auth_response is not None and auth_response.status in {401, 403}:
-                tenant = self._crm_origin or f"{current.scheme}://{current.netloc}"
+                page_origin = urlparse(page.url)
+                tenant = self._crm_origin or f"{page_origin.scheme}://{page_origin.netloc}"
                 raise UtelQaError(
                     "inconcert_login",
                     f"InConcert rechazó las credenciales para {tenant} (HTTP {auth_response.status}). "
