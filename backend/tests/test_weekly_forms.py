@@ -615,7 +615,7 @@ def test_custom_privacy_checkbox_is_activated(tmp_path: Path):
 
 
 def test_parallel_crm_uses_the_first_detail_as_primary_result(tmp_path: Path):
-    """Weekly Forms conserva como enlace principal el CRM que responde primero."""
+    """Weekly Forms toma Balanceador sin esperar la indexación de InConcert."""
 
     async def scenario():
         runner = WeeklyFormsRunner(Settings(database_path=tmp_path / "test.db", storage_dir=tmp_path / "storage"))
@@ -674,7 +674,9 @@ def test_parallel_crm_uses_the_first_detail_as_primary_result(tmp_path: Path):
             0.0,
         )
 
-        assert result["inconcert_lead_url"] == inconcert_url
+        # Balanceador confirma primero y la búsqueda lenta de InConcert se
+        # cancela para no consumir toda la ventana de indexación.
+        assert result["inconcert_lead_url"] is None
         assert result["balancer_lead_url"] == balancer_url
         assert result["lead_url"] == balancer_url
         assert result["lead_source"] == "balanceador"

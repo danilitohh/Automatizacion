@@ -662,21 +662,36 @@ class UtelInconcertRunner:
                 await self._record_crm_search_failure(error, page, 6)
                 return None, False, None
 
-        # Las dos búsquedas siguen corriendo en paralelo para conservar ambas
-        # evidencias, pero ya no se elige InConcert por ser la primera variable
-        # del código: el enlace principal será el CRM cuyo detalle terminó
-        # primero (Balancer o InConcert).
-        (
-            inconcert_url,
-            inconcert_found,
-            inconcert_finished,
-        ), (
-            balancer_url,
-            balancer_found,
-            balancer_finished,
-        ) = await asyncio.gather(
-            search_inconcert(),
-            search_balancer(),
+        # Las dos búsquedas arrancan en paralelo, pero una coincidencia válida
+        # termina la conciliación de inmediato. Antes se usaba gather(), que
+        # obligaba a esperar toda la ventana de indexación de InConcert aunque
+        # Balanceador ya hubiera abierto el detalle del lead.
+        crm_tasks = {
+            "inconcert": asyncio.create_task(search_inconcert()),
+            "balanceador": asyncio.create_task(search_balancer()),
+        }
+        crm_results: dict[str, tuple[str | None, bool, float | None]] = {}
+        pending = set(crm_tasks.values())
+        while pending:
+            done, pending = await asyncio.wait(
+                pending,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            for task in done:
+                source = next(name for name, candidate in crm_tasks.items() if candidate is task)
+                crm_results[source] = task.result()
+            if any(found for _, found, _ in crm_results.values()):
+                for task in pending:
+                    task.cancel()
+                if pending:
+                    await asyncio.gather(*pending, return_exceptions=True)
+                pending.clear()
+
+        inconcert_url, inconcert_found, inconcert_finished = crm_results.get(
+            "inconcert", (None, False, None)
+        )
+        balancer_url, balancer_found, balancer_finished = crm_results.get(
+            "balanceador", (None, False, None)
         )
         self._inconcert_lead_url = inconcert_url
         self._balancer_lead_url = balancer_url
