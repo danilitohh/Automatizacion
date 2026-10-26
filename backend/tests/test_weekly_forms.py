@@ -513,6 +513,45 @@ def test_colombian_document_and_country_selection_are_corrected(tmp_path: Path):
     asyncio.run(scenario())
 
 
+def test_hybrid_sede_step_is_completed_before_contact_fields(tmp_path: Path):
+    """Las landings híbridas revelan los campos después de elegir Estado/Sede."""
+
+    async def scenario():
+        from playwright.async_api import async_playwright
+
+        runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_content("""
+              <form id="addForm">
+                <select id="estado">
+                  <option value="">Selecciona un estado</option>
+                  <option value="cdmx">Ciudad de México</option>
+                </select>
+                <select id="sede" disabled>
+                  <option value="">Selecciona una sede</option>
+                </select>
+              </form>
+              <script>
+                const estado = document.querySelector('#estado');
+                estado.addEventListener('change', () => {
+                  const sede = document.querySelector('#sede');
+                  sede.disabled = false;
+                  sede.innerHTML = '<option value="">Selecciona una sede</option>'
+                    + '<option value="hub">Utel Hub</option>';
+                });
+              </script>
+            """)
+            form = page.locator("#addForm")
+            await runner._prepare_sede_form(page, form)
+            assert await page.locator("#estado").input_value() == "cdmx"
+            assert await page.locator("#sede").input_value() == "hub"
+            await browser.close()
+
+    asyncio.run(scenario())
+
+
 def test_page_without_lead_form_is_reported_for_manual_work(tmp_path: Path):
     async def scenario():
         from playwright.async_api import async_playwright

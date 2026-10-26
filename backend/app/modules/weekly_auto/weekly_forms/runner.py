@@ -132,6 +132,7 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
 
     async def _fill_utel_form(self, page: Any, form: Any, config: WeeklyFormsCaseConfig) -> None:
         # El campo puede aparecer en cualquier variante de formulario del lote.
+        await self._prepare_sede_form(page, form)
         await self._fill_document_number(form, config)
         if not self._is_generic_lp(config):
             if config.program_name:
@@ -220,6 +221,46 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
 
         await asyncio.sleep(0.8)
         await self._validate_generic_form(form)
+
+    async def _prepare_sede_form(self, page: Any, form: Any) -> None:
+        """Avanza los formularios híbridos que piden sede antes del contacto.
+
+        Las landings de modalidad híbrida montan primero Estado/Sede y solo
+        después muestran nombre, correo y teléfono. Si se busca el contacto
+        en el primer estado del DOM, el formulario parece incompleto aunque
+        el flujo sí sea utilizable.
+        """
+
+        state = page.locator("select#estado:visible").first
+        venue = page.locator("select#sede:visible").first
+        if not await state.count() or not await venue.count():
+            state = form.locator("select#estado:visible").first
+            venue = form.locator("select#sede:visible").first
+        if not await state.count() or not await venue.count():
+            return
+        if not await self._has_real_select_value(state):
+            state_options = await state.locator("option").evaluate_all(
+                "items => items.map(item => ({value: item.value || '', disabled: item.disabled}))"
+            )
+            state_value = next((item["value"] for item in state_options if item["value"] and not item["disabled"]), "")
+            if state_value:
+                # select_option ya emite change; el sitio reemplaza el select
+                # de sede durante ese evento, por lo que no debemos dispararlo
+                # una segunda vez sobre un nodo que puede quedar desconectado.
+                await state.select_option(value=state_value)
+            # onEstadoChange() can replace the sede node while populating its
+            # options; reacquire it instead of dispatching on a detached node.
+            venue = page.locator("select#sede:visible").first
+        await self._wait_for_select_options(venue)
+        if not await self._has_real_select_value(venue):
+            venue_options = await venue.locator("option").evaluate_all(
+                "items => items.map(item => ({value: item.value || '', disabled: item.disabled}))"
+            )
+            venue_value = next((item["value"] for item in venue_options if item["value"] and not item["disabled"]), "")
+            if venue_value:
+                await venue.select_option(value=venue_value)
+        # onSedeChange() reveals the contact controls asynchronously.
+        await asyncio.sleep(0.5)
 
     async def _fill_required_date_fields(self, form: Any) -> None:
         """Completa fechas QA obligatorias que algunas LP agregan al formulario."""
