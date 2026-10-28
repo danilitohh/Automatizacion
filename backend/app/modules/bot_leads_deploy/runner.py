@@ -268,7 +268,22 @@ class UtelInconcertRunner:
                 utel_page.set_default_timeout(18000)
                 await self._run_stage(1, "utel_open", "UTEL abierta", utel_page, lambda: self._open_utel(utel_page, config), "01_utel_inicio")
                 self._raise_if_stop_requested(should_stop)
-                await self._run_stage(2, "utel_navigation", "Modalidad, nivel y programa resueltos", utel_page, lambda: self._navigate_utel(utel_page, config))
+                # La captura se toma cuando la navegación ya terminó, de modo
+                # que documente la PDP real que se usará para el formulario.
+                pdp_screenshot_name = (
+                    None
+                    if self._uses_home_footer(config)
+                    else "02_pdp_completa"
+                )
+                await self._run_stage(
+                    2,
+                    "utel_navigation",
+                    "Modalidad, nivel y programa resueltos",
+                    utel_page,
+                    lambda: self._navigate_utel(utel_page, config),
+                    pdp_screenshot_name,
+                    full_page_screenshot=bool(pdp_screenshot_name),
+                )
                 self._raise_if_stop_requested(should_stop)
                 form = await self._run_stage(3, "utel_form", "Formulario identificado", utel_page, lambda: self._find_utel_form(utel_page, config))
                 try:
@@ -981,6 +996,7 @@ class UtelInconcertRunner:
         page: Any,
         action: Callable[[], Awaitable[Any]],
         screenshot_name: str | None = None,
+        full_page_screenshot: bool = False,
     ) -> Any:
         """Ejecuta una etapa y registra su resultado legible."""
 
@@ -996,11 +1012,17 @@ class UtelInconcertRunner:
                 and callable(getattr(value, "screenshot", None))
                 else page
             )
-            screenshot = (
-                await self._safe_screenshot(result_page, screenshot_name)
-                if screenshot_name
-                else None
-            )
+            if screenshot_name and full_page_screenshot:
+                screenshot = await self._safe_full_page_screenshot(
+                    result_page,
+                    screenshot_name,
+                )
+            else:
+                screenshot = (
+                    await self._safe_screenshot(result_page, screenshot_name)
+                    if screenshot_name
+                    else None
+                )
             self.stage_results.append(
                 UtelQaStageResult(
                     step_number=number,
@@ -4615,10 +4637,58 @@ class UtelInconcertRunner:
             self.logger.exception("No se pudo guardar screenshot %s", name)
             return None
 
+    async def _safe_full_page_screenshot(self, page: Any, name: str | None) -> str | None:
+        """Guarda una captura completa de la PDP sin degradarla a viewport.
+
+        Se recorre la página antes de capturarla para activar imágenes o
+        bloques con carga diferida. Si el navegador no puede producir la
+        captura completa, se registra el fallo y no se confunde una captura
+        parcial con la evidencia solicitada.
+        """
+
+        if not name or self.evidence_directory is None:
+            return None
+
+        file_path = self.evidence_directory / f"{name}.png"
+        try:
+            await self._prepare_full_page_capture(page)
+            await page.screenshot(
+                path=str(file_path),
+                full_page=True,
+                animations="disabled",
+                timeout=30000,
+            )
+            relative = file_path.relative_to(self.settings.storage_dir.parent).as_posix()
+            self.screenshots.append(relative)
+            return relative
+        except Exception:
+            self.logger.exception("No se pudo guardar la captura completa de la PDP %s", name)
+            return None
+
+    async def _prepare_full_page_capture(self, page: Any) -> None:
+        """Fuerza la carga de contenido diferido y devuelve la página al inicio."""
+
+        try:
+            await page.evaluate("window.scrollTo(0, 0)")
+            previous_height = 0
+            for _ in range(24):
+                height = await page.evaluate(
+                    "() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
+                )
+                if not isinstance(height, (int, float)) or height <= previous_height:
+                    break
+                previous_height = height
+                await page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+                await asyncio.sleep(0.15)
+            await page.evaluate("window.scrollTo(0, 0)")
+            await asyncio.sleep(0.3)
+        except Exception as error:  # noqa: BLE001 - no bloquear la captura por una página no estándar
+            self.logger.debug("No se pudo preparar el scroll completo de la PDP: %s", error)
+
     def _evidence_directory(self, name: str) -> Path:
         now = datetime.now()
         unique_suffix = secrets.token_hex(3)
-        directory = self.settings.storage_dir / "screenshots" / "utel_inconcert" / now.date().isoformat() / f"{self._slug(name)}_{now.strftime('%H%M%S_%f')}_{unique_suffix}"
+        directory = self.settings.storage_dir / "screenshots" / "leads_deploy_pdp" / now.date().isoformat() / f"{self._slug(name)}_{now.strftime('%H%M%S_%f')}_{unique_suffix}"
         directory.mkdir(parents=True, exist_ok=True)
         return directory
 

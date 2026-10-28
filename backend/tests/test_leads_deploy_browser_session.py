@@ -105,6 +105,26 @@ def test_batch_cleanup_happens_only_at_end(tmp_path, cancelled, keep_open):
     asyncio.run(scenario())
 
 
+def test_pdp_screenshot_is_full_page_and_stored_in_leads_deploy_folder(tmp_path):
+    """La evidencia de PDP no puede degradarse a una captura del viewport."""
+
+    async def scenario():
+        runner = LeadsDeployRunner(Settings(storage_dir=tmp_path / "storage"))
+        runner.evidence_directory = runner._evidence_directory("fila PDP")
+        page = AsyncMock()
+        page.evaluate.side_effect = [None, 2200, None, 2200, None]
+
+        path = await runner._safe_full_page_screenshot(page, "02_pdp_completa")
+
+        assert path is not None
+        assert "storage/screenshots/leads_deploy_pdp/" in path
+        assert path.endswith("/02_pdp_completa.png")
+        page.screenshot.assert_awaited_once()
+        assert page.screenshot.await_args.kwargs["full_page"] is True
+
+    asyncio.run(scenario())
+
+
 def test_ready_inconcert_skips_navigation_but_changed_country_does_not(tmp_path):
     """Evita login/listado redundantes sin confundir sesiones de dos países."""
 
@@ -255,6 +275,10 @@ def test_real_browser_preserves_session_between_programs(tmp_path, browser_name)
             await context.route("**/*", fixture)
             first = await runner.run(config)
             assert first["status"] == "PASS", first
+            assert any(
+                path.endswith("/02_pdp_completa.png")
+                for path in first["screenshots"]
+            )
             await rows[0].evaluate("localStorage.setItem('qa-session', 'preserved'); sessionStorage.setItem('qa-tab', 'preserved')")
             await context.add_cookies([{"name": "qa-session", "value": "preserved", "url": config.utel_url}])
             second = await runner.run(config.model_copy(update={"utel_url": "https://landing.test/two"}))

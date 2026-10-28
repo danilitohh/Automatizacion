@@ -15,3 +15,8 @@ liberan los recursos. Un segundo lote de Leads Deploy espera su turno antes de
 usar el perfil. Los reintentos del módulo también conservan el navegador elegido.
 Esto evita aperturas y navegaciones redundantes, sin garantizar acceso a sitios
 que estén bloqueando el tráfico de QA.
+
+Cuando la fila entra a una PDP, antes de localizar y llenar el formulario se
+guarda una captura completa, desde el inicio hasta el final de la página, en
+`storage/screenshots/leads_deploy_pdp/<fecha>/<ejecucion>/02_pdp_completa.png`.
+La ruta relativa también se devuelve en el campo `screenshots` del resultado.
