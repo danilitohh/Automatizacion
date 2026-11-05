@@ -314,6 +314,87 @@ def test_generic_lp_form_is_identified_and_filled(tmp_path: Path):
     asyncio.run(scenario())
 
 
+def test_formio_choices_program_is_selected_before_submit(tmp_path: Path):
+    """Las LP Form.io usan Choices y mantienen Enviar deshabilitado sin programa."""
+
+    async def scenario():
+        from playwright.async_api import async_playwright
+
+        runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
+        config = WeeklyFormsCaseConfig.model_validate({
+            "country": "Mexico", "level": "Maestría", "modality": "En linea",
+            "utel_url": "https://example.test/posgrados", "weekly_form_type": "form_lp",
+            "lead": {"name": "Persona QA", "email": "qa@example.test", "phone": "5555555555"},
+        })
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_content("""
+              <div class="formio-form">
+                <input name="data[name]" placeholder="Nombre(s)">
+                <input name="data[email]" placeholder="Correo electrónico">
+                <input name="data[cellphone]" placeholder="Teléfono">
+                <select name="data[area]">
+                  <option value="">Área de interés</option><option value="maestria">Maestrías</option>
+                </select>
+                <div class="choices formio-choices" style="display:block;width:300px;height:40px">
+                  <div class="choices__list--single"><div class="choices__item choices__placeholder">Selecciona un programa</div></div>
+                  <div class="choices__list--dropdown" style="display:block">
+                    <select name="data[program]" placeholder="Selecciona un programa" hidden>
+                      <option value="Selecciona un programa">Selecciona un programa</option>
+                    </select>
+                    <div role="listbox"><div class="choices__item choices__item--choice" role="option" data-choice-selectable data-value="adm">Administración</div></div>
+                  </div>
+                </div>
+                <input name="data[terms]" type="checkbox" required>
+                <button type="submit" disabled>Enviar</button>
+              </div>
+              <script>
+                const choice = document.querySelector('[role=option]');
+                const program = document.querySelector('select[name="data[program]"]');
+                const selected = document.querySelector('.choices__list--single .choices__item');
+                choice.addEventListener('click', () => {
+                  program.innerHTML = '<option value="adm">Administración</option>';
+                  program.value = 'adm';
+                  selected.textContent = 'Administración';
+                  document.querySelector('button[type=submit]').disabled = false;
+                });
+              </script>
+            """)
+            form = page.locator(".formio-form")
+            await runner._fill_utel_form(page, form, config)
+            assert runner.selected_program_name == "Administración"
+            assert await form.locator('select[name="data[program]"]').input_value() == "adm"
+            assert not await form.locator('button[type="submit"]').is_disabled()
+            await browser.close()
+
+    asyncio.run(scenario())
+
+
+def test_split_numeric_birth_date_fields_are_filled_individually(tmp_path: Path):
+    async def scenario():
+        from playwright.async_api import async_playwright
+
+        runner = WeeklyFormsRunner(Settings(storage_dir=tmp_path))
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_content("""
+              <form>
+                <input id="birth_date-day" type="number" required aria-label="Birth date day">
+                <input id="birth_date-month" type="number" required aria-label="Birth date month">
+                <input id="birth_date-year" type="number" required aria-label="Birth date year">
+              </form>
+            """)
+            await runner._fill_required_date_fields(page.locator("form"))
+            assert await page.locator("#birth_date-day").input_value() == "15"
+            assert await page.locator("#birth_date-month").input_value() == "01"
+            assert await page.locator("#birth_date-year").input_value() == "1990"
+            await browser.close()
+
+    asyncio.run(scenario())
+
+
 def test_generic_lp_ignores_hidden_duplicate_form(tmp_path: Path):
     """La variante visible no debe confundirse con el formulario oculto responsive."""
     async def scenario():

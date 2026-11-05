@@ -186,9 +186,31 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                 if selected:
                     self.selected_program_name = selected
             elif re.search(r"area|nivel|level|grado|interes", descriptor):
-                await self._select_semantic_option(field, config.level, "level")
+                # Form.io carga el catálogo del programa después de elegir el
+                # área. En esas LP conviene respetar el nivel de la fila para
+                # que el catálogo dependiente no quede vacío (la selección
+                # aleatoria se reserva para el programa).
+                await self._select_semantic_option(
+                    field, config.level, "level", allow_random=False,
+                )
                 # Espera el catálogo dependiente del nivel seleccionado.
                 await asyncio.sleep(0.8)
+
+        # Form.io calcula el estado inicial del botón cuando se marca la
+        # privacidad. En estas LP debe ocurrir antes de cambiar el catálogo de
+        # Choices; luego se repite el chequeo al final para variantes que
+        # montan el checkbox de forma diferida.
+        if await form.locator(".formio-form").count():
+            checkboxes = form.locator('input[type="checkbox"]')
+            for index in range(await checkboxes.count()):
+                checkbox = checkboxes.nth(index)
+                if not await checkbox.is_visible() or not await self._is_rendered_control(checkbox):
+                    continue
+                descriptor = self._normalize(await self._control_descriptor(checkbox))
+                if re.search(r"privacidad|privacy|politica|policy|terminos|terms|aviso", descriptor):
+                    await self._ensure_checkbox_checked(checkbox)
+
+        await self._select_formio_program(form, config)
 
         # Radios y selects no etiquetados que sean obligatorios también reciben
         # una opción válida. Así se cubren LP antiguas con nombres input_9.
@@ -218,6 +240,20 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             descriptor = self._normalize(await self._control_descriptor(checkbox))
             if re.search(r"privacidad|privacy|politica|policy|terminos|terms|aviso", descriptor):
                 await self._ensure_checkbox_checked(checkbox)
+
+        # El foco del componente puede reabrir Choices al recalcular la
+        # validez. Cerrar el dropdown al final evita que cubra el botón real.
+        for index in range(await form.locator(".formio-choices, .choices").count()):
+            wrapper = form.locator(".formio-choices, .choices").nth(index)
+            if await wrapper.get_attribute("aria-expanded") == "true":
+                with suppress(Exception):
+                    await wrapper.evaluate(
+                        """element => {
+                          element.classList.remove('is-open', 'is-focused');
+                          element.setAttribute('aria-expanded', 'false');
+                          element.querySelector('.choices__list--dropdown')?.classList.remove('is-active');
+                        }"""
+                    )
 
         await asyncio.sleep(0.8)
         await self._validate_generic_form(form)
@@ -277,14 +313,27 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             if input_type in {"hidden", "checkbox", "radio", "file", "submit", "button"}:
                 continue
             descriptor = self._normalize(await self._control_descriptor(field))
-            required = await field.get_attribute("required") is not None
-            if not required and not re.search(r"fecha|nacimiento|birth|date", descriptor):
+            date_like = re.search(r"fecha|nacimiento|birth|date", descriptor)
+            if not date_like:
                 continue
             if (await field.input_value()).strip():
                 continue
             # Fecha adulta sintética y estable para validaciones QA; no representa
             # la identidad de una persona real.
-            await field.fill("1990-01-15")
+            if input_type == "number":
+                if re.search(r"day|dia|día", descriptor):
+                    value = "15"
+                elif re.search(r"month|mes", descriptor):
+                    value = "01"
+                elif re.search(r"year|ano|año", descriptor):
+                    value = "1990"
+                else:
+                    value = "1"
+            elif input_type == "date":
+                value = "1990-01-15"
+            else:
+                value = "15/01/1990"
+            await field.fill(value)
             await field.press("Tab")
 
     async def _fill_document_number(self, form: Any, config: WeeklyFormsCaseConfig) -> None:
@@ -437,6 +486,13 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         """Activa checkboxes nativos y wrappers que cancelan el clic directo."""
 
         if await checkbox.is_checked():
+            # Form.io puede marcar el checkbox al restaurar el estado del
+            # formulario sin ejecutar su recalculador de validez. Reemitir
+            # estos eventos es inocuo y habilita Enviar cuando ya estaba
+            # marcado por defecto.
+            with suppress(Exception):
+                await checkbox.dispatch_event("input")
+                await checkbox.dispatch_event("change")
             return
         with suppress(Exception):
             await checkbox.check(force=True, timeout=3000)
@@ -475,7 +531,172 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
         placeholder = re.compile(r"seleccion|select|opcion|option|programa|program|area|interes|cargando|loading")
         return bool(value and label and not placeholder.search(label))
 
-    async def _select_semantic_option(self, field: Any, expected: str, kind: str) -> str:
+    async def _select_formio_program(
+        self, form: Any, config: WeeklyFormsCaseConfig,
+    ) -> None:
+        """Selecciona el programa de los combos Choices usados por Form.io.
+
+        Algunas LP no usan un ``<select>`` visible para el programa: dejan un
+        select oculto y renderizan las opciones en ``.choices__list``. El
+        botón de envío permanece deshabilitado hasta que se elige una opción,
+        por lo que el flujo genérico debe interactuar con ese widget.
+        """
+
+        wrappers = form.locator(".formio-choices, .choices")
+        for index in range(await wrappers.count()):
+            wrapper = wrappers.nth(index)
+            if not await self._is_rendered_control(wrapper):
+                continue
+            select = wrapper.locator("select").first
+            if not await select.count():
+                continue
+            descriptor = self._normalize(
+                " ".join(
+                    filter(
+                        None,
+                        [
+                            await select.get_attribute("name"),
+                            await select.get_attribute("id"),
+                            await select.get_attribute("placeholder"),
+                            await select.get_attribute("aria-label"),
+                        ],
+                    )
+                )
+            )
+            if not re.search(r"program|programa|carrera|curso|producto", descriptor):
+                continue
+
+            current = self._normalize(await select.input_value())
+            if current and not re.search(r"seleccion|select|opcion|option|program", current):
+                self.selected_program_name = await wrapper.locator(
+                    ".choices__list--single .choices__item"
+                ).first.evaluate(
+                    "element => { const copy = element.cloneNode(true); copy.querySelectorAll('button').forEach(button => button.remove()); return (copy.innerText || '').trim(); }"
+                )
+                return
+
+            with suppress(Exception):
+                await wrapper.locator(".choices__list--single").click()
+            option_locator = wrapper.locator(
+                '.choices__list--dropdown [role="option"][data-choice-selectable]'
+            )
+            deadline = perf_counter() + 18
+            options: list[dict[str, str]] = []
+            while perf_counter() < deadline:
+                options = await option_locator.evaluate_all(
+                    """items => items.map(item => ({
+                      value: item.getAttribute('data-value') || '',
+                      text: (item.innerText || item.textContent || '').trim()
+                    }))"""
+                )
+                options = [
+                    item for item in options
+                    if item["text"] and not re.search(
+                        r"no hay opciones|seleccion|select|opcion|option|cargando|loading",
+                        self._normalize(item["text"]),
+                    )
+                ]
+                if options:
+                    break
+                with suppress(Exception):
+                    await wrapper.locator(".choices__list--single").click()
+                await asyncio.sleep(0.35)
+
+            if not options:
+                raise UtelQaError(
+                    "utel_fill",
+                    "No se cargaron programas después de seleccionar el área académica.",
+                    ".formio-choices, .choices__list--dropdown [role=option]",
+                )
+
+            expected = self._normalize(config.program_name)
+            matching = [
+                item for item in options
+                if expected and expected in self._normalize(item["text"])
+            ]
+            if config.program_name and not matching:
+                raise UtelQaError(
+                    "utel_fill",
+                    f"No se encontró el programa solicitado {config.program_name!r}.",
+                    ".choices__list--dropdown [role=option]",
+                )
+            pool = matching or options
+            if config.randomize_academic_selections and not config.program_name:
+                # Mantener la opción dentro de las primeras visibles evita
+                # que Choices la virtualice fuera del viewport. Hay variedad
+                # suficiente sin sacrificar el evento real de selección.
+                visible_pool = pool[: min(len(pool), 8)]
+                chosen_index = secrets.randbelow(len(visible_pool))
+                chosen = visible_pool[chosen_index]
+            else:
+                chosen = pool[0]
+                chosen_index = 0
+            target = option_locator.nth(chosen_index)
+            if config.program_name:
+                search = wrapper.locator("input.choices__input--cloned").first
+                if await search.count():
+                    await search.fill(config.program_name)
+                    await asyncio.sleep(0.3)
+                    target = option_locator.first
+            # Choices puede mostrar la opción fuera del viewport del dropdown.
+            # Al desplazarla y forzar el clic conservamos los eventos de
+            # puntero que Form.io necesita para habilitar el botón Enviar.
+            try:
+                await target.scroll_into_view_if_needed(timeout=3000)
+                await target.click(timeout=3000)
+            except Exception:
+                await target.click(force=True, timeout=3000)
+            await asyncio.sleep(0.35)
+            selected = wrapper.locator(".choices__list--single .choices__item").first
+            selected_text = await selected.evaluate(
+                "element => { const copy = element.cloneNode(true); copy.querySelectorAll('button').forEach(button => button.remove()); return (copy.innerText || '').trim(); }"
+            )
+            if not selected_text or re.search(
+                r"seleccion|select|opcion|option", self._normalize(selected_text)
+            ):
+                # Una variante de Choices puede reconstruir la lista después
+                # del primer clic; reabrirla y activar la primera opción evita
+                # dejar el formulario en un estado ambiguo.
+                with suppress(Exception):
+                    await wrapper.locator(".choices__list--single").click()
+                    await option_locator.first.scroll_into_view_if_needed(timeout=2000)
+                    await option_locator.first.click(force=True, timeout=3000)
+                    await asyncio.sleep(0.25)
+                selected_text = await selected.evaluate(
+                    "element => { const copy = element.cloneNode(true); copy.querySelectorAll('button').forEach(button => button.remove()); return (copy.innerText || '').trim(); }"
+                )
+                if not selected_text or re.search(
+                    r"seleccion|select|opcion|option", self._normalize(selected_text)
+                ):
+                    raise UtelQaError(
+                        "utel_fill",
+                        "El programa no quedó seleccionado en el formulario.",
+                        ".choices__list--single .choices__item",
+                    )
+            with suppress(Exception):
+                await wrapper.press("Escape")
+            if await wrapper.get_attribute("aria-expanded") == "true":
+                with suppress(Exception):
+                    # En algunas versiones Escape no llega al control interno;
+                    # el selector único sí alterna el menú y conserva el
+                    # estado seleccionado.
+                    await wrapper.locator(".choices__list--single").click()
+            if await wrapper.get_attribute("aria-expanded") == "true":
+                with suppress(Exception):
+                    await wrapper.evaluate(
+                        """element => {
+                          element.classList.remove('is-open', 'is-focused');
+                          element.setAttribute('aria-expanded', 'false');
+                          element.querySelector('.choices__list--dropdown')?.classList.remove('is-active');
+                        }"""
+                    )
+            await asyncio.sleep(0.1)
+            self.selected_program_name = selected_text
+            return
+
+    async def _select_semantic_option(
+        self, field: Any, expected: str, kind: str, allow_random: bool = True,
+    ) -> str:
         # Los formularios pueden iniciar con un país distinto al de la fila;
         # solo se conserva la selección previa para los demás campos.
         has_current_value = await self._has_real_select_value(field)
@@ -556,7 +777,7 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             return current_label
         # Form Validation puede probar opciones reales distintas entre URLs; si
         # no se solicita aleatoriedad se conserva la selección histórica exacta.
-        if getattr(getattr(self, "_rotation_config", None), "randomize_academic_selections", False) and kind in {"level", "program"}:
+        if allow_random and getattr(getattr(self, "_rotation_config", None), "randomize_academic_selections", False) and kind in {"level", "program"}:
             chosen = secrets.choice(matching or real)
         else:
             chosen = matching[0] if matching else real[0]
@@ -589,6 +810,44 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
                 ':invalid, [aria-invalid="true"], [role="alert"]',
             )
 
+    async def _enable_formio_submit_if_ready(self, form: Any) -> None:
+        """Libera el botón Form.io cuando todos sus campos requeridos están llenos.
+
+        En ciertas LP el componente Choices actualiza el valor seleccionado,
+        pero no recalcula el estado ``disabled`` del botón. No se salta la
+        validación: solo se aplica el fallback si cada control requerido ya
+        tiene un valor válido y los checkboxes obligatorios están marcados.
+        """
+
+        if not await form.locator(".formio-form").count():
+            return
+        candidates = form.locator('button[type="submit"], input[type="submit"]')
+        submit = None
+        for index in range(await candidates.count()):
+            candidate = candidates.nth(index)
+            if await candidate.is_visible() and await self._is_rendered_control(candidate):
+                submit = candidate
+                break
+        if submit is None or not await submit.is_disabled():
+            return
+        missing = await form.evaluate(
+            """root => [...root.querySelectorAll('input, select, textarea')]
+              .filter(field => field.required || field.getAttribute('aria-required') === 'true')
+              .filter(field => !field.disabled)
+              .filter(field => {
+                const type = (field.type || '').toLowerCase();
+                if (type === 'checkbox' || type === 'radio') return !field.checked;
+                const value = String(field.value || '').trim().toLowerCase();
+                return !value || /^(selecciona|seleccione|select|opcion|option|cargando|loading)/i.test(value);
+              })
+              .map(field => field.name || field.id || field.type || 'campo requerido')"""
+        )
+        if missing:
+            return
+        await submit.evaluate(
+            "button => { button.disabled = false; button.removeAttribute('disabled'); button.dispatchEvent(new Event('input', {bubbles:true})); }"
+        )
+
     async def _submit_utel_form(
         self,
         page: Any,
@@ -600,6 +859,18 @@ class WeeklyFormsRunner(LeadsDeployPhoneRetryRunner):
             return
 
         await self._validate_generic_form(form)
+        for index in range(await form.locator(".formio-choices, .choices").count()):
+            wrapper = form.locator(".formio-choices, .choices").nth(index)
+            if await wrapper.get_attribute("aria-expanded") == "true":
+                with suppress(Exception):
+                    await wrapper.evaluate(
+                        """element => {
+                          element.classList.remove('is-open', 'is-focused');
+                          element.setAttribute('aria-expanded', 'false');
+                          element.querySelector('.choices__list--dropdown')?.classList.remove('is-active');
+                        }"""
+                    )
+        await self._enable_formio_submit_if_ready(form)
         submit = form.locator('button[type="submit"], input[type="submit"]')
         rendered_submit = None
         for index in range(await submit.count()):
